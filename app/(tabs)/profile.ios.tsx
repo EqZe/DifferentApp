@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Platform,
   TouchableOpacity,
 } from 'react-native';
 import { useTheme } from '@react-navigation/native';
@@ -18,7 +17,12 @@ export default function ProfileScreen() {
   const { colors } = useTheme();
   const { user } = useUser();
 
+  React.useEffect(() => {
+    console.log('✅ ProfileScreen (iOS) mounted, user:', user?.fullName);
+  }, []);
+
   if (!user) {
+    console.log('⚠️ ProfileScreen (iOS): No user found');
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
         <View style={styles.emptyContainer}>
@@ -27,6 +31,8 @@ export default function ProfileScreen() {
       </SafeAreaView>
     );
   }
+
+  console.log('🎨 ProfileScreen (iOS) rendering for user:', user.fullName);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -242,7 +248,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   header: {
-    paddingTop: Platform.OS === 'android' ? 48 : 40,
+    paddingTop: 40,
     paddingBottom: 40,
     paddingHorizontal: 24,
     alignItems: 'center',

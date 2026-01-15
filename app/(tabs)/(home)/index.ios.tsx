@@ -9,7 +9,6 @@ import {
   Image,
   Linking,
   RefreshControl,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { useTheme } from '@react-navigation/native';
@@ -104,7 +103,8 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    console.log('Information screen loaded with', posts.length, 'posts');
+    console.log('✅ HomeScreen (iOS) mounted - Information screen loaded with', posts.length, 'posts');
+    console.log('User:', user?.fullName);
   }, []);
 
   const onRefresh = () => {
@@ -125,8 +125,17 @@ export default function HomeScreen() {
   };
 
   if (!user) {
-    return null;
+    console.log('⚠️ HomeScreen (iOS): No user found, showing loading...');
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2784F5" />
+        </View>
+      </SafeAreaView>
+    );
   }
+
+  console.log('🎨 HomeScreen (iOS) rendering with user:', user.fullName, 'and', posts.length, 'posts');
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -265,7 +274,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
-    paddingTop: Platform.OS === 'android' ? 48 : 20,
+    paddingTop: 20,
     paddingBottom: 24,
     paddingHorizontal: 24,
     borderBottomLeftRadius: 24,

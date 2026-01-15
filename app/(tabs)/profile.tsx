@@ -18,7 +18,12 @@ export default function ProfileScreen() {
   const { colors } = useTheme();
   const { user } = useUser();
 
+  React.useEffect(() => {
+    console.log('✅ ProfileScreen mounted, user:', user?.fullName);
+  }, []);
+
   if (!user) {
+    console.log('⚠️ ProfileScreen: No user found');
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
         <View style={styles.emptyContainer}>
@@ -27,6 +32,8 @@ export default function ProfileScreen() {
       </SafeAreaView>
     );
   }
+
+  console.log('🎨 ProfileScreen rendering for user:', user.fullName);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>

@@ -51,6 +51,8 @@ export default function FloatingTabBar({
 
   // Improved active tab detection with better path matching
   const activeTabIndex = React.useMemo(() => {
+    console.log('Current pathname:', pathname);
+    
     // Find the best matching tab based on the current pathname
     let bestMatch = -1;
     let bestMatchScore = 0;
@@ -82,7 +84,9 @@ export default function FloatingTabBar({
     });
 
     // Default to first tab if no match found
-    return bestMatch >= 0 ? bestMatch : 0;
+    const finalIndex = bestMatch >= 0 ? bestMatch : 0;
+    console.log('Active tab index:', finalIndex, 'for tab:', tabs[finalIndex]?.name);
+    return finalIndex;
   }, [pathname, tabs]);
 
   React.useEffect(() => {
@@ -175,7 +179,7 @@ export default function FloatingTabBar({
 
               return (
                 <TouchableOpacity
-                  key={`tab-${index}`}
+                  key={`tab-${tab.name}-${index}`}
                   style={styles.tab}
                   onPress={() => handleTabPress(tab.route)}
                   activeOpacity={0.7}
