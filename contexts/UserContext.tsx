@@ -17,7 +17,6 @@ interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
   isLoading: boolean;
-  logout: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -86,13 +85,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = async () => {
-    console.log('User logging out');
-    await setUser(null);
-  };
-
   return (
-    <UserContext.Provider value={{ user, setUser, isLoading, logout }}>
+    <UserContext.Provider value={{ user, setUser, isLoading }}>
       {children}
     </UserContext.Provider>
   );
