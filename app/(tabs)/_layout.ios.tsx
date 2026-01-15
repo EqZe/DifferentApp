@@ -1,17 +1,47 @@
+
 import React from 'react';
-import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
+import { useUser } from '@/contexts/UserContext';
+import FloatingTabBar from '@/components/FloatingTabBar';
 
 export default function TabLayout() {
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger key="home" name="(home)">
-        <Icon sf="house.fill" />
-        <Label>Home</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger key="profile" name="profile">
-        <Icon sf="person.fill" />
-        <Label>Profile</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
+  const { user } = useUser();
+
+  // Define tabs based on user agreement status
+  const tabs = user?.hasSignedAgreement
+    ? [
+        {
+          name: '(home)',
+          title: 'בית',
+          ios_icon_name: 'house.fill',
+          android_material_icon_name: 'home',
+        },
+        {
+          name: 'tasks',
+          title: 'משימות',
+          ios_icon_name: 'checkmark.circle.fill',
+          android_material_icon_name: 'check-circle',
+        },
+        {
+          name: 'profile',
+          title: 'פרופיל',
+          ios_icon_name: 'person.fill',
+          android_material_icon_name: 'person',
+        },
+      ]
+    : [
+        {
+          name: '(home)',
+          title: 'בית',
+          ios_icon_name: 'house.fill',
+          android_material_icon_name: 'home',
+        },
+        {
+          name: 'profile',
+          title: 'פרופיל',
+          ios_icon_name: 'person.fill',
+          android_material_icon_name: 'person',
+        },
+      ];
+
+  return <FloatingTabBar tabs={tabs} />;
 }

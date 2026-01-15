@@ -1,42 +1,48 @@
 
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Platform } from 'react-native';
+import { useUser } from '@/contexts/UserContext';
 import FloatingTabBar from '@/components/FloatingTabBar';
-import { useTheme } from '@react-navigation/native';
-import { colors } from '@/styles/commonStyles';
 
 export default function TabLayout() {
-  const { colors: themeColors } = useTheme();
+  const { user } = useUser();
 
-  return (
-    <Tabs
-      tabBar={(props) => (
-        <FloatingTabBar
-          {...props}
-          tabs={[
-            {
-              name: '(home)',
-              title: 'בית',
-              ios_icon_name: 'house.fill',
-              android_material_icon_name: 'home',
-              route: '/(tabs)/(home)',
-            },
-            {
-              name: 'profile',
-              title: 'פרופיל',
-              ios_icon_name: 'person.fill',
-              android_material_icon_name: 'person',
-              route: '/(tabs)/profile',
-            },
-          ]}
-        />
-      )}
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Tabs.Screen name="(home)" />
-      <Tabs.Screen name="profile" />
-    </Tabs>
-  );
+  // Define tabs based on user agreement status
+  const tabs = user?.hasSignedAgreement
+    ? [
+        {
+          name: '(home)',
+          title: 'בית',
+          ios_icon_name: 'house.fill',
+          android_material_icon_name: 'home',
+        },
+        {
+          name: 'tasks',
+          title: 'משימות',
+          ios_icon_name: 'checkmark.circle.fill',
+          android_material_icon_name: 'check-circle',
+        },
+        {
+          name: 'profile',
+          title: 'פרופיל',
+          ios_icon_name: 'person.fill',
+          android_material_icon_name: 'person',
+        },
+      ]
+    : [
+        {
+          name: '(home)',
+          title: 'בית',
+          ios_icon_name: 'house.fill',
+          android_material_icon_name: 'home',
+        },
+        {
+          name: 'profile',
+          title: 'פרופיל',
+          ios_icon_name: 'person.fill',
+          android_material_icon_name: 'person',
+        },
+      ];
+
+  return <FloatingTabBar tabs={tabs} />;
 }

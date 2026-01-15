@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@react-navigation/native';
@@ -17,12 +18,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@/contexts/UserContext';
 import { IconSymbol } from '@/components/IconSymbol';
-import Constants from 'expo-constants';
+import { api } from '@/utils/api';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
   FadeIn,
   FadeOut,
   SlideInRight,
@@ -78,7 +78,7 @@ export default function RegisterScreen() {
   };
 
   const handleRegister = async () => {
-    console.log('Registering user with phone:', phoneNumber);
+    console.log('Registering/logging in user with phone:', phoneNumber);
     
     if (!phoneNumber.trim() || phoneNumber.length < 9) {
       return;
@@ -88,32 +88,29 @@ export default function RegisterScreen() {
     progress.value = 100;
     
     try {
-      const BACKEND_URL = Constants.expoConfig?.extra?.backendUrl;
-      console.log('Calling registration API:', BACKEND_URL);
+      // First, check if user already exists with this phone number
+      console.log('Checking if user exists with phone:', phoneNumber);
+      let user;
       
-      if (!BACKEND_URL) {
-        throw new Error('Backend URL not configured');
+      try {
+        user = await api.getUserByPhone(phoneNumber);
+        console.log('User found, logging in:', user.fullName);
+        
+        // User exists, log them in
+        await setUser(user);
+        
+        setTimeout(() => {
+          router.replace('/(tabs)/(home)');
+        }, 500);
+        return;
+      } catch (error) {
+        // User doesn't exist, proceed with registration
+        console.log('User not found, proceeding with registration');
       }
 
-      const response = await fetch(`${BACKEND_URL}/api/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fullName,
-          city,
-          phoneNumber,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Registration API error:', response.status, errorText);
-        throw new Error(`Registration failed: ${response.status}`);
-      }
-
-      const registeredUser = await response.json();
+      // Register new user
+      console.log('Registering new user');
+      const registeredUser = await api.register(fullName, city, phoneNumber);
       console.log('User registered successfully:', registeredUser);
 
       await setUser(registeredUser);
@@ -123,7 +120,14 @@ export default function RegisterScreen() {
         router.replace('/(tabs)/(home)');
       }, 500);
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Registration/login error:', error);
+      
+      if (Platform.OS === 'web') {
+        alert('שגיאה בהרשמה. אנא נסה שוב.');
+      } else {
+        Alert.alert('שגיאה', 'לא הצלחנו לרשום אותך. אנא נסה שוב.');
+      }
+      
       setIsLoading(false);
       progress.value = 66;
     }
