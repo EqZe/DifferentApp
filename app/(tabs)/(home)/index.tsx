@@ -32,65 +32,93 @@ interface Post {
   createdAt: string;
 }
 
+// Dummy data for posts
+const DUMMY_POSTS: Post[] = [
+  {
+    id: '1',
+    title: 'ברוכים הבאים למערכת הליווי',
+    content: 'אנחנו כאן כדי ללוות אתכם בכל שלב של תהליך הייבוא מסין לישראל. במערכת תמצאו מידע חשוב, משאבים ותמיכה מלאה.',
+    imageUrl: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=800',
+    videoUrl: null,
+    buttonText: 'למד עוד',
+    buttonLink: 'https://example.com',
+    isPreAgreement: true,
+    orderIndex: 1,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '2',
+    title: 'תהליך הייבוא - מדריך מקיף',
+    content: 'הייבוא אישי של תכולת בית מסין לישראל כולל מספר שלבים חשובים. נלווה אתכם בכל אחד מהם - מבחירת הפריטים ועד לקבלתם בבית.',
+    imageUrl: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800',
+    videoUrl: null,
+    buttonText: 'צפה במדריך',
+    buttonLink: 'https://example.com/guide',
+    isPreAgreement: true,
+    orderIndex: 2,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '3',
+    title: 'שאלות נפוצות',
+    content: 'יש לכם שאלות? אספנו עבורכם את השאלות הנפוצות ביותר והתשובות המפורטות שלהן. כל מה שצריך לדעת על תהליך הייבוא.',
+    imageUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800',
+    videoUrl: null,
+    buttonText: 'לשאלות נפוצות',
+    buttonLink: 'https://example.com/faq',
+    isPreAgreement: true,
+    orderIndex: 3,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '4',
+    title: 'צור קשר עם הצוות',
+    content: 'הצוות שלנו זמין עבורכם לכל שאלה או בקשה. ניתן ליצור קשר בטלפון, במייל או דרך המערכת.',
+    imageUrl: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800',
+    videoUrl: null,
+    buttonText: 'צור קשר',
+    buttonLink: 'https://example.com/contact',
+    isPreAgreement: true,
+    orderIndex: 4,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: '5',
+    title: 'המלצות ועצות חשובות',
+    content: 'למדו מהניסיון של לקוחות קודמים. כאן תמצאו המלצות, עצות וטיפים שיעזרו לכם להפיק את המרב מתהליך הייבוא.',
+    imageUrl: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800',
+    videoUrl: null,
+    buttonText: 'קרא המלצות',
+    buttonLink: 'https://example.com/tips',
+    isPreAgreement: true,
+    orderIndex: 5,
+    createdAt: new Date().toISOString(),
+  },
+];
+
 export default function HomeScreen() {
   const { colors } = useTheme();
   const { user } = useUser();
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<Post[]>(DUMMY_POSTS);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    loadPosts();
-  }, [user]);
-
-  const loadPosts = async () => {
-    if (!user) return;
-    
-    setIsLoading(true);
-    try {
-      console.log('Loading posts for user:', user.fullName, 'Agreement status:', user.hasSignedAgreement);
-      
-      // Get backend URL from app.json configuration
-      const BACKEND_URL = Constants.expoConfig?.extra?.backendUrl;
-      console.log('Backend URL:', BACKEND_URL);
-      
-      if (!BACKEND_URL) {
-        throw new Error('Backend URL not configured');
-      }
-
-      // Call the posts API endpoint with hasSignedAgreement query parameter
-      // The API filters posts based on whether user has signed agreement
-      const response = await fetch(`${BACKEND_URL}/api/posts?hasSignedAgreement=${user.hasSignedAgreement}`);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Posts API error:', response.status, errorText);
-        throw new Error(`Failed to load posts: ${response.status}`);
-      }
-
-      const loadedPosts: Post[] = await response.json();
-      console.log('Posts loaded from API:', loadedPosts.length);
-      
-      // Sort posts by orderIndex (API should return them sorted, but ensure it)
-      const sortedPosts = loadedPosts.sort((a, b) => a.orderIndex - b.orderIndex);
-      setPosts(sortedPosts);
-    } catch (error) {
-      console.error('Error loading posts:', error);
-      // Show empty state or error message to user
-      setPosts([]);
-    } finally {
-      setIsLoading(false);
-      setRefreshing(false);
-    }
-  };
+    console.log('Information screen loaded with', posts.length, 'posts');
+  }, []);
 
   const onRefresh = () => {
+    console.log('User pulled to refresh posts');
     setRefreshing(true);
-    loadPosts();
+    // Simulate refresh delay
+    setTimeout(() => {
+      setRefreshing(false);
+      console.log('Posts refreshed');
+    }, 1000);
   };
 
   const handleButtonPress = (link: string) => {
-    console.log('Opening link:', link);
+    console.log('User tapped button to open link:', link);
     Linking.openURL(link).catch((err) => {
       console.error('Error opening link:', err);
     });
@@ -119,18 +147,15 @@ export default function HomeScreen() {
           <View style={styles.headerContent}>
             <View style={styles.greetingContainer}>
               <Text style={styles.greeting}>שלום, {user.fullName}</Text>
-              <Text style={styles.subGreeting}>{user.city}</Text>
+              <Text style={styles.subGreeting}>מידע ומשאבים</Text>
             </View>
-            <View style={styles.statusBadge}>
+            <View style={styles.iconContainer}>
               <IconSymbol
-                ios_icon_name={user.hasSignedAgreement ? 'checkmark.circle.fill' : 'clock.fill'}
-                android_material_icon_name={user.hasSignedAgreement ? 'check-circle' : 'schedule'}
-                size={16}
+                ios_icon_name="info.circle.fill"
+                android_material_icon_name="info"
+                size={32}
                 color="#FFFFFF"
               />
-              <Text style={styles.statusText}>
-                {user.hasSignedAgreement ? 'לאחר חתימה' : 'לפני חתימה'}
-              </Text>
             </View>
           </View>
         </LinearGradient>
@@ -140,10 +165,10 @@ export default function HomeScreen() {
           <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.statusCardHeader}>
               <IconSymbol
-                ios_icon_name="info.circle.fill"
-                android_material_icon_name="info"
+                ios_icon_name="checkmark.circle.fill"
+                android_material_icon_name="check-circle"
                 size={24}
-                color="#F5AD27"
+                color="#10B981"
               />
               <Text style={[styles.statusCardTitle, { color: colors.text }]}>סטטוס התהליך</Text>
             </View>
@@ -172,6 +197,7 @@ export default function HomeScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>מידע ומשאבים</Text>
             {isLoading && posts.length === 0 ? (
               <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#2784F5" />
                 <Text style={[styles.loadingText, { color: colors.text + '99' }]}>טוען תוכן...</Text>
               </View>
             ) : posts.length === 0 ? (
@@ -265,19 +291,13 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'right',
   },
-  statusBadge: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   contentContainer: {
     paddingHorizontal: 24,
@@ -387,6 +407,7 @@ const styles = StyleSheet.create({
     padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
   },
   loadingText: {
     fontSize: 16,
