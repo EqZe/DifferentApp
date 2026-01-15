@@ -1,45 +1,46 @@
 
 import React from 'react';
 import { useUser } from '@/contexts/UserContext';
-import FloatingTabBar from '@/components/FloatingTabBar';
+import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
+import { Href } from 'expo-router';
 
 export default function TabLayout() {
   const { user } = useUser();
 
   // Define tabs based on user agreement status
-  const tabs = user?.hasSignedAgreement
+  const tabs: TabBarItem[] = user?.hasSignedAgreement
     ? [
         {
           name: '(home)',
-          title: 'בית',
-          ios_icon_name: 'house.fill',
-          android_material_icon_name: 'home',
+          route: '/(tabs)/(home)' as Href,
+          icon: 'home',
+          label: 'בית',
         },
         {
           name: 'tasks',
-          title: 'משימות',
-          ios_icon_name: 'checkmark.circle.fill',
-          android_material_icon_name: 'check-circle',
+          route: '/(tabs)/tasks' as Href,
+          icon: 'check-circle',
+          label: 'משימות',
         },
         {
           name: 'profile',
-          title: 'פרופיל',
-          ios_icon_name: 'person.fill',
-          android_material_icon_name: 'person',
+          route: '/(tabs)/profile' as Href,
+          icon: 'person',
+          label: 'פרופיל',
         },
       ]
     : [
         {
           name: '(home)',
-          title: 'בית',
-          ios_icon_name: 'house.fill',
-          android_material_icon_name: 'home',
+          route: '/(tabs)/(home)' as Href,
+          icon: 'home',
+          label: 'בית',
         },
         {
           name: 'profile',
-          title: 'פרופיל',
-          ios_icon_name: 'person.fill',
-          android_material_icon_name: 'person',
+          route: '/(tabs)/profile' as Href,
+          icon: 'person',
+          label: 'פרופיל',
         },
       ];
 
