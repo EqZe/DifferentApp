@@ -50,9 +50,9 @@ export const api = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Registration failed' }));
       console.error('API: Registration failed', error);
-      throw new Error('Registration failed');
+      throw new Error(error.message || 'Registration failed');
     }
 
     const data = await response.json();
@@ -60,14 +60,19 @@ export const api = {
     return data;
   },
 
-  getUserByPhone: async (phoneNumber: string): Promise<User> => {
+  getUserByPhone: async (phoneNumber: string): Promise<User | null> => {
     console.log('API: Getting user by phone', phoneNumber);
     const response = await fetch(`${BACKEND_URL}/api/users/phone/${phoneNumber}`);
 
+    if (response.status === 404) {
+      console.log('API: User not found with phone', phoneNumber);
+      return null;
+    }
+
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Failed to get user' }));
       console.error('API: Get user failed', error);
-      throw new Error('Failed to get user');
+      throw new Error(error.message || 'Failed to get user');
     }
 
     const data = await response.json();
@@ -80,9 +85,9 @@ export const api = {
     const response = await fetch(`${BACKEND_URL}/api/users/${userId}`);
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Failed to get user' }));
       console.error('API: Get user failed', error);
-      throw new Error('Failed to get user');
+      throw new Error(error.message || 'Failed to get user');
     }
 
     const data = await response.json();
@@ -104,9 +109,9 @@ export const api = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Failed to update user' }));
       console.error('API: Update user failed', error);
-      throw new Error('Failed to update user');
+      throw new Error(error.message || 'Failed to update user');
     }
 
     const data = await response.json();
@@ -124,9 +129,9 @@ export const api = {
     const response = await fetch(url);
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Failed to get posts' }));
       console.error('API: Get posts failed', error);
-      throw new Error('Failed to get posts');
+      throw new Error(error.message || 'Failed to get posts');
     }
 
     const data = await response.json();
@@ -154,9 +159,9 @@ export const api = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Failed to create post' }));
       console.error('API: Create post failed', error);
-      throw new Error('Failed to create post');
+      throw new Error(error.message || 'Failed to create post');
     }
 
     const data = await response.json();
@@ -175,9 +180,9 @@ export const api = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Failed to update post' }));
       console.error('API: Update post failed', error);
-      throw new Error('Failed to update post');
+      throw new Error(error.message || 'Failed to update post');
     }
 
     const data = await response.json();
@@ -192,9 +197,9 @@ export const api = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Failed to delete post' }));
       console.error('API: Delete post failed', error);
-      throw new Error('Failed to delete post');
+      throw new Error(error.message || 'Failed to delete post');
     }
 
     console.log('API: Post deleted');
@@ -206,9 +211,9 @@ export const api = {
     const response = await fetch(`${BACKEND_URL}/api/users/${userId}/tasks`);
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Failed to get tasks' }));
       console.error('API: Get tasks failed', error);
-      throw new Error('Failed to get tasks');
+      throw new Error(error.message || 'Failed to get tasks');
     }
 
     const data = await response.json();
@@ -230,9 +235,9 @@ export const api = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Failed to create task' }));
       console.error('API: Create task failed', error);
-      throw new Error('Failed to create task');
+      throw new Error(error.message || 'Failed to create task');
     }
 
     const data = await response.json();
@@ -251,9 +256,9 @@ export const api = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Failed to complete task' }));
       console.error('API: Complete task failed', error);
-      throw new Error('Failed to complete task');
+      throw new Error(error.message || 'Failed to complete task');
     }
 
     const data = await response.json();
@@ -272,9 +277,9 @@ export const api = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Failed to update task reminder' }));
       console.error('API: Update task reminder failed', error);
-      throw new Error('Failed to update task reminder');
+      throw new Error(error.message || 'Failed to update task reminder');
     }
 
     const data = await response.json();
@@ -289,9 +294,9 @@ export const api = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
+      const error = await response.json().catch(() => ({ message: 'Failed to delete task' }));
       console.error('API: Delete task failed', error);
-      throw new Error('Failed to delete task');
+      throw new Error(error.message || 'Failed to delete task');
     }
 
     console.log('API: Task deleted');

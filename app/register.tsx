@@ -90,26 +90,21 @@ export default function RegisterScreen() {
     try {
       // First, check if user already exists with this phone number
       console.log('Checking if user exists with phone:', phoneNumber);
-      let user;
+      const existingUser = await api.getUserByPhone(phoneNumber);
       
-      try {
-        user = await api.getUserByPhone(phoneNumber);
-        console.log('User found, logging in:', user.fullName);
-        
+      if (existingUser) {
         // User exists, log them in
-        await setUser(user);
+        console.log('User found, logging in:', existingUser.fullName);
+        await setUser(existingUser);
         
         setTimeout(() => {
           router.replace('/(tabs)/(home)');
         }, 500);
         return;
-      } catch (error) {
-        // User doesn't exist, proceed with registration
-        console.log('User not found, proceeding with registration');
       }
 
-      // Register new user
-      console.log('Registering new user');
+      // User doesn't exist, register new user
+      console.log('User not found, registering new user');
       const registeredUser = await api.register(fullName, city, phoneNumber);
       console.log('User registered successfully:', registeredUser);
 
