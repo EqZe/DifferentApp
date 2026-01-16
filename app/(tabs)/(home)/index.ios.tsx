@@ -158,12 +158,11 @@ export default function HomeScreen() {
               <Text style={styles.greeting}>שלום, {user.fullName}</Text>
               <Text style={styles.subGreeting}>מידע ומשאבים</Text>
             </View>
-            <View style={styles.iconContainer}>
-              <IconSymbol
-                ios_icon_name="info.circle.fill"
-                android_material_icon_name="info"
-                size={32}
-                color="#FFFFFF"
+            <View style={styles.logoHeaderContainer}>
+              <Image
+                source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
+                style={styles.logoHeader}
+                resizeMode="contain"
               />
             </View>
           </View>
@@ -300,13 +299,19 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'right',
   },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  logoHeaderContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  logoHeader: {
+    width: 100,
+    height: 32,
   },
   contentContainer: {
     paddingHorizontal: 24,

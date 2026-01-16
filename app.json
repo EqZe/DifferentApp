@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "China Israel Escort",
-    "slug": "China Israel Escort",
+    "name": "Different",
+    "slug": "Different",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/natively-dark.png",
@@ -45,5 +45,5 @@
       "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev"
     }
   },
-  "scheme": "China Israel Escort"
+  "scheme": "Different"
 }

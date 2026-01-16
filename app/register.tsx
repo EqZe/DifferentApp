@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Alert,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@react-navigation/native';
@@ -141,6 +142,15 @@ export default function RegisterScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
         {/* Progress Bar */}
         <View style={styles.progressContainer}>
           <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
@@ -318,9 +328,18 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
+  logoContainer: {
+    alignItems: 'center',
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
+  logo: {
+    width: 180,
+    height: 60,
+  },
   progressContainer: {
     paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingTop: 10,
     paddingBottom: 40,
   },
   progressTrack: {
