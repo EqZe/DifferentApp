@@ -16,7 +16,7 @@ export default function TabLayout() {
     {
       name: '(home)',
       route: '/(tabs)/(home)' as Href,
-      icon: 'info',
+      icon: 'home',
       label: 'מידע',
     },
   ];
@@ -27,7 +27,7 @@ export default function TabLayout() {
     tabs.push({
       name: 'calculator',
       route: '/(tabs)/calculator' as Href,
-      icon: 'calculate',
+      icon: 'savings',
       label: 'מחשבון חיסכון',
     });
   }

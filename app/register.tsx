@@ -142,7 +142,7 @@ export default function RegisterScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        {/* Logo */}
+        {/* Logo - Made bigger */}
         <View style={styles.logoContainer}>
           <Image
             source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
@@ -334,8 +334,8 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   logo: {
-    width: 180,
-    height: 60,
+    width: 240,
+    height: 80,
   },
   progressContainer: {
     paddingHorizontal: 24,

@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   logoHeaderContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 12,
-    padding: 8,
+    padding: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -310,8 +310,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   logoHeader: {
-    width: 100,
-    height: 32,
+    width: 140,
+    height: 45,
   },
   contentContainer: {
     paddingHorizontal: 24,
