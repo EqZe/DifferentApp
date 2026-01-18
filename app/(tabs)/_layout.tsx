@@ -9,9 +9,9 @@ import { Href } from 'expo-router';
 export default function TabLayout() {
   const { user } = useUser();
 
-  console.log('TabLayout rendering, user:', user?.fullName);
+  console.log('TabLayout rendering, user:', user?.fullName, 'hasSignedAgreement:', user?.hasSignedAgreement);
 
-  // Only 2 tabs: Information (posts) and Profile
+  // Build tabs based on user status
   const tabs: TabBarItem[] = [
     {
       name: '(home)',
@@ -19,13 +19,37 @@ export default function TabLayout() {
       icon: 'info',
       label: 'מידע',
     },
-    {
-      name: 'profile',
-      route: '/(tabs)/profile' as Href,
-      icon: 'person',
-      label: 'פרופיל',
-    },
   ];
+
+  // Add calculator tab for first-stage users (not signed agreement)
+  if (user && !user.hasSignedAgreement) {
+    console.log('Adding calculator tab for first-stage user');
+    tabs.push({
+      name: 'calculator',
+      route: '/(tabs)/calculator' as Href,
+      icon: 'calculate',
+      label: 'מחשבון חיסכון',
+    });
+  }
+
+  // Add tasks tab for second-stage users (signed agreement)
+  if (user && user.hasSignedAgreement) {
+    console.log('Adding tasks tab for second-stage user');
+    tabs.push({
+      name: 'tasks',
+      route: '/(tabs)/tasks' as Href,
+      icon: 'check-circle',
+      label: 'משימות',
+    });
+  }
+
+  // Profile tab is always last
+  tabs.push({
+    name: 'profile',
+    route: '/(tabs)/profile' as Href,
+    icon: 'person',
+    label: 'פרופיל',
+  });
 
   return (
     <View style={styles.container}>
