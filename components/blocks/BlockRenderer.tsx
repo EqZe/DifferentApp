@@ -11,6 +11,8 @@ import { spacing, radius, typography } from '@/styles/designSystem';
 
 interface BlockRendererProps {
   block: PostBlock;
+  isLocked?: boolean;
+  isPreview?: boolean;
 }
 
 const styles = StyleSheet.create({
@@ -25,25 +27,25 @@ const styles = StyleSheet.create({
   },
 });
 
-export function BlockRenderer({ block }: BlockRendererProps) {
-  console.log('Rendering block:', block.type, block.order);
+export function BlockRenderer({ block, isLocked = false, isPreview = false }: BlockRendererProps) {
+  console.log('Rendering block:', block.type, block.order, 'locked:', isLocked, 'preview:', isPreview);
 
   try {
     switch (block.type) {
       case 'text':
-        return <TextBlock data={block.data} />;
+        return <TextBlock data={block.data} isLocked={isLocked} isPreview={isPreview} />;
       
       case 'image':
-        return <ImageBlock data={block.data} />;
+        return <ImageBlock data={block.data} isLocked={isLocked} />;
       
       case 'gallery':
-        return <GalleryBlock data={block.data} />;
+        return <GalleryBlock data={block.data} isLocked={isLocked} />;
       
       case 'html':
-        return <HtmlBlock data={block.data} />;
+        return <HtmlBlock data={block.data} isLocked={isLocked} isPreview={isPreview} />;
       
       case 'map':
-        return <MapBlock data={block.data} />;
+        return <MapBlock data={block.data} isLocked={isLocked} />;
       
       default:
         console.warn('Unknown block type:', block.type);

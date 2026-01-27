@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { View, Image, Text, StyleSheet, ImageSourcePropType } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { spacing, radius, typography } from '@/styles/designSystem';
 
 interface ImageBlockProps {
@@ -8,17 +9,28 @@ interface ImageBlockProps {
     url: string;
     caption?: string;
   };
+  isLocked?: boolean;
 }
 
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    position: 'relative',
   },
   image: {
     width: '100%',
     height: 250,
     borderRadius: radius.lg,
     backgroundColor: '#f0f0f0',
+  },
+  blurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
   },
   caption: {
     marginTop: spacing.sm,
@@ -36,7 +48,7 @@ function resolveImageSource(source: string | number | ImageSourcePropType | unde
   return source as ImageSourcePropType;
 }
 
-export function ImageBlock({ data }: ImageBlockProps) {
+export function ImageBlock({ data, isLocked = false }: ImageBlockProps) {
   const imageUrl = data.url;
   const caption = data.caption;
 
@@ -47,6 +59,11 @@ export function ImageBlock({ data }: ImageBlockProps) {
         style={styles.image}
         resizeMode="cover"
       />
+      {isLocked && (
+        <View style={styles.blurOverlay}>
+          <BlurView intensity={80} style={{ flex: 1 }} tint="light" />
+        </View>
+      )}
       {caption && <Text style={styles.caption}>{caption}</Text>}
     </View>
   );

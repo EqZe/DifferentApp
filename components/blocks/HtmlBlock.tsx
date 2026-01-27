@@ -2,23 +2,35 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { BlurView } from 'expo-blur';
 
 interface HtmlBlockProps {
   data: {
     content: string;
   };
+  isLocked?: boolean;
+  isPreview?: boolean;
 }
 
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    position: 'relative',
   },
   webview: {
     backgroundColor: 'transparent',
   },
+  blurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+  },
 });
 
-export function HtmlBlock({ data }: HtmlBlockProps) {
+export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlockProps) {
   const [webViewHeight, setWebViewHeight] = useState(200);
   
   const htmlContent = data.content;
@@ -97,6 +109,11 @@ export function HtmlBlock({ data }: HtmlBlockProps) {
           }, 100);
         `}
       />
+      {isLocked && (
+        <View style={styles.blurOverlay}>
+          <BlurView intensity={60} style={{ flex: 1 }} tint="light" />
+        </View>
+      )}
     </View>
   );
 }

@@ -12,6 +12,7 @@ import {
   ImageSourcePropType,
   useColorScheme,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -134,8 +135,9 @@ export default function PostDetailScreen() {
   const isLocked = !isPublic && !user?.hasContract;
   const blocks = post.blocks || [];
   
-  const visibleBlocks = isLocked ? blocks.slice(0, 2) : blocks;
-  const hasMoreBlocks = isLocked && blocks.length > 2;
+  const previewBlockCount = 2;
+  const visibleBlocks = isLocked ? blocks.slice(0, previewBlockCount) : blocks;
+  const hasMoreBlocks = isLocked && blocks.length > previewBlockCount;
 
   return (
     <>
@@ -245,106 +247,83 @@ export default function PostDetailScreen() {
 
             {/* Article Body - Blocks */}
             <View style={styles.articleBody}>
-              {visibleBlocks.map((block, index) => (
-                <View key={block.id} style={styles.blockWrapper}>
-                  <BlockRenderer block={block} />
-                </View>
-              ))}
+              {visibleBlocks.map((block, index) => {
+                const isTextOrHtml = block.type === 'text' || block.type === 'html';
+                const isPreviewBlock = isLocked && index < previewBlockCount;
+                
+                return (
+                  <View key={block.id} style={styles.blockWrapper}>
+                    <BlockRenderer 
+                      block={block} 
+                      isLocked={isLocked}
+                      isPreview={isPreviewBlock && isTextOrHtml}
+                    />
+                  </View>
+                );
+              })}
             </View>
 
-            {/* Locked Content Overlay - Premium Design */}
+            {/* Locked Content Message & CTA */}
             {isLocked && hasMoreBlocks && (
-              <View style={styles.lockedOverlayContainer}>
-                {/* Smooth Gradient Fade */}
+              <View style={styles.lockedContentContainer}>
+                {/* Gradient Fade */}
                 <LinearGradient
                   colors={[
                     'transparent',
-                    isDark ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.5)',
-                    isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                    isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                    isDark ? 'rgba(15, 23, 42, 0.3)' : 'rgba(255, 255, 255, 0.3)',
+                    isDark ? 'rgba(15, 23, 42, 0.6)' : 'rgba(255, 255, 255, 0.6)',
+                    isDark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
                     isDark ? '#0F172A' : '#FFFFFF',
                   ]}
-                  style={styles.fadeGradient}
+                  style={styles.contentFadeGradient}
                 />
                 
-                {/* Premium Lock Card */}
-                <View style={[
-                  styles.premiumLockCard,
-                  { backgroundColor: colors.surface },
-                  isDark && styles.premiumLockCardDark,
-                ]}>
-                  {/* Lock Icon with Glow */}
-                  <View style={styles.lockIconWrapper}>
+                {/* Lock Message Card */}
+                <View style={[styles.lockMessageCard, { backgroundColor: colors.surface }]}>
+                  {/* Lock Icon */}
+                  <View style={styles.lockIconContainer}>
                     <View style={[styles.lockIconGlow, { backgroundColor: designColors.secondaryBg }]} />
                     <View style={[styles.lockIconCircle, { backgroundColor: designColors.secondary }]}>
                       <IconSymbol
                         ios_icon_name="lock.fill"
                         android_material_icon_name="lock"
-                        size={28}
+                        size={24}
                         color="#FFFFFF"
                       />
                     </View>
                   </View>
                   
                   {/* Lock Message */}
-                  <Text style={[styles.lockTitle, { color: colors.text }]}>
-                    תוכן זה זמין ללקוחות בלבד
+                  <Text style={[styles.lockMessageText, { color: colors.textSecondary }]}>
+                    תוכן זה זמין לאחר חתימת חוזה
                   </Text>
                   
-                  <Text style={[styles.lockDescription, { color: colors.textSecondary }]}>
-                    כדי לצפות בתוכן המלא ולקבל גישה לכל המידע והליווי האישי,
-                    יש לחתום על חוזה עם החברה.
-                  </Text>
+                  {/* CTA Button */}
+                  <TouchableOpacity 
+                    style={[styles.ctaButton, { backgroundColor: designColors.secondary }]}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.ctaButtonText}>
+                      חתום חוזה כדי לפתוח את הפוסט
+                    </Text>
+                    <IconSymbol
+                      ios_icon_name="arrow.left"
+                      android_material_icon_name="arrow-back"
+                      size={20}
+                      color="#FFFFFF"
+                    />
+                  </TouchableOpacity>
                   
-                  {/* Features List */}
-                  <View style={styles.featuresList}>
-                    <View style={styles.featureRow}>
-                      <IconSymbol
-                        ios_icon_name="checkmark.circle.fill"
-                        android_material_icon_name="check-circle"
-                        size={20}
-                        color={designColors.success}
-                      />
-                      <Text style={[styles.featureText, { color: colors.textSecondary }]}>
-                        גישה מלאה לכל התכנים והמדריכים
-                      </Text>
-                    </View>
-                    
-                    <View style={styles.featureRow}>
-                      <IconSymbol
-                        ios_icon_name="checkmark.circle.fill"
-                        android_material_icon_name="check-circle"
-                        size={20}
-                        color={designColors.success}
-                      />
-                      <Text style={[styles.featureText, { color: colors.textSecondary }]}>
-                        ליווי אישי לאורך כל התהליך
-                      </Text>
-                    </View>
-                    
-                    <View style={styles.featureRow}>
-                      <IconSymbol
-                        ios_icon_name="checkmark.circle.fill"
-                        android_material_icon_name="check-circle"
-                        size={20}
-                        color={designColors.success}
-                      />
-                      <Text style={[styles.featureText, { color: colors.textSecondary }]}>
-                        תמיכה ועדכונים שוטפים
-                      </Text>
-                    </View>
-                  </View>
-                  
-                  {/* Contact Info */}
-                  <View style={[styles.contactInfo, { backgroundColor: colors.backgroundSecondary }]}>
+                  {/* Additional Info */}
+                  <View style={[styles.infoBox, { backgroundColor: colors.backgroundSecondary }]}>
                     <IconSymbol
                       ios_icon_name="info.circle"
                       android_material_icon_name="info"
-                      size={18}
+                      size={16}
                       color={designColors.primary}
                     />
-                    <Text style={[styles.contactText, { color: colors.textSecondary }]}>
-                      פנה למנהל המערכת לפרטים נוספים
+                    <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+                      פנה למנהל המערכת לפרטים נוספים על חתימת חוזה
                     </Text>
                   </View>
                 </View>
@@ -494,7 +473,7 @@ const styles = StyleSheet.create({
     marginVertical: spacing.lg,
   },
   
-  // Article Body - FIXED: Better spacing between blocks
+  // Article Body
   articleBody: {
     marginBottom: spacing.xl,
   },
@@ -502,87 +481,87 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   
-  // Locked Overlay - Premium Design
-  lockedOverlayContainer: {
+  // Locked Content Container
+  lockedContentContainer: {
     position: 'relative',
-    marginTop: -spacing.xxxl * 2,
-    paddingTop: spacing.xxxl * 2,
+    marginTop: -spacing.xxxl,
+    paddingTop: spacing.xxxl,
   },
-  fadeGradient: {
+  contentFadeGradient: {
     position: 'absolute',
     top: 0,
     left: -layout.screenPadding,
     right: -layout.screenPadding,
-    height: 200,
+    height: 120,
   },
-  premiumLockCard: {
+  
+  // Lock Message Card
+  lockMessageCard: {
     borderRadius: radius.xl,
     padding: spacing.xl,
     alignItems: 'center',
-    ...shadows.xl,
+    ...shadows.lg,
   },
-  premiumLockCardDark: {
-    borderWidth: 1,
-    borderColor: designColors.dark.border,
-  },
-  lockIconWrapper: {
+  lockIconContainer: {
     position: 'relative',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   lockIconGlow: {
     position: 'absolute',
-    width: 100,
-    height: 100,
+    width: 70,
+    height: 70,
     borderRadius: radius.full,
     opacity: 0.3,
-    top: -10,
-    left: -10,
+    top: -5,
+    left: -5,
   },
   lockIconCircle: {
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
     borderRadius: radius.full,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  lockTitle: {
-    ...typography.h2,
+  lockMessageText: {
+    ...typography.h3,
     textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  lockDescription: {
-    ...typography.body,
-    textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: spacing.xl,
-  },
-  featuresList: {
-    width: '100%',
-    gap: spacing.md,
     marginBottom: spacing.lg,
+    fontWeight: '600',
   },
-  featureRow: {
+  
+  // CTA Button
+  ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-  },
-  featureText: {
-    ...typography.body,
-    flex: 1,
-    textAlign: 'right',
-  },
-  contactInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.full,
+    width: '100%',
+    marginBottom: spacing.md,
+    ...shadows.md,
+  },
+  ctaButtonText: {
+    ...typography.button,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  
+  // Info Box
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.md,
     width: '100%',
   },
-  contactText: {
-    ...typography.bodySmall,
+  infoText: {
+    ...typography.caption,
     flex: 1,
     textAlign: 'right',
+    lineHeight: 18,
   },
 });

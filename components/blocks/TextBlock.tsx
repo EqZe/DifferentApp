@@ -2,23 +2,39 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface TextBlockProps {
   data: {
     html: string;
   };
+  isLocked?: boolean;
+  isPreview?: boolean;
 }
 
 const styles = StyleSheet.create({
   container: {
     width: '100%',
+    position: 'relative',
   },
   webview: {
     backgroundColor: 'transparent',
   },
+  previewContainer: {
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    zIndex: 10,
+  },
 });
 
-export function TextBlock({ data }: TextBlockProps) {
+export function TextBlock({ data, isLocked = false, isPreview = false }: TextBlockProps) {
   const [webViewHeight, setWebViewHeight] = useState(200);
   
   const htmlContent = data.html;
@@ -126,8 +142,11 @@ export function TextBlock({ data }: TextBlockProps) {
     }
   };
 
+  const shouldTruncate = isLocked && isPreview;
+  const displayHeight = shouldTruncate ? Math.min(webViewHeight, 120) : webViewHeight;
+
   return (
-    <View style={[styles.container, { height: webViewHeight }]}>
+    <View style={[styles.container, shouldTruncate && styles.previewContainer, { height: displayHeight }]}>
       <WebView
         source={{ html: htmlTemplate }}
         style={styles.webview}
@@ -144,6 +163,13 @@ export function TextBlock({ data }: TextBlockProps) {
           }, 100);
         `}
       />
+      {shouldTruncate && (
+        <LinearGradient
+          colors={['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 1)']}
+          style={styles.gradientOverlay}
+          pointerEvents="none"
+        />
+      )}
     </View>
   );
 }

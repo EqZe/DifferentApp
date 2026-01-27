@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { IconSymbol } from '@/components/IconSymbol';
 import { spacing, radius, typography } from '@/styles/designSystem';
 
@@ -10,6 +11,7 @@ interface MapBlockProps {
     longitude?: number;
     address?: string;
   };
+  isLocked?: boolean;
 }
 
 const styles = StyleSheet.create({
@@ -21,6 +23,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
     alignItems: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  blurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
   },
   icon: {
     marginBottom: spacing.md,
@@ -45,7 +57,7 @@ const styles = StyleSheet.create({
   },
 });
 
-export function MapBlock({ data }: MapBlockProps) {
+export function MapBlock({ data, isLocked = false }: MapBlockProps) {
   const address = data.address;
 
   return (
@@ -62,6 +74,11 @@ export function MapBlock({ data }: MapBlockProps) {
         react-native-maps אינו נתמך כרגע ב-Natively
       </Text>
       {address && <Text style={styles.address}>{address}</Text>}
+      {isLocked && (
+        <View style={styles.blurOverlay}>
+          <BlurView intensity={60} style={{ flex: 1 }} tint="light" />
+        </View>
+      )}
     </View>
   );
 }
