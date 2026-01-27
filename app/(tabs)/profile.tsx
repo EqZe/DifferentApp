@@ -85,7 +85,6 @@ export default function ProfileScreen() {
               </View>
             </View>
             <Text style={styles.userName}>{user.fullName}</Text>
-            <Text style={styles.userCity}>{user.city}</Text>
           </View>
         </LinearGradient>
 
