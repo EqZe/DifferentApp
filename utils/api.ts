@@ -74,71 +74,110 @@ export const api = {
   signUp: async (email: string, password: string, fullName: string, city: string, phoneNumber?: string): Promise<UserFrontend> => {
     console.log('API: Signing up user', { email, fullName, city });
     
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          // Skip email confirmation - user can sign in immediately
+          emailRedirectTo: undefined,
+        },
+      });
 
-    if (authError) {
-      console.error('API: Sign up failed', authError);
-      throw new Error(authError.message || 'Sign up failed');
+      if (authError) {
+        console.error('API: Sign up auth error', authError);
+        
+        // Handle specific error cases
+        if (authError.message.includes('rate limit')) {
+          throw new Error('יותר מדי ניסיונות הרשמה. אנא נסה שוב בעוד מספר דקות.');
+        }
+        if (authError.message.includes('already registered')) {
+          throw new Error('המייל כבר רשום במערכת. נסה להתחבר במקום.');
+        }
+        
+        throw new Error(authError.message || 'שגיאה בהרשמה');
+      }
+
+      if (!authData.user) {
+        throw new Error('לא התקבל משתמש מהשרת');
+      }
+
+      console.log('API: Sign up successful, creating user profile in database');
+      
+      // Create the user profile in the users table
+      const { data: userData, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          auth_user_id: authData.user.id,
+          full_name: fullName,
+          city,
+          phone_number: phoneNumber || null,
+          email: email,
+          has_contract: false,
+          travel_date: null,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('API: Failed to create user profile', insertError);
+        
+        // If profile creation fails, try to clean up the auth user
+        await supabase.auth.signOut();
+        
+        if (insertError.message.includes('duplicate key')) {
+          throw new Error('המשתמש כבר קיים במערכת');
+        }
+        
+        throw new Error(insertError.message || 'שגיאה ביצירת פרופיל משתמש');
+      }
+
+      console.log('API: User profile created successfully', userData);
+      
+      const camelData = toCamelCase(userData);
+      return {
+        ...camelData,
+        id: camelData.authUserId,
+      };
+    } catch (error: any) {
+      console.error('API: Sign up failed with error:', error);
+      throw error;
     }
-
-    if (!authData.user) {
-      throw new Error('No user returned from sign up');
-    }
-
-    console.log('API: Sign up successful, creating user profile in database');
-    
-    // Create the user profile in the users table
-    const { data: userData, error: insertError } = await supabase
-      .from('users')
-      .insert({
-        auth_user_id: authData.user.id,
-        full_name: fullName,
-        city,
-        phone_number: phoneNumber || null,
-        email: email,
-        has_contract: false,
-        travel_date: null,
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('API: Failed to create user profile', insertError);
-      throw new Error(insertError.message || 'Failed to create user profile');
-    }
-
-    console.log('API: User profile created successfully', userData);
-    
-    const camelData = toCamelCase(userData);
-    return {
-      ...camelData,
-      id: camelData.authUserId,
-    };
   },
 
   signIn: async (email: string, password: string): Promise<UserFrontend> => {
     console.log('API: Signing in user', email);
     
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      console.error('API: Sign in failed', authError);
-      throw new Error(authError.message || 'Sign in failed');
+      if (authError) {
+        console.error('API: Sign in failed', authError);
+        
+        if (authError.message.includes('Invalid login credentials')) {
+          throw new Error('אימייל או סיסמה שגויים');
+        }
+        if (authError.message.includes('Email not confirmed')) {
+          throw new Error('יש לאמת את כתובת המייל לפני התחברות');
+        }
+        
+        throw new Error(authError.message || 'שגיאה בהתחברות');
+      }
+
+      if (!authData.user) {
+        throw new Error('לא התקבל משתמש מהשרת');
+      }
+
+      console.log('API: Sign in successful, fetching user profile');
+      const userData = await api.getUserByAuthId(authData.user.id);
+      return userData;
+    } catch (error: any) {
+      console.error('API: Sign in failed with error:', error);
+      throw error;
     }
-
-    if (!authData.user) {
-      throw new Error('No user returned from sign in');
-    }
-
-    console.log('API: Sign in successful, fetching user profile');
-    const userData = await api.getUserByAuthId(authData.user.id);
-    return userData;
   },
 
   signOut: async (): Promise<void> => {
@@ -146,7 +185,7 @@ export const api = {
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('API: Sign out failed', error);
-      throw new Error(error.message || 'Sign out failed');
+      throw new Error(error.message || 'שגיאה בהתנתקות');
     }
     console.log('API: Sign out successful');
   },
@@ -163,7 +202,7 @@ export const api = {
 
     if (error) {
       console.error('API: Get user failed', error);
-      throw new Error(error.message || 'Failed to get user');
+      throw new Error(error.message || 'שגיאה בטעינת פרטי משתמש');
     }
 
     console.log('API: User retrieved', data);
@@ -207,7 +246,7 @@ export const api = {
 
     if (error) {
       console.error('API: Update user failed', error);
-      throw new Error(error.message || 'Failed to update user');
+      throw new Error(error.message || 'שגיאה בעדכון פרטי משתמש');
     }
 
     console.log('API: User updated', data);
@@ -230,7 +269,7 @@ export const api = {
 
     if (error) {
       console.error('API: Get posts failed', error);
-      throw new Error(error.message || 'Failed to get posts');
+      throw new Error(error.message || 'שגיאה בטעינת פוסטים');
     }
 
     console.log('API: Posts retrieved', data?.length || 0, 'posts (public + contract_only)');
@@ -253,7 +292,7 @@ export const api = {
         return null;
       }
       console.error('API: Get post failed', error);
-      throw new Error(error.message || 'Failed to get post');
+      throw new Error(error.message || 'שגיאה בטעינת פוסט');
     }
 
     console.log('API: Post retrieved', data);
@@ -271,7 +310,7 @@ export const api = {
 
     if (error) {
       console.error('API: Get post blocks failed', error);
-      throw new Error(error.message || 'Failed to get post blocks');
+      throw new Error(error.message || 'שגיאה בטעינת תוכן פוסט');
     }
 
     console.log('API: Post blocks retrieved', data?.length || 0);
@@ -304,7 +343,7 @@ export const api = {
 
     if (error) {
       console.error('API: Get tasks failed', error);
-      throw new Error(error.message || 'Failed to get tasks');
+      throw new Error(error.message || 'שגיאה בטעינת משימות');
     }
 
     console.log('API: Tasks retrieved', data?.length || 0);
@@ -336,7 +375,7 @@ export const api = {
 
     if (error) {
       console.error('API: Create task failed', error);
-      throw new Error(error.message || 'Failed to create task');
+      throw new Error(error.message || 'שגיאה ביצירת משימה');
     }
 
     console.log('API: Task created', data);
@@ -359,7 +398,7 @@ export const api = {
 
     if (error) {
       console.error('API: Complete task failed', error);
-      throw new Error(error.message || 'Failed to complete task');
+      throw new Error(error.message || 'שגיאה בסימון משימה כהושלמה');
     }
 
     console.log('API: Task completed', data);
@@ -382,7 +421,7 @@ export const api = {
 
     if (error) {
       console.error('API: Update task reminder failed', error);
-      throw new Error(error.message || 'Failed to update task reminder');
+      throw new Error(error.message || 'שגיאה בעדכון תזכורת');
     }
 
     console.log('API: Task reminder updated', data);
@@ -403,7 +442,7 @@ export const api = {
 
     if (error) {
       console.error('API: Delete task failed', error);
-      throw new Error(error.message || 'Failed to delete task');
+      throw new Error(error.message || 'שגיאה במחיקת משימה');
     }
 
     console.log('API: Task deleted');
