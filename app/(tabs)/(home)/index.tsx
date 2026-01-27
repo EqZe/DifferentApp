@@ -33,6 +33,19 @@ function resolveImageSource(source: string | number | ImageSourcePropType | unde
   return source as ImageSourcePropType;
 }
 
+// Helper function to get time-based greeting in Hebrew
+function getTimeBasedGreeting(): string {
+  const hour = new Date().getHours();
+  
+  if (hour >= 5 && hour < 12) {
+    return 'בוקר טוב';
+  } else if (hour >= 12 && hour < 18) {
+    return 'צהריים טובים';
+  } else {
+    return 'ערב טוב';
+  }
+}
+
 export default function HomeScreen() {
   const { user } = useUser();
   const router = useRouter();
@@ -43,6 +56,7 @@ export default function HomeScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [greeting, setGreeting] = useState(getTimeBasedGreeting());
 
   const loadPosts = useCallback(async () => {
     try {
@@ -60,11 +74,15 @@ export default function HomeScreen() {
 
   useEffect(() => {
     loadPosts();
+    // Update greeting when component mounts
+    setGreeting(getTimeBasedGreeting());
   }, [loadPosts]);
 
   const onRefresh = () => {
     console.log('HomeScreen: Refreshing posts');
     setRefreshing(true);
+    // Update greeting on refresh
+    setGreeting(getTimeBasedGreeting());
     loadPosts();
   };
 
@@ -83,18 +101,13 @@ export default function HomeScreen() {
     );
   }
 
-  const welcomeText = user?.hasSignedAgreement 
-    ? 'ברוכים הבאים למערכת הליווי'
-    : 'ברוכים הבאים';
-  const userName = user?.fullName || '';
-  const personalGreeting = user?.hasSignedAgreement 
-    ? `${userName}, שמחים שאתה איתנו!`
-    : `${userName}`;
+  const firstName = user?.fullName?.split(' ')[0] || '';
+  const personalizedGreeting = firstName ? `${greeting}, ${firstName}` : greeting;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <SafeAreaView style={styles.container} edges={['top']}>
-        {/* Modern Header with Company Logo */}
+        {/* Minimal Modern Header - Reduced Size */}
         <LinearGradient
           colors={[designColors.primary, designColors.primaryDark]}
           start={{ x: 0, y: 0 }}
@@ -102,7 +115,7 @@ export default function HomeScreen() {
           style={styles.header}
         >
           <View style={styles.headerContent}>
-            {/* Company Logo */}
+            {/* Company Logo - Smaller */}
             <View style={styles.logoContainer}>
               <Image
                 source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
@@ -111,15 +124,8 @@ export default function HomeScreen() {
               />
             </View>
             
-            {/* Welcome Text */}
-            <Text style={styles.welcomeText}>{welcomeText}</Text>
-            
-            {/* Personal Greeting */}
-            {user && (
-              <View style={styles.userGreeting}>
-                <Text style={styles.userGreetingText}>{personalGreeting}</Text>
-              </View>
-            )}
+            {/* Dynamic Time-Based Greeting */}
+            <Text style={styles.greetingText}>{personalizedGreeting}</Text>
           </View>
         </LinearGradient>
 
@@ -136,26 +142,6 @@ export default function HomeScreen() {
             />
           }
         >
-          {/* Section Header */}
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
-              <View style={[styles.sectionIconCircle, { backgroundColor: designColors.primaryBg }]}>
-                <IconSymbol
-                  ios_icon_name="doc.text.fill"
-                  android_material_icon_name="article"
-                  size={24}
-                  color={designColors.primary}
-                />
-              </View>
-              <View style={styles.sectionTitleContent}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>תוכן ומידע</Text>
-                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-                  כל המידע החשוב שלך במקום אחד
-                </Text>
-              </View>
-            </View>
-          </View>
-
           {/* Posts Grid */}
           {posts.length === 0 ? (
             <View style={styles.emptyState}>
@@ -163,7 +149,7 @@ export default function HomeScreen() {
                 <IconSymbol
                   ios_icon_name="doc.text"
                   android_material_icon_name="description"
-                  size={56}
+                  size={48}
                   color={colors.textTertiary}
                 />
               </View>
@@ -204,7 +190,7 @@ export default function HomeScreen() {
                               <IconSymbol
                                 ios_icon_name="lock.fill"
                                 android_material_icon_name="lock"
-                                size={28}
+                                size={24}
                                 color="#FFFFFF"
                               />
                             </View>
@@ -220,7 +206,7 @@ export default function HomeScreen() {
                             <IconSymbol
                               ios_icon_name={isPublic ? 'globe' : 'lock.fill'}
                               android_material_icon_name={isPublic ? 'public' : 'lock'}
-                              size={12}
+                              size={10}
                               color="#FFFFFF"
                             />
                             <Text style={styles.imageBadgeText}>
@@ -244,7 +230,7 @@ export default function HomeScreen() {
                           <IconSymbol
                             ios_icon_name="info.circle.fill"
                             android_material_icon_name="info"
-                            size={16}
+                            size={14}
                             color={designColors.locked}
                           />
                           <Text style={styles.lockedMessageText}>
@@ -259,7 +245,7 @@ export default function HomeScreen() {
                           <IconSymbol
                             ios_icon_name="chevron.left"
                             android_material_icon_name="chevron-left"
-                            size={18}
+                            size={16}
                             color={designColors.primary}
                           />
                           <Text style={[styles.readMoreText, { color: designColors.primary }]}>
@@ -288,48 +274,42 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  
+  // Minimal Header - Reduced Size
   header: {
-    paddingTop: Platform.OS === 'android' ? spacing.xl : spacing.md,
-    paddingBottom: spacing.xxl,
+    paddingTop: Platform.OS === 'android' ? spacing.lg : spacing.sm,
+    paddingBottom: spacing.lg,
     paddingHorizontal: layout.screenPadding,
   },
   headerContent: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.lg,
-    padding: spacing.md,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    padding: spacing.xs,
   },
   logo: {
     width: '100%',
     height: '100%',
   },
-  welcomeText: {
+  
+  // Dynamic Greeting - Prominent Typography
+  greetingText: {
     ...typography.h2,
     color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: spacing.sm,
+    textAlign: 'right',
     fontWeight: '700',
+    flex: 1,
+    marginRight: spacing.md,
   },
-  userGreeting: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: radius.full,
-  },
-  userGreetingText: {
-    ...typography.bodyLarge,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
+  
   content: {
     flex: 1,
   },
@@ -338,40 +318,15 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: 120,
   },
-  sectionHeader: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  postsGrid: {
     gap: spacing.md,
   },
-  sectionIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sectionTitleContent: {
-    flex: 1,
-  },
-  sectionTitle: {
-    ...typography.h3,
-    marginBottom: spacing.xs / 2,
-  },
-  sectionSubtitle: {
-    ...typography.bodySmall,
-  },
-  postsGrid: {
-    gap: spacing.lg,
-  },
   
-  // Post Card - Modern Design with Shadow
+  // Post Card - Clean Modern Design with Shadow
   postCard: {
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     overflow: 'hidden',
-    ...shadows.lg,
+    ...shadows.md,
   },
   postCardDark: {
     borderWidth: 1,
@@ -379,7 +334,7 @@ const styles = StyleSheet.create({
   },
   coverImageContainer: {
     width: '100%',
-    height: 220,
+    height: 180,
     backgroundColor: designColors.light.backgroundSecondary,
     position: 'relative',
   },
@@ -393,27 +348,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   lockIconContainer: {
-    width: 72,
-    height: 72,
+    width: 56,
+    height: 56,
     borderRadius: radius.full,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.xl,
+    ...shadows.lg,
   },
   imageBadgeContainer: {
     position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
+    top: spacing.sm,
+    right: spacing.sm,
   },
   imageBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
+    gap: spacing.xs / 2,
+    paddingVertical: spacing.xs / 2,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.full,
-    ...shadows.md,
+    ...shadows.sm,
   },
   publicImageBadge: {
     backgroundColor: 'rgba(39, 132, 245, 0.95)',
@@ -425,32 +380,32 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 11,
+    fontSize: 10,
   },
   
   // Card Content - RTL Optimized
   postCardContent: {
-    padding: spacing.lg,
+    padding: spacing.md,
   },
   postTitle: {
     ...typography.h4,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     textAlign: 'right',
-    lineHeight: 28,
+    lineHeight: 26,
     fontWeight: '600',
   },
   lockedMessage: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
     backgroundColor: designColors.lockedBg,
-    borderRadius: radius.md,
-    marginBottom: spacing.md,
+    borderRadius: radius.sm,
+    marginBottom: spacing.sm,
   },
   lockedMessageText: {
-    ...typography.labelSmall,
+    ...typography.caption,
     color: designColors.locked,
     flex: 1,
     textAlign: 'right',
@@ -464,10 +419,10 @@ const styles = StyleSheet.create({
   readMoreContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.xs / 2,
   },
   readMoreText: {
-    ...typography.label,
+    ...typography.labelSmall,
     fontWeight: '700',
   },
   
@@ -477,16 +432,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxxl,
   },
   emptyIconContainer: {
-    width: 120,
-    height: 120,
+    width: 96,
+    height: 96,
     borderRadius: radius.full,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   emptyTitle: {
     ...typography.h3,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     fontWeight: '600',
   },
   emptySubtitle: {
