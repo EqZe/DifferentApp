@@ -28,10 +28,11 @@ function toSnakeCase<T extends Record<string, any>>(obj: T): any {
 
 // Frontend-compatible interfaces (camelCase)
 export interface UserFrontend {
-  id: string;
+  id: string; // This is auth_user_id
   fullName: string;
   city: string;
-  phoneNumber: string;
+  phoneNumber: string | null;
+  email: string | null;
   hasContract: boolean;
   travelDate: string | null;
   createdAt: string;
@@ -59,7 +60,7 @@ export interface PostFrontend {
 
 export interface TaskFrontend {
   id: string;
-  userId: string;
+  userId: string; // This is auth_user_id
   title: string;
   description: string | null;
   dueDate: string | null;
@@ -69,59 +70,81 @@ export interface TaskFrontend {
 }
 
 export const api = {
+  // Auth endpoints
+  signUp: async (email: string, password: string, fullName: string, city: string, phoneNumber?: string): Promise<UserFrontend> => {
+    console.log('API: Signing up user', { email, fullName, city });
+    
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          city,
+          phone_number: phoneNumber || '',
+        },
+      },
+    });
+
+    if (authError) {
+      console.error('API: Sign up failed', authError);
+      throw new Error(authError.message || 'Sign up failed');
+    }
+
+    if (!authData.user) {
+      throw new Error('No user returned from sign up');
+    }
+
+    console.log('API: Sign up successful, fetching user profile');
+    
+    // Wait a moment for the trigger to create the profile
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Fetch the created user profile
+    const userData = await api.getUserByAuthId(authData.user.id);
+    return userData;
+  },
+
+  signIn: async (email: string, password: string): Promise<UserFrontend> => {
+    console.log('API: Signing in user', email);
+    
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (authError) {
+      console.error('API: Sign in failed', authError);
+      throw new Error(authError.message || 'Sign in failed');
+    }
+
+    if (!authData.user) {
+      throw new Error('No user returned from sign in');
+    }
+
+    console.log('API: Sign in successful, fetching user profile');
+    const userData = await api.getUserByAuthId(authData.user.id);
+    return userData;
+  },
+
+  signOut: async (): Promise<void> => {
+    console.log('API: Signing out user');
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('API: Sign out failed', error);
+      throw new Error(error.message || 'Sign out failed');
+    }
+    console.log('API: Sign out successful');
+  },
+
   // User endpoints
-  register: async (fullName: string, city: string, phoneNumber: string): Promise<UserFrontend> => {
-    console.log('API: Registering user', { fullName, city, phoneNumber });
-    
-    const { data, error } = await supabase
-      .from('users')
-      .insert({
-        full_name: fullName,
-        city,
-        phone_number: phoneNumber,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('API: Registration failed', error);
-      throw new Error(error.message || 'Registration failed');
-    }
-
-    console.log('API: Registration successful', data);
-    return toCamelCase(data);
-  },
-
-  getUserByPhone: async (phoneNumber: string): Promise<UserFrontend | null> => {
-    console.log('API: Getting user by phone', phoneNumber);
+  getUserByAuthId: async (authUserId: string): Promise<UserFrontend> => {
+    console.log('API: Getting user by auth ID', authUserId);
     
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('phone_number', phoneNumber)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // No rows returned
-        console.log('API: User not found with phone', phoneNumber);
-        return null;
-      }
-      console.error('API: Get user failed', error);
-      throw new Error(error.message || 'Failed to get user');
-    }
-
-    console.log('API: User retrieved', data);
-    return toCamelCase(data);
-  },
-
-  getUserById: async (userId: string): Promise<UserFrontend> => {
-    console.log('API: Getting user by ID', userId);
-    
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
+      .eq('auth_user_id', authUserId)
       .single();
 
     if (error) {
@@ -130,14 +153,19 @@ export const api = {
     }
 
     console.log('API: User retrieved', data);
-    return toCamelCase(data);
+    const camelData = toCamelCase(data);
+    // Map auth_user_id to id for frontend compatibility
+    return {
+      ...camelData,
+      id: camelData.authUserId,
+    };
   },
 
   updateUser: async (
-    userId: string,
-    updates: { hasContract?: boolean; travelDate?: string | null }
+    authUserId: string,
+    updates: { hasContract?: boolean; travelDate?: string | null; fullName?: string; city?: string; phoneNumber?: string }
   ): Promise<UserFrontend> => {
-    console.log('API: Updating user', { userId, updates });
+    console.log('API: Updating user', { authUserId, updates });
     
     const updateData: any = {};
     if (updates.hasContract !== undefined) {
@@ -146,11 +174,20 @@ export const api = {
     if (updates.travelDate !== undefined) {
       updateData.travel_date = updates.travelDate;
     }
+    if (updates.fullName !== undefined) {
+      updateData.full_name = updates.fullName;
+    }
+    if (updates.city !== undefined) {
+      updateData.city = updates.city;
+    }
+    if (updates.phoneNumber !== undefined) {
+      updateData.phone_number = updates.phoneNumber;
+    }
 
     const { data, error } = await supabase
       .from('users')
       .update(updateData)
-      .eq('id', userId)
+      .eq('auth_user_id', authUserId)
       .select()
       .single();
 
@@ -160,15 +197,17 @@ export const api = {
     }
 
     console.log('API: User updated', data);
-    return toCamelCase(data);
+    const camelData = toCamelCase(data);
+    return {
+      ...camelData,
+      id: camelData.authUserId,
+    };
   },
 
   // Posts endpoints
   getPosts: async (): Promise<PostFrontend[]> => {
     console.log('API: Getting ALL published posts (public and contract_only)');
     
-    // FIXED: Fetch ALL published posts regardless of visibility
-    // The homepage should show all posts, but contract_only posts will be locked
     const { data, error } = await supabase
       .from('posts')
       .select('*')
@@ -241,13 +280,13 @@ export const api = {
   },
 
   // Tasks endpoints
-  getTasks: async (userId: string): Promise<TaskFrontend[]> => {
-    console.log('API: Getting tasks for user', userId);
+  getTasks: async (authUserId: string): Promise<TaskFrontend[]> => {
+    console.log('API: Getting tasks for user', authUserId);
     
     const { data, error } = await supabase
       .from('tasks')
       .select('*')
-      .eq('user_id', userId);
+      .eq('auth_user_id', authUserId);
 
     if (error) {
       console.error('API: Get tasks failed', error);
@@ -255,19 +294,25 @@ export const api = {
     }
 
     console.log('API: Tasks retrieved', data?.length || 0);
-    return data?.map(toCamelCase) || [];
+    return data?.map((task) => {
+      const camelTask = toCamelCase(task);
+      return {
+        ...camelTask,
+        userId: camelTask.authUserId,
+      };
+    }) || [];
   },
 
   createTask: async (
-    userId: string,
+    authUserId: string,
     task: { title: string; description?: string | null; dueDate: string }
   ): Promise<TaskFrontend> => {
-    console.log('API: Creating task', { userId, task });
+    console.log('API: Creating task', { authUserId, task });
     
     const { data, error } = await supabase
       .from('tasks')
       .insert({
-        user_id: userId,
+        auth_user_id: authUserId,
         title: task.title,
         description: task.description || null,
         due_date: task.dueDate,
@@ -281,7 +326,11 @@ export const api = {
     }
 
     console.log('API: Task created', data);
-    return toCamelCase(data);
+    const camelTask = toCamelCase(data);
+    return {
+      ...camelTask,
+      userId: camelTask.authUserId,
+    };
   },
 
   completeTask: async (taskId: string): Promise<TaskFrontend> => {
@@ -300,7 +349,11 @@ export const api = {
     }
 
     console.log('API: Task completed', data);
-    return toCamelCase(data);
+    const camelTask = toCamelCase(data);
+    return {
+      ...camelTask,
+      userId: camelTask.authUserId,
+    };
   },
 
   updateTaskReminder: async (taskId: string, reminderSent: boolean): Promise<TaskFrontend> => {
@@ -319,7 +372,11 @@ export const api = {
     }
 
     console.log('API: Task reminder updated', data);
-    return toCamelCase(data);
+    const camelTask = toCamelCase(data);
+    return {
+      ...camelTask,
+      userId: camelTask.authUserId,
+    };
   },
 
   deleteTask: async (taskId: string): Promise<void> => {

@@ -1,11 +1,12 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import { supabase } from '@/lib/supabase';
+import type { Session } from '@supabase/supabase-js';
 import { api, type User } from '@/utils/api';
 
 interface UserContextType {
   user: User | null;
+  session: Session | null;
   setUser: (user: User | null) => void;
   refreshUser: () => Promise<void>;
   isLoading: boolean;
@@ -15,89 +16,78 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadUser();
+    console.log('UserContext: Initializing Supabase Auth session');
+    
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('UserContext: Initial session', session ? 'found' : 'not found');
+      setSession(session);
+      if (session) {
+        loadUserProfile(session.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('UserContext: Auth state changed', _event, session ? 'session exists' : 'no session');
+      setSession(session);
+      
+      if (session) {
+        loadUserProfile(session.user.id);
+      } else {
+        setUserState(null);
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const loadUser = async () => {
+  const loadUserProfile = async (authUserId: string) => {
     try {
-      console.log('Loading user from storage...');
-      let userJson: string | null = null;
-      
-      // Use localStorage for web, SecureStore for native
-      if (Platform.OS === 'web') {
-        userJson = localStorage.getItem('user');
-      } else {
-        userJson = await SecureStore.getItemAsync('user');
-      }
-      
-      if (userJson) {
-        const userData = JSON.parse(userJson);
-        console.log('User loaded:', userData.fullName);
-        setUserState(userData);
-      } else {
-        console.log('No user found in storage');
-      }
+      console.log('UserContext: Loading user profile for auth user', authUserId);
+      const userData = await api.getUserByAuthId(authUserId);
+      console.log('UserContext: User profile loaded', userData.fullName, 'hasContract:', userData.hasContract);
+      setUserState(userData);
     } catch (error) {
-      console.error('Error loading user:', error);
+      console.error('UserContext: Error loading user profile:', error);
+      setUserState(null);
     } finally {
       setIsLoading(false);
     }
   };
 
   const setUser = async (userData: User | null) => {
-    try {
-      if (userData) {
-        console.log('Saving user to storage:', userData.fullName);
-        
-        // Use localStorage for web, SecureStore for native
-        if (Platform.OS === 'web') {
-          localStorage.setItem('user', JSON.stringify(userData));
-        } else {
-          await SecureStore.setItemAsync('user', JSON.stringify(userData));
-        }
-        
-        setUserState(userData);
-      } else {
-        console.log('Clearing user from storage');
-        
-        // Use localStorage for web, SecureStore for native
-        if (Platform.OS === 'web') {
-          localStorage.removeItem('user');
-        } else {
-          await SecureStore.deleteItemAsync('user');
-        }
-        
-        setUserState(null);
-      }
-    } catch (error) {
-      console.error('Error saving user:', error);
-    }
+    console.log('UserContext: setUser called', userData ? userData.fullName : 'null');
+    setUserState(userData);
   };
 
-  // FIXED: Add refreshUser function to fetch latest user data from database
   const refreshUser = async () => {
-    if (!user?.id) {
-      console.log('refreshUser: No user to refresh');
+    if (!session?.user?.id) {
+      console.log('UserContext: refreshUser - No session to refresh');
       return;
     }
 
     try {
-      console.log('refreshUser: Fetching latest user data from database for user', user.id);
-      const freshUserData = await api.getUserById(user.id);
-      console.log('refreshUser: User data refreshed, hasContract:', freshUserData.hasContract);
-      
-      // Update both state and storage
-      await setUser(freshUserData);
+      console.log('UserContext: Refreshing user data from database');
+      const freshUserData = await api.getUserByAuthId(session.user.id);
+      console.log('UserContext: User data refreshed, hasContract:', freshUserData.hasContract);
+      setUserState(freshUserData);
     } catch (error) {
-      console.error('refreshUser: Failed to refresh user data', error);
+      console.error('UserContext: Failed to refresh user data', error);
     }
   };
 
   return (
-    <UserContext.Provider value={{ user, setUser, refreshUser, isLoading }}>
+    <UserContext.Provider value={{ user, session, setUser, refreshUser, isLoading }}>
       {children}
     </UserContext.Provider>
   );
