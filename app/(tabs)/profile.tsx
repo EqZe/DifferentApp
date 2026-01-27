@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   useColorScheme,
   I18nManager,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -36,8 +37,28 @@ export default function ProfileScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const { user, setUser } = useUser();
+  const { user, setUser, refreshUser, session } = useUser();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Refresh user data when screen loads if user data seems incomplete
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (session && (!user || !user.fullName)) {
+        console.log('ProfileScreen: User data incomplete, refreshing...');
+        setIsRefreshing(true);
+        try {
+          await refreshUser();
+        } catch (error) {
+          console.error('ProfileScreen: Failed to refresh user data', error);
+        } finally {
+          setIsRefreshing(false);
+        }
+      }
+    };
+
+    loadUserData();
+  }, [session, user, refreshUser]);
 
   const handleLogout = async () => {
     console.log('User tapped Logout button');
@@ -45,30 +66,35 @@ export default function ProfileScreen() {
     
     try {
       await api.signOut();
-      await setUser(null);
+      setUser(null);
       console.log('User logged out successfully, redirecting to register');
       router.replace('/register');
     } catch (error) {
       console.error('Logout error:', error);
+      // Even if logout fails on backend, clear local state
+      setUser(null);
+      router.replace('/register');
     }
   };
 
-  if (!user) {
+  // Show loading state while user data is being fetched
+  if (!user || isRefreshing) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: designColors.background[isDark ? 'dark' : 'light'] }]} edges={['top']}>
         <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={designColors.primary.main} />
           <Text style={[styles.loadingText, { color: designColors.text[isDark ? 'dark' : 'light'] }]}>
-            טוען...
+            טוען פרטי משתמש...
           </Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const fullNameText = user.fullName;
+  const fullNameText = user.fullName || 'משתמש';
   const emailText = user.email || 'לא זמין';
   const phoneText = user.phoneNumber || 'לא זמין';
-  const cityText = user.city;
+  const cityText = user.city || 'לא זמין';
   const contractStatusText = user.hasContract ? 'יש חוזה' : 'אין חוזה';
   const travelDateText = formatDate(user.travelDate);
 
@@ -335,9 +361,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: spacing.md,
   },
   loadingText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
   scrollView: {
