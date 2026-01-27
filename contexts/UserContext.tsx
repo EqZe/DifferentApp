@@ -2,16 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-
-interface User {
-  id: string;
-  fullName: string;
-  city: string;
-  phoneNumber: string;
-  hasSignedAgreement: boolean;
-  travelDate: string | null;
-  createdAt: string;
-}
+import type { User } from '@/utils/api';
 
 interface UserContextType {
   user: User | null;

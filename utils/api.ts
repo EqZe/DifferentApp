@@ -1,9 +1,33 @@
 
-import Constants from 'expo-constants';
+import { supabase } from '@/lib/supabase';
+import type { User, Post, Task } from '@/lib/supabase';
 
-const BACKEND_URL = Constants.expoConfig?.extra?.backendUrl || 'https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev';
+// Helper function to convert snake_case to camelCase for frontend compatibility
+function toCamelCase<T extends Record<string, any>>(obj: T): any {
+  if (!obj) return obj;
+  
+  const camelCaseObj: any = {};
+  for (const key in obj) {
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    camelCaseObj[camelKey] = obj[key];
+  }
+  return camelCaseObj;
+}
 
-export interface User {
+// Helper function to convert camelCase to snake_case for database
+function toSnakeCase<T extends Record<string, any>>(obj: T): any {
+  if (!obj) return obj;
+  
+  const snakeCaseObj: any = {};
+  for (const key in obj) {
+    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    snakeCaseObj[snakeKey] = obj[key];
+  }
+  return snakeCaseObj;
+}
+
+// Frontend-compatible interfaces (camelCase)
+export interface UserFrontend {
   id: string;
   fullName: string;
   city: string;
@@ -13,7 +37,7 @@ export interface User {
   createdAt: string;
 }
 
-export interface Post {
+export interface PostFrontend {
   id: string;
   title: string;
   content: string;
@@ -26,7 +50,7 @@ export interface Post {
   createdAt: string;
 }
 
-export interface Task {
+export interface TaskFrontend {
   id: string;
   userId: string;
   title: string;
@@ -38,105 +62,124 @@ export interface Task {
 }
 
 export const api = {
-  // User endpoints (matching OpenAPI spec)
-  register: async (fullName: string, city: string, phoneNumber: string): Promise<User> => {
+  // User endpoints
+  register: async (fullName: string, city: string, phoneNumber: string): Promise<UserFrontend> => {
     console.log('API: Registering user', { fullName, city, phoneNumber });
-    const response = await fetch(`${BACKEND_URL}/api/users`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ fullName, city, phoneNumber }),
-    });
+    
+    const { data, error } = await supabase
+      .from('users')
+      .insert({
+        full_name: fullName,
+        city,
+        phone_number: phoneNumber,
+      })
+      .select()
+      .single();
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Registration failed' }));
+    if (error) {
       console.error('API: Registration failed', error);
       throw new Error(error.message || 'Registration failed');
     }
 
-    const data = await response.json();
     console.log('API: Registration successful', data);
-    return data;
+    return toCamelCase(data);
   },
 
-  getUserByPhone: async (phoneNumber: string): Promise<User | null> => {
+  getUserByPhone: async (phoneNumber: string): Promise<UserFrontend | null> => {
     console.log('API: Getting user by phone', phoneNumber);
-    const response = await fetch(`${BACKEND_URL}/api/users/phone/${phoneNumber}`);
+    
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('phone_number', phoneNumber)
+      .single();
 
-    if (response.status === 404) {
-      console.log('API: User not found with phone', phoneNumber);
-      return null;
-    }
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to get user' }));
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows returned
+        console.log('API: User not found with phone', phoneNumber);
+        return null;
+      }
       console.error('API: Get user failed', error);
       throw new Error(error.message || 'Failed to get user');
     }
 
-    const data = await response.json();
     console.log('API: User retrieved', data);
-    return data;
+    return toCamelCase(data);
   },
 
-  getUserById: async (userId: string): Promise<User> => {
+  getUserById: async (userId: string): Promise<UserFrontend> => {
     console.log('API: Getting user by ID', userId);
-    const response = await fetch(`${BACKEND_URL}/api/users/${userId}`);
+    
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to get user' }));
+    if (error) {
       console.error('API: Get user failed', error);
       throw new Error(error.message || 'Failed to get user');
     }
 
-    const data = await response.json();
     console.log('API: User retrieved', data);
-    return data;
+    return toCamelCase(data);
   },
 
   updateUser: async (
     userId: string,
     updates: { hasSignedAgreement?: boolean; travelDate?: string | null }
-  ): Promise<User> => {
+  ): Promise<UserFrontend> => {
     console.log('API: Updating user', { userId, updates });
-    const response = await fetch(`${BACKEND_URL}/api/users/${userId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
+    
+    const updateData: any = {};
+    if (updates.hasSignedAgreement !== undefined) {
+      updateData.has_signed_agreement = updates.hasSignedAgreement;
+    }
+    if (updates.travelDate !== undefined) {
+      updateData.travel_date = updates.travelDate;
+    }
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to update user' }));
+    const { data, error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
       console.error('API: Update user failed', error);
       throw new Error(error.message || 'Failed to update user');
     }
 
-    const data = await response.json();
     console.log('API: User updated', data);
-    return data;
+    return toCamelCase(data);
   },
 
   // Posts endpoints
-  getPosts: async (hasSignedAgreement?: boolean): Promise<Post[]> => {
+  getPosts: async (hasSignedAgreement?: boolean): Promise<PostFrontend[]> => {
     console.log('API: Getting posts', { hasSignedAgreement });
-    const url = hasSignedAgreement !== undefined 
-      ? `${BACKEND_URL}/api/posts?hasSignedAgreement=${hasSignedAgreement}`
-      : `${BACKEND_URL}/api/posts`;
     
-    const response = await fetch(url);
+    let query = supabase
+      .from('posts')
+      .select('*')
+      .order('order_index', { ascending: true });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to get posts' }));
+    // If hasSignedAgreement is false, only show pre-agreement posts
+    // If hasSignedAgreement is true, show all posts
+    if (hasSignedAgreement === false) {
+      query = query.eq('is_pre_agreement', true);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
       console.error('API: Get posts failed', error);
       throw new Error(error.message || 'Failed to get posts');
     }
 
-    const data = await response.json();
-    console.log('API: Posts retrieved', data.length);
-    return data;
+    console.log('API: Posts retrieved', data?.length || 0);
+    return data?.map(toCamelCase) || [];
   },
 
   createPost: async (post: {
@@ -148,56 +191,63 @@ export const api = {
     buttonLink?: string | null;
     isPreAgreement?: boolean;
     orderIndex?: number;
-  }): Promise<Post> => {
+  }): Promise<PostFrontend> => {
     console.log('API: Creating post', post);
-    const response = await fetch(`${BACKEND_URL}/api/posts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(post),
-    });
+    
+    const { data, error } = await supabase
+      .from('posts')
+      .insert({
+        title: post.title,
+        content: post.content,
+        image_url: post.imageUrl || null,
+        video_url: post.videoUrl || null,
+        button_text: post.buttonText || null,
+        button_link: post.buttonLink || null,
+        is_pre_agreement: post.isPreAgreement ?? true,
+        order_index: post.orderIndex ?? 0,
+      })
+      .select()
+      .single();
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to create post' }));
+    if (error) {
       console.error('API: Create post failed', error);
       throw new Error(error.message || 'Failed to create post');
     }
 
-    const data = await response.json();
     console.log('API: Post created', data);
-    return data;
+    return toCamelCase(data);
   },
 
-  updatePost: async (postId: string, updates: Partial<Post>): Promise<Post> => {
+  updatePost: async (postId: string, updates: Partial<PostFrontend>): Promise<PostFrontend> => {
     console.log('API: Updating post', { postId, updates });
-    const response = await fetch(`${BACKEND_URL}/api/posts/${postId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
+    
+    const updateData = toSnakeCase(updates);
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to update post' }));
+    const { data, error } = await supabase
+      .from('posts')
+      .update(updateData)
+      .eq('id', postId)
+      .select()
+      .single();
+
+    if (error) {
       console.error('API: Update post failed', error);
       throw new Error(error.message || 'Failed to update post');
     }
 
-    const data = await response.json();
     console.log('API: Post updated', data);
-    return data;
+    return toCamelCase(data);
   },
 
   deletePost: async (postId: string): Promise<void> => {
     console.log('API: Deleting post', postId);
-    const response = await fetch(`${BACKEND_URL}/api/posts/${postId}`, {
-      method: 'DELETE',
-    });
+    
+    const { error } = await supabase
+      .from('posts')
+      .delete()
+      .eq('id', postId);
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to delete post' }));
+    if (error) {
       console.error('API: Delete post failed', error);
       throw new Error(error.message || 'Failed to delete post');
     }
@@ -206,95 +256,96 @@ export const api = {
   },
 
   // Tasks endpoints
-  getTasks: async (userId: string): Promise<Task[]> => {
+  getTasks: async (userId: string): Promise<TaskFrontend[]> => {
     console.log('API: Getting tasks for user', userId);
-    const response = await fetch(`${BACKEND_URL}/api/users/${userId}/tasks`);
+    
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('user_id', userId);
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to get tasks' }));
+    if (error) {
       console.error('API: Get tasks failed', error);
       throw new Error(error.message || 'Failed to get tasks');
     }
 
-    const data = await response.json();
-    console.log('API: Tasks retrieved', data.length);
-    return data;
+    console.log('API: Tasks retrieved', data?.length || 0);
+    return data?.map(toCamelCase) || [];
   },
 
   createTask: async (
     userId: string,
     task: { title: string; description?: string | null; dueDate: string }
-  ): Promise<Task> => {
+  ): Promise<TaskFrontend> => {
     console.log('API: Creating task', { userId, task });
-    const response = await fetch(`${BACKEND_URL}/api/users/${userId}/tasks`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(task),
-    });
+    
+    const { data, error } = await supabase
+      .from('tasks')
+      .insert({
+        user_id: userId,
+        title: task.title,
+        description: task.description || null,
+        due_date: task.dueDate,
+      })
+      .select()
+      .single();
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to create task' }));
+    if (error) {
       console.error('API: Create task failed', error);
       throw new Error(error.message || 'Failed to create task');
     }
 
-    const data = await response.json();
     console.log('API: Task created', data);
-    return data;
+    return toCamelCase(data);
   },
 
-  completeTask: async (taskId: string): Promise<Task> => {
+  completeTask: async (taskId: string): Promise<TaskFrontend> => {
     console.log('API: Completing task', taskId);
-    const response = await fetch(`${BACKEND_URL}/api/tasks/${taskId}/complete`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}),
-    });
+    
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({ is_completed: true })
+      .eq('id', taskId)
+      .select()
+      .single();
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to complete task' }));
+    if (error) {
       console.error('API: Complete task failed', error);
       throw new Error(error.message || 'Failed to complete task');
     }
 
-    const data = await response.json();
     console.log('API: Task completed', data);
-    return data;
+    return toCamelCase(data);
   },
 
-  updateTaskReminder: async (taskId: string, reminderSent: boolean): Promise<Task> => {
+  updateTaskReminder: async (taskId: string, reminderSent: boolean): Promise<TaskFrontend> => {
     console.log('API: Updating task reminder', { taskId, reminderSent });
-    const response = await fetch(`${BACKEND_URL}/api/tasks/${taskId}/reminder`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ reminderSent }),
-    });
+    
+    const { data, error } = await supabase
+      .from('tasks')
+      .update({ reminder_sent: reminderSent })
+      .eq('id', taskId)
+      .select()
+      .single();
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to update task reminder' }));
+    if (error) {
       console.error('API: Update task reminder failed', error);
       throw new Error(error.message || 'Failed to update task reminder');
     }
 
-    const data = await response.json();
     console.log('API: Task reminder updated', data);
-    return data;
+    return toCamelCase(data);
   },
 
   deleteTask: async (taskId: string): Promise<void> => {
     console.log('API: Deleting task', taskId);
-    const response = await fetch(`${BACKEND_URL}/api/tasks/${taskId}`, {
-      method: 'DELETE',
-    });
+    
+    const { error } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskId);
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to delete task' }));
+    if (error) {
       console.error('API: Delete task failed', error);
       throw new Error(error.message || 'Failed to delete task');
     }
@@ -303,5 +354,5 @@ export const api = {
   },
 };
 
-// Export BACKEND_URL for direct use in components
-export { BACKEND_URL };
+// Export types for use in components
+export type { UserFrontend as User, PostFrontend as Post, TaskFrontend as Task };
