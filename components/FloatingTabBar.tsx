@@ -51,7 +51,6 @@ export default function FloatingTabBar({
   const colors = isDark ? designColors.dark : designColors.light;
   const animatedValue = useSharedValue(0);
 
-  // Improved active tab detection
   const activeTabIndex = React.useMemo(() => {
     console.log('FloatingTabBar: Current pathname:', pathname);
     
@@ -114,9 +113,13 @@ export default function FloatingTabBar({
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <View style={[styles.container, { width: containerWidth, marginBottom: bottomMargin }]}>
+      <View style={[
+        styles.container,
+        { width: containerWidth, marginBottom: bottomMargin },
+        styles.containerShadow,
+      ]}>
         <BlurView
-          intensity={isDark ? 60 : 80}
+          intensity={isDark ? 70 : 90}
           style={[
             styles.blurContainer,
             { borderRadius },
@@ -125,13 +128,13 @@ export default function FloatingTabBar({
         >
           <View style={[
             styles.background,
-            { backgroundColor: isDark ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.9)' },
+            { backgroundColor: isDark ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)' },
           ]} />
           
           <Animated.View style={[
             styles.indicator,
             {
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(39, 132, 245, 0.1)',
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(39, 132, 245, 0.12)',
               width: `${tabWidthPercent}%` as `${number}%`,
             },
             indicatorStyle,
@@ -140,6 +143,8 @@ export default function FloatingTabBar({
           <View style={styles.tabsContainer}>
             {tabs.map((tab, index) => {
               const isActive = activeTabIndex === index;
+              const iconColor = isActive ? designColors.primary : colors.textTertiary;
+              const labelColor = isActive ? designColors.primary : colors.textTertiary;
 
               return (
                 <TouchableOpacity
@@ -149,17 +154,19 @@ export default function FloatingTabBar({
                   activeOpacity={0.7}
                 >
                   <View style={styles.tabContent}>
-                    <IconSymbol
-                      android_material_icon_name={tab.icon}
-                      ios_icon_name={tab.icon}
-                      size={24}
-                      color={isActive ? designColors.primary : colors.textTertiary}
-                    />
+                    <View style={styles.iconWrapper}>
+                      <IconSymbol
+                        android_material_icon_name={tab.icon}
+                        ios_icon_name={tab.icon}
+                        size={26}
+                        color={iconColor}
+                      />
+                    </View>
                     <Text
                       style={[
                         styles.tabLabel,
-                        { color: colors.textTertiary },
-                        isActive && { color: designColors.primary, fontWeight: '600' },
+                        { color: labelColor },
+                        isActive && styles.tabLabelActive,
                       ]}
                     >
                       {tab.label}
@@ -187,17 +194,24 @@ const styles = StyleSheet.create({
   container: {
     alignSelf: 'center',
   },
+  containerShadow: {
+    ...shadows.xl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 12,
+  },
   blurContainer: {
     overflow: 'hidden',
-    ...shadows.lg,
   },
   blurContainerLight: {
     borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
+    borderColor: 'rgba(0, 0, 0, 0.1)',
   },
   blurContainerDark: {
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   background: {
     ...StyleSheet.absoluteFillObject,
@@ -211,7 +225,7 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     flexDirection: 'row',
-    height: 64,
+    height: 68,
     alignItems: 'center',
     paddingHorizontal: 4,
   },
@@ -226,8 +240,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
   },
+  iconWrapper: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tabLabel: {
     ...typography.caption,
     fontWeight: '500',
+    fontSize: 11,
+  },
+  tabLabelActive: {
+    fontWeight: '700',
   },
 });

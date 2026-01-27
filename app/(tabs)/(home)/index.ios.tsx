@@ -178,7 +178,7 @@ export default function HomeScreen() {
                         />
                         {isLocked && (
                           <View style={styles.lockedOverlay}>
-                            <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+                            <BlurView intensity={30} style={StyleSheet.absoluteFill} />
                             <View style={styles.lockIconContainer}>
                               <IconSymbol
                                 ios_icon_name="lock.fill"
@@ -189,35 +189,33 @@ export default function HomeScreen() {
                             </View>
                           </View>
                         )}
+                        
+                        {/* Category Badge on Image */}
+                        <View style={styles.imageBadgeContainer}>
+                          <View style={[
+                            styles.imageBadge,
+                            isPublic ? styles.publicImageBadge : styles.contractImageBadge,
+                          ]}>
+                            <IconSymbol
+                              ios_icon_name={isPublic ? 'globe' : 'lock.fill'}
+                              android_material_icon_name={isPublic ? 'public' : 'lock'}
+                              size={10}
+                              color="#FFFFFF"
+                            />
+                            <Text style={styles.imageBadgeText}>
+                              {isPublic ? 'ציבורי' : 'חוזה'}
+                            </Text>
+                          </View>
+                        </View>
                       </View>
                     )}
 
-                    {/* Card Content */}
+                    {/* Card Content - RTL Optimized */}
                     <View style={styles.postCardContent}>
-                      <View style={styles.postHeader}>
-                        <Text style={[styles.postTitle, { color: colors.text }]} numberOfLines={2}>
-                          {post.title}
-                        </Text>
-                        
-                        {/* Visibility Badge */}
-                        <View style={[
-                          styles.visibilityBadge,
-                          isPublic ? styles.publicBadge : styles.contractBadge,
-                        ]}>
-                          <IconSymbol
-                            ios_icon_name={isPublic ? 'globe' : 'lock.fill'}
-                            android_material_icon_name={isPublic ? 'public' : 'lock'}
-                            size={12}
-                            color={isPublic ? designColors.primary : designColors.secondary}
-                          />
-                          <Text style={[
-                            styles.badgeText,
-                            isPublic ? styles.publicBadgeText : styles.contractBadgeText,
-                          ]}>
-                            {isPublic ? 'ציבורי' : 'חוזה בלבד'}
-                          </Text>
-                        </View>
-                      </View>
+                      {/* Title */}
+                      <Text style={[styles.postTitle, { color: colors.text }]} numberOfLines={2}>
+                        {post.title}
+                      </Text>
 
                       {/* Locked State Message */}
                       {isLocked && (
@@ -225,7 +223,7 @@ export default function HomeScreen() {
                           <IconSymbol
                             ios_icon_name="info.circle"
                             android_material_icon_name="info"
-                            size={16}
+                            size={14}
                             color={designColors.locked}
                           />
                           <Text style={styles.lockedMessageText}>
@@ -234,17 +232,19 @@ export default function HomeScreen() {
                         </View>
                       )}
 
-                      {/* Action Arrow */}
+                      {/* Action Footer */}
                       <View style={styles.postFooter}>
-                        <Text style={[styles.readMoreText, { color: designColors.primary }]}>
-                          קרא עוד
-                        </Text>
-                        <IconSymbol
-                          ios_icon_name="chevron.left"
-                          android_material_icon_name="chevron-left"
-                          size={16}
-                          color={designColors.primary}
-                        />
+                        <View style={styles.readMoreContainer}>
+                          <Text style={[styles.readMoreText, { color: designColors.primary }]}>
+                            קרא עוד
+                          </Text>
+                          <IconSymbol
+                            ios_icon_name="chevron.left"
+                            android_material_icon_name="chevron-left"
+                            size={16}
+                            color={designColors.primary}
+                          />
+                        </View>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -324,17 +324,21 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...typography.h3,
     marginBottom: spacing.xs,
+    textAlign: 'right',
   },
   sectionSubtitle: {
     ...typography.bodySmall,
+    textAlign: 'right',
   },
   postsGrid: {
-    gap: spacing.md,
+    gap: spacing.lg,
   },
+  
+  // Post Card - Modern Design with Shadow
   postCard: {
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     overflow: 'hidden',
-    ...shadows.md,
+    ...shadows.lg,
   },
   postCardDark: {
     borderWidth: 1,
@@ -342,7 +346,7 @@ const styles = StyleSheet.create({
   },
   coverImageContainer: {
     width: '100%',
-    height: 180,
+    height: 200,
     backgroundColor: designColors.light.backgroundSecondary,
     position: 'relative',
   },
@@ -356,48 +360,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   lockIconContainer: {
-    width: 56,
-    height: 56,
+    width: 64,
+    height: 64,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  postCardContent: {
-    padding: spacing.lg,
+  imageBadgeContainer: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
   },
-  postHeader: {
-    marginBottom: spacing.md,
-  },
-  postTitle: {
-    ...typography.h4,
-    marginBottom: spacing.sm,
-    textAlign: 'right',
-  },
-  visibilityBadge: {
+  imageBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
     borderRadius: radius.full,
-    alignSelf: 'flex-start',
+    ...shadows.md,
   },
-  publicBadge: {
-    backgroundColor: designColors.primaryBg,
+  publicImageBadge: {
+    backgroundColor: 'rgba(39, 132, 245, 0.9)',
   },
-  contractBadge: {
-    backgroundColor: designColors.secondaryBg,
+  contractImageBadge: {
+    backgroundColor: 'rgba(245, 173, 39, 0.9)',
   },
-  badgeText: {
+  imageBadgeText: {
     ...typography.caption,
+    color: '#FFFFFF',
     fontWeight: '600',
+    fontSize: 11,
   },
-  publicBadgeText: {
-    color: designColors.primary,
+  
+  // Card Content - RTL Optimized
+  postCardContent: {
+    padding: spacing.lg,
   },
-  contractBadgeText: {
-    color: designColors.secondary,
+  postTitle: {
+    ...typography.h4,
+    marginBottom: spacing.md,
+    textAlign: 'right',
+    lineHeight: 28,
   },
   lockedMessage: {
     flexDirection: 'row',
@@ -406,23 +411,31 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     backgroundColor: designColors.lockedBg,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     marginBottom: spacing.md,
   },
   lockedMessageText: {
     ...typography.labelSmall,
     color: designColors.locked,
+    flex: 1,
+    textAlign: 'right',
   },
   postFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
+  },
+  readMoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.xs,
   },
   readMoreText: {
     ...typography.label,
     fontWeight: '600',
   },
+  
+  // Empty State
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.xxxl,

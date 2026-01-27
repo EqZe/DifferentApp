@@ -27,7 +27,7 @@ export default function TabLayout() {
     tabs.push({
       name: 'calculator',
       route: '/(tabs)/calculator' as Href,
-      icon: 'savings',
+      icon: 'calculate',
       label: 'מחשבון חיסכון',
     });
   }
