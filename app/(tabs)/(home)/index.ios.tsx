@@ -46,7 +46,7 @@ function getTimeBasedGreeting(): string {
 }
 
 export default function HomeScreen() {
-  const { user, isLoading } = useUser();
+  const { user, isLoading, refreshUser } = useUser();
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -67,9 +67,11 @@ export default function HomeScreen() {
 
   const loadPosts = useCallback(async () => {
     try {
-      console.log('HomeScreen (iOS): Loading posts for user', user?.hasContract);
-      const fetchedPosts = await api.getPosts(user?.hasContract);
-      console.log('HomeScreen (iOS): Posts loaded', fetchedPosts.length);
+      console.log('HomeScreen (iOS): Loading ALL posts (public + contract_only)');
+      // FIXED: Remove hasContract parameter - fetch ALL posts
+      const fetchedPosts = await api.getPosts();
+      console.log('HomeScreen (iOS): Posts loaded', fetchedPosts.length, 'posts');
+      console.log('HomeScreen (iOS): Post visibilities:', fetchedPosts.map(p => ({ title: p.title, visibility: p.visibility })));
       setPosts(fetchedPosts);
     } catch (error) {
       console.error('HomeScreen (iOS): Failed to load posts', error);
@@ -77,7 +79,7 @@ export default function HomeScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.hasContract]);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -87,12 +89,17 @@ export default function HomeScreen() {
     }
   }, [loadPosts, user]);
 
-  const onRefresh = () => {
-    console.log('HomeScreen (iOS): Refreshing posts');
+  const onRefresh = async () => {
+    console.log('HomeScreen (iOS): Refreshing posts and user data');
     setRefreshing(true);
     // Update greeting on refresh
     setGreeting(getTimeBasedGreeting());
-    loadPosts();
+    
+    // FIXED: Refresh user data from database to get latest hasContract value
+    await refreshUser();
+    
+    // Then load posts
+    await loadPosts();
   };
 
   const handlePostPress = (postId: string) => {

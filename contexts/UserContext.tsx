@@ -2,11 +2,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import type { User } from '@/utils/api';
+import { api, type User } from '@/utils/api';
 
 interface UserContextType {
   user: User | null;
   setUser: (user: User | null) => void;
+  refreshUser: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -76,8 +77,27 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // FIXED: Add refreshUser function to fetch latest user data from database
+  const refreshUser = async () => {
+    if (!user?.id) {
+      console.log('refreshUser: No user to refresh');
+      return;
+    }
+
+    try {
+      console.log('refreshUser: Fetching latest user data from database for user', user.id);
+      const freshUserData = await api.getUserById(user.id);
+      console.log('refreshUser: User data refreshed, hasContract:', freshUserData.hasContract);
+      
+      // Update both state and storage
+      await setUser(freshUserData);
+    } catch (error) {
+      console.error('refreshUser: Failed to refresh user data', error);
+    }
+  };
+
   return (
-    <UserContext.Provider value={{ user, setUser, isLoading }}>
+    <UserContext.Provider value={{ user, setUser, refreshUser, isLoading }}>
       {children}
     </UserContext.Provider>
   );

@@ -164,11 +164,11 @@ export const api = {
   },
 
   // Posts endpoints
-  getPosts: async (hasContract?: boolean): Promise<PostFrontend[]> => {
-    console.log('API: Getting posts', { hasContract });
+  getPosts: async (): Promise<PostFrontend[]> => {
+    console.log('API: Getting ALL published posts (public and contract_only)');
     
-    // Fetch ALL published posts regardless of visibility
-    // The homepage should show all posts, but locked posts will have restricted preview
+    // FIXED: Fetch ALL published posts regardless of visibility
+    // The homepage should show all posts, but contract_only posts will be locked
     const { data, error } = await supabase
       .from('posts')
       .select('*')
@@ -180,7 +180,7 @@ export const api = {
       throw new Error(error.message || 'Failed to get posts');
     }
 
-    console.log('API: Posts retrieved', data?.length || 0, 'posts (including contract_only)');
+    console.log('API: Posts retrieved', data?.length || 0, 'posts (public + contract_only)');
     return data?.map(toCamelCase) || [];
   },
 
