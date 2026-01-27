@@ -32,7 +32,6 @@ export interface UserFrontend {
   fullName: string;
   city: string;
   phoneNumber: string;
-  hasSignedAgreement: boolean;
   hasContract: boolean;
   travelDate: string | null;
   createdAt: string;
@@ -136,13 +135,13 @@ export const api = {
 
   updateUser: async (
     userId: string,
-    updates: { hasSignedAgreement?: boolean; travelDate?: string | null }
+    updates: { hasContract?: boolean; travelDate?: string | null }
   ): Promise<UserFrontend> => {
     console.log('API: Updating user', { userId, updates });
     
     const updateData: any = {};
-    if (updates.hasSignedAgreement !== undefined) {
-      updateData.has_signed_agreement = updates.hasSignedAgreement;
+    if (updates.hasContract !== undefined) {
+      updateData.has_contract = updates.hasContract;
     }
     if (updates.travelDate !== undefined) {
       updateData.travel_date = updates.travelDate;

@@ -18,7 +18,6 @@ export interface User {
   full_name: string;
   city: string;
   phone_number: string;
-  has_signed_agreement: boolean;
   has_contract: boolean;
   travel_date: string | null;
   created_at: string;

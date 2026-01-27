@@ -36,19 +36,25 @@ export default function ProfileScreen() {
   const isDark = colorScheme === 'dark';
   const colors = isDark ? designColors.dark : designColors.light;
 
-  const statusText = user?.hasSignedAgreement ? 'לקוח פעיל' : 'משתמש רשום';
-  const statusDescription = user?.hasSignedAgreement 
-    ? 'חתמת על הסכם והינך לקוח פעיל במערכת'
-    : 'טרם חתמת על הסכם. פנה למנהל המערכת';
-  
-  const greetingText = user?.hasSignedAgreement 
-    ? `שלום ${user?.fullName || 'משתמש'}, שמחים שאתה איתנו!`
-    : `שלום ${user?.fullName || 'משתמש'}`;
+  if (!user) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={styles.loadingContainer}>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            לא נמצא משתמש
+          </Text>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  const hasContract = user.hasContract;
+  const travelDateFormatted = formatDate(user.travelDate);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <SafeAreaView style={styles.container} edges={['top']}>
-        {/* Modern Header with Gradient */}
+        {/* Header with Gradient */}
         <LinearGradient
           colors={[designColors.primary, designColors.primaryDark]}
           start={{ x: 0, y: 0 }}
@@ -56,34 +62,18 @@ export default function ProfileScreen() {
           style={styles.header}
         >
           <View style={styles.headerContent}>
-            {/* Avatar with glow effect */}
-            <View style={styles.avatarGlow}>
+            <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
                 <IconSymbol
                   ios_icon_name="person.fill"
                   android_material_icon_name="person"
-                  size={56}
+                  size={48}
                   color="#FFFFFF"
                 />
               </View>
             </View>
-            
-            {/* Personal Greeting */}
-            <Text style={styles.greetingText}>{greetingText}</Text>
-            
-            {/* Status Badge */}
-            <View style={[
-              styles.statusBadge,
-              user?.hasSignedAgreement ? styles.statusBadgeActive : styles.statusBadgeInactive,
-            ]}>
-              <IconSymbol
-                ios_icon_name={user?.hasSignedAgreement ? 'checkmark.seal.fill' : 'clock.fill'}
-                android_material_icon_name={user?.hasSignedAgreement ? 'verified' : 'schedule'}
-                size={18}
-                color="#FFFFFF"
-              />
-              <Text style={styles.statusBadgeText}>{statusText}</Text>
-            </View>
+            <Text style={styles.userName}>{user.fullName}</Text>
+            <Text style={styles.userCity}>{user.city}</Text>
           </View>
         </LinearGradient>
 
@@ -93,172 +83,141 @@ export default function ProfileScreen() {
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Personal Status Card */}
-          <View style={[styles.card, { backgroundColor: colors.surface }, isDark && styles.cardDark]}>
-            <View style={styles.cardIconHeader}>
-              <View style={[styles.cardIconCircle, { backgroundColor: designColors.primaryBg }]}>
+          {/* Contract Status Card */}
+          <View style={[
+            styles.statusCard,
+            { backgroundColor: colors.surface },
+            isDark && styles.statusCardDark,
+          ]}>
+            <View style={styles.statusHeader}>
+              <View style={[
+                styles.statusIconContainer,
+                hasContract ? styles.statusIconActive : styles.statusIconInactive,
+              ]}>
                 <IconSymbol
-                  ios_icon_name="person.badge.shield.checkmark.fill"
-                  android_material_icon_name="verified-user"
-                  size={28}
-                  color={designColors.primary}
+                  ios_icon_name={hasContract ? 'checkmark.seal.fill' : 'lock.fill'}
+                  android_material_icon_name={hasContract ? 'verified' : 'lock'}
+                  size={32}
+                  color="#FFFFFF"
                 />
               </View>
-              <View style={styles.cardHeaderText}>
-                <Text style={[styles.cardTitle, { color: colors.text }]}>סטטוס החשבון שלך</Text>
-                <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
-                  {statusDescription}
+              <View style={styles.statusTextContainer}>
+                <Text style={[styles.statusTitle, { color: colors.text }]}>
+                  סטטוס חוזה
                 </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Personal Information Card */}
-          <View style={[styles.card, { backgroundColor: colors.surface }, isDark && styles.cardDark]}>
-            <View style={styles.cardHeader}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>הפרטים שלך</Text>
-              <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
-                המידע האישי שלך במערכת
-              </Text>
-            </View>
-
-            <View style={styles.infoList}>
-              {/* Full Name */}
-              <View style={styles.infoItem}>
-                <View style={[styles.infoIconCircle, { backgroundColor: colors.backgroundSecondary }]}>
-                  <IconSymbol
-                    ios_icon_name="person.text.rectangle.fill"
-                    android_material_icon_name="badge"
-                    size={22}
-                    color={designColors.primary}
-                  />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>שם מלא</Text>
-                  <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {user?.fullName || '-'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={[styles.divider, { backgroundColor: colors.divider }]} />
-
-              {/* City */}
-              <View style={styles.infoItem}>
-                <View style={[styles.infoIconCircle, { backgroundColor: colors.backgroundSecondary }]}>
-                  <IconSymbol
-                    ios_icon_name="building.2.fill"
-                    android_material_icon_name="location-city"
-                    size={22}
-                    color={designColors.secondary}
-                  />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>עיר מגורים</Text>
-                  <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {user?.city || '-'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={[styles.divider, { backgroundColor: colors.divider }]} />
-
-              {/* Phone */}
-              <View style={styles.infoItem}>
-                <View style={[styles.infoIconCircle, { backgroundColor: colors.backgroundSecondary }]}>
-                  <IconSymbol
-                    ios_icon_name="phone.fill"
-                    android_material_icon_name="phone"
-                    size={22}
-                    color={designColors.success}
-                  />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>טלפון</Text>
-                  <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {user?.phoneNumber || '-'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Travel Information Card (only for signed agreement users) */}
-          {user?.hasSignedAgreement && (
-            <View style={[styles.card, { backgroundColor: colors.surface }, isDark && styles.cardDark]}>
-              <View style={styles.cardIconHeader}>
-                <View style={[styles.cardIconCircle, { backgroundColor: designColors.secondaryBg }]}>
-                  <IconSymbol
-                    ios_icon_name="airplane.departure"
-                    android_material_icon_name="flight-takeoff"
-                    size={28}
-                    color={designColors.secondary}
-                  />
-                </View>
-                <View style={styles.cardHeaderText}>
-                  <Text style={[styles.cardTitle, { color: colors.text }]}>הנסיעה שלך לסין</Text>
-                  <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
-                    פרטי הנסיעה המתוכננת
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.travelInfo}>
-                <View style={[styles.travelDateCard, { backgroundColor: colors.backgroundSecondary }]}>
-                  <View style={styles.travelDateIcon}>
-                    <IconSymbol
-                      ios_icon_name="calendar.badge.clock"
-                      android_material_icon_name="event"
-                      size={36}
-                      color={designColors.secondary}
-                    />
-                  </View>
-                  <View style={styles.travelDateContent}>
-                    <Text style={[styles.travelDateLabel, { color: colors.textSecondary }]}>
-                      תאריך יציאה
-                    </Text>
-                    <Text style={[styles.travelDateValue, { color: colors.text }]}>
-                      {formatDate(user?.travelDate || null)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Help & Support Card */}
-          <View style={[styles.card, { backgroundColor: colors.surface }, isDark && styles.cardDark]}>
-            <View style={styles.cardIconHeader}>
-              <View style={[styles.cardIconCircle, { backgroundColor: designColors.infoBg }]}>
-                <IconSymbol
-                  ios_icon_name="questionmark.bubble.fill"
-                  android_material_icon_name="help"
-                  size={28}
-                  color={designColors.info}
-                />
-              </View>
-              <View style={styles.cardHeaderText}>
-                <Text style={[styles.cardTitle, { color: colors.text }]}>צריך עזרה?</Text>
-                <Text style={[styles.cardSubtitle, { color: colors.textSecondary }]}>
-                  אנחנו כאן בשבילך
+                <Text style={[
+                  styles.statusValue,
+                  hasContract ? styles.statusValueActive : styles.statusValueInactive,
+                ]}>
+                  {hasContract ? 'חוזה פעיל' : 'ללא חוזה'}
                 </Text>
               </View>
             </View>
             
-            <TouchableOpacity 
-              style={[styles.helpButton, { backgroundColor: colors.backgroundSecondary }]}
-              activeOpacity={0.7}
-            >
-              <IconSymbol
-                ios_icon_name="message.fill"
-                android_material_icon_name="chat"
-                size={20}
-                color={designColors.primary}
-              />
-              <Text style={[styles.helpButtonText, { color: designColors.primary }]}>
-                צור קשר עם התמיכה
-              </Text>
-            </TouchableOpacity>
+            {hasContract && (
+              <View style={[styles.statusBadge, { backgroundColor: designColors.successBg }]}>
+                <IconSymbol
+                  ios_icon_name="checkmark.circle.fill"
+                  android_material_icon_name="check-circle"
+                  size={16}
+                  color={designColors.success}
+                />
+                <Text style={[styles.statusBadgeText, { color: designColors.success }]}>
+                  יש לך גישה לכל התכנים והליווי האישי
+                </Text>
+              </View>
+            )}
+            
+            {!hasContract && (
+              <View style={[styles.statusBadge, { backgroundColor: designColors.lockedBg }]}>
+                <IconSymbol
+                  ios_icon_name="info.circle.fill"
+                  android_material_icon_name="info"
+                  size={16}
+                  color={designColors.locked}
+                />
+                <Text style={[styles.statusBadgeText, { color: designColors.locked }]}>
+                  פנה למנהל המערכת לחתימה על חוזה
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Info Cards */}
+          <View style={styles.infoSection}>
+            {/* Phone Number */}
+            <View style={[
+              styles.infoCard,
+              { backgroundColor: colors.surface },
+              isDark && styles.infoCardDark,
+            ]}>
+              <View style={[styles.infoIconContainer, { backgroundColor: designColors.primaryBg }]}>
+                <IconSymbol
+                  ios_icon_name="phone.fill"
+                  android_material_icon_name="phone"
+                  size={24}
+                  color={designColors.primary}
+                />
+              </View>
+              <View style={styles.infoTextContainer}>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                  טלפון
+                </Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>
+                  {user.phoneNumber}
+                </Text>
+              </View>
+            </View>
+
+            {/* City */}
+            <View style={[
+              styles.infoCard,
+              { backgroundColor: colors.surface },
+              isDark && styles.infoCardDark,
+            ]}>
+              <View style={[styles.infoIconContainer, { backgroundColor: designColors.secondaryBg }]}>
+                <IconSymbol
+                  ios_icon_name="location.fill"
+                  android_material_icon_name="location-on"
+                  size={24}
+                  color={designColors.secondary}
+                />
+              </View>
+              <View style={styles.infoTextContainer}>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                  עיר
+                </Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>
+                  {user.city}
+                </Text>
+              </View>
+            </View>
+
+            {/* Travel Date */}
+            {hasContract && (
+              <View style={[
+                styles.infoCard,
+                { backgroundColor: colors.surface },
+                isDark && styles.infoCardDark,
+              ]}>
+                <View style={[styles.infoIconContainer, { backgroundColor: designColors.primaryBg }]}>
+                  <IconSymbol
+                    ios_icon_name="calendar"
+                    android_material_icon_name="calendar-today"
+                    size={24}
+                    color={designColors.primary}
+                  />
+                </View>
+                <View style={styles.infoTextContainer}>
+                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>
+                    תאריך נסיעה
+                  </Text>
+                  <Text style={[styles.infoValue, { color: colors.text }]}>
+                    {travelDateFormatted}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -270,57 +229,49 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    ...typography.body,
+  },
+  
+  // Header
   header: {
     paddingTop: Platform.OS === 'android' ? spacing.xl : spacing.md,
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.xl,
     paddingHorizontal: layout.screenPadding,
   },
   headerContent: {
     alignItems: 'center',
   },
-  avatarGlow: {
-    padding: 8,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    marginBottom: spacing.lg,
+  avatarContainer: {
+    marginBottom: spacing.md,
   },
   avatar: {
-    width: 110,
-    height: 110,
+    width: 100,
+    height: 100,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  greetingText: {
+  userName: {
     ...typography.h2,
     color: '#FFFFFF',
-    marginBottom: spacing.md,
-    textAlign: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.full,
-    ...shadows.md,
-  },
-  statusBadgeActive: {
-    backgroundColor: designColors.success,
-  },
-  statusBadgeInactive: {
-    backgroundColor: designColors.warning,
-  },
-  statusBadgeText: {
-    ...typography.label,
-    color: '#FFFFFF',
     fontWeight: '700',
+    marginBottom: spacing.xs,
   },
+  userCity: {
+    ...typography.body,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  
+  // Content
   content: {
     flex: 1,
   },
@@ -328,61 +279,94 @@ const styles = StyleSheet.create({
     paddingHorizontal: layout.screenPadding,
     paddingTop: spacing.lg,
     paddingBottom: 120,
-    gap: spacing.lg,
   },
-  card: {
-    borderRadius: radius.xl,
+  
+  // Status Card
+  statusCard: {
+    borderRadius: radius.lg,
     padding: spacing.lg,
+    marginBottom: spacing.lg,
     ...shadows.md,
   },
-  cardDark: {
+  statusCardDark: {
     borderWidth: 1,
     borderColor: designColors.dark.border,
   },
-  cardHeader: {
-    marginBottom: spacing.lg,
-  },
-  cardIconHeader: {
+  statusHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
-  cardIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.full,
+  statusIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: spacing.md,
   },
-  cardHeaderText: {
+  statusIconActive: {
+    backgroundColor: designColors.success,
+  },
+  statusIconInactive: {
+    backgroundColor: designColors.locked,
+  },
+  statusTextContainer: {
     flex: 1,
   },
-  cardTitle: {
-    ...typography.h4,
+  statusTitle: {
+    ...typography.labelSmall,
     marginBottom: spacing.xs / 2,
   },
-  cardSubtitle: {
-    ...typography.bodySmall,
-    lineHeight: 20,
+  statusValue: {
+    ...typography.h3,
+    fontWeight: '700',
   },
-  infoList: {
-    gap: spacing.sm,
+  statusValueActive: {
+    color: designColors.success,
   },
-  infoItem: {
+  statusValueInactive: {
+    color: designColors.locked,
+  },
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.xs,
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
   },
-  infoIconCircle: {
+  statusBadgeText: {
+    ...typography.bodySmall,
+    flex: 1,
+    textAlign: 'right',
+    fontWeight: '600',
+  },
+  
+  // Info Section
+  infoSection: {
+    gap: spacing.md,
+  },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    ...shadows.sm,
+  },
+  infoCardDark: {
+    borderWidth: 1,
+    borderColor: designColors.dark.border,
+  },
+  infoIconContainer: {
     width: 48,
     height: 48,
-    borderRadius: radius.full,
+    borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
+    marginLeft: spacing.md,
   },
-  infoContent: {
+  infoTextContainer: {
     flex: 1,
   },
   infoLabel: {
@@ -390,54 +374,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs / 2,
   },
   infoValue: {
-    ...typography.bodyLarge,
-    fontWeight: '600',
-  },
-  divider: {
-    height: 1,
-    marginVertical: spacing.xs,
-  },
-  travelInfo: {
-    marginTop: spacing.sm,
-  },
-  travelDateCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: radius.lg,
-  },
-  travelDateIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(245, 173, 39, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  travelDateContent: {
-    flex: 1,
-  },
-  travelDateLabel: {
-    ...typography.label,
-    marginBottom: spacing.xs,
-  },
-  travelDateValue: {
-    ...typography.h3,
-    fontWeight: '700',
-  },
-  helpButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-    marginTop: spacing.md,
-  },
-  helpButtonText: {
-    ...typography.label,
+    ...typography.body,
     fontWeight: '600',
   },
 });
