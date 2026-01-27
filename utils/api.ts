@@ -77,13 +77,6 @@ export const api = {
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-          city,
-          phone_number: phoneNumber || '',
-        },
-      },
     });
 
     if (authError) {
@@ -95,14 +88,35 @@ export const api = {
       throw new Error('No user returned from sign up');
     }
 
-    console.log('API: Sign up successful, fetching user profile');
+    console.log('API: Sign up successful, creating user profile in database');
     
-    // Wait a moment for the trigger to create the profile
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Create the user profile in the users table
+    const { data: userData, error: insertError } = await supabase
+      .from('users')
+      .insert({
+        auth_user_id: authData.user.id,
+        full_name: fullName,
+        city,
+        phone_number: phoneNumber || null,
+        email: email,
+        has_contract: false,
+        travel_date: null,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('API: Failed to create user profile', insertError);
+      throw new Error(insertError.message || 'Failed to create user profile');
+    }
+
+    console.log('API: User profile created successfully', userData);
     
-    // Fetch the created user profile
-    const userData = await api.getUserByAuthId(authData.user.id);
-    return userData;
+    const camelData = toCamelCase(userData);
+    return {
+      ...camelData,
+      id: camelData.authUserId,
+    };
   },
 
   signIn: async (email: string, password: string): Promise<UserFrontend> => {
