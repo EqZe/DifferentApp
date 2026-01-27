@@ -41,6 +41,8 @@ export function TextBlock({ data, isLocked = false, isPreview = false }: TextBlo
   
   const htmlContent = data.html;
   
+  console.log('TextBlock: Rendering with isLocked:', isLocked, 'isPreview:', isPreview, 'height:', webViewHeight);
+  
   const htmlTemplate = `
     <!DOCTYPE html>
     <html dir="rtl">
@@ -146,6 +148,8 @@ export function TextBlock({ data, isLocked = false, isPreview = false }: TextBlo
 
   const shouldTruncate = isLocked && isPreview;
   const displayHeight = shouldTruncate ? Math.min(webViewHeight, 150) : webViewHeight;
+
+  console.log('TextBlock: shouldTruncate:', shouldTruncate, 'displayHeight:', displayHeight);
 
   const gradientColors = isDark 
     ? ['rgba(15, 23, 42, 0)', 'rgba(15, 23, 42, 0.7)', 'rgba(15, 23, 42, 0.95)', '#0F172A']

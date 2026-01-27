@@ -132,10 +132,13 @@ export default function PostDetailScreen() {
   }
 
   const isPublic = post.visibility === 'public';
-  const isLocked = !isPublic && !user?.hasContract;
+  const hasContract = user?.hasContract || false;
+  const isLocked = !isPublic && !hasContract;
   const blocks = post.blocks || [];
   
   const previewBlockCount = 2;
+
+  console.log('PostDetailScreen: Rendering post', post.title, 'isLocked:', isLocked, 'hasContract:', hasContract, 'blocks:', blocks.length);
 
   return (
     <>
@@ -249,6 +252,8 @@ export default function PostDetailScreen() {
                 const isTextOrHtml = block.type === 'text' || block.type === 'html';
                 const isInPreviewRange = index < previewBlockCount;
                 const shouldShowPreview = isLocked && isInPreviewRange && isTextOrHtml;
+                
+                console.log('PostDetailScreen: Rendering block', index, block.type, 'isLocked:', isLocked, 'isPreview:', shouldShowPreview);
                 
                 return (
                   <View key={block.id} style={styles.blockWrapper}>

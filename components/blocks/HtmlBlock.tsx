@@ -50,6 +50,8 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
   
   const htmlContent = data.content;
   
+  console.log('HtmlBlock: Rendering with isLocked:', isLocked, 'isPreview:', isPreview, 'height:', webViewHeight);
+  
   const htmlTemplate = `
     <!DOCTYPE html>
     <html dir="rtl">
@@ -110,6 +112,8 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
   const shouldTruncate = isLocked && isPreview;
   const shouldBlur = isLocked && !isPreview;
   const displayHeight = shouldTruncate ? Math.min(webViewHeight, 150) : webViewHeight;
+
+  console.log('HtmlBlock: shouldTruncate:', shouldTruncate, 'shouldBlur:', shouldBlur, 'displayHeight:', displayHeight);
 
   const gradientColors = isDark 
     ? ['rgba(15, 23, 42, 0)', 'rgba(15, 23, 42, 0.7)', 'rgba(15, 23, 42, 0.95)', '#0F172A']

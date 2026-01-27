@@ -52,6 +52,8 @@ export function ImageBlock({ data, isLocked = false }: ImageBlockProps) {
   const imageUrl = data.url;
   const caption = data.caption;
 
+  console.log('ImageBlock: Rendering with isLocked:', isLocked, 'url:', imageUrl);
+
   return (
     <View style={styles.container}>
       <Image

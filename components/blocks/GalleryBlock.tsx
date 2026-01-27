@@ -61,6 +61,8 @@ function resolveImageSource(source: string | number | ImageSourcePropType | unde
 export function GalleryBlock({ data, isLocked = false }: GalleryBlockProps) {
   const images = data.images || [];
 
+  console.log('GalleryBlock: Rendering with isLocked:', isLocked, 'images:', images.length);
+
   return (
     <View style={styles.container}>
       <ScrollView

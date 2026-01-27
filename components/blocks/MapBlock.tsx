@@ -60,6 +60,8 @@ const styles = StyleSheet.create({
 export function MapBlock({ data, isLocked = false }: MapBlockProps) {
   const address = data.address;
 
+  console.log('MapBlock: Rendering with isLocked:', isLocked, 'address:', address);
+
   return (
     <View style={styles.container}>
       <IconSymbol
