@@ -84,7 +84,7 @@ export default function ProfileScreen() {
                 />
               </View>
             </View>
-            <Text style={styles.userName}></Text>
+            <Text style={styles.userName}>שלום, {user.fullName}</Text>
           </View>
         </LinearGradient>
 
