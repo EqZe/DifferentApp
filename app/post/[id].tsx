@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -43,11 +43,7 @@ export default function PostDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadPost();
-  }, [id]);
-
-  const loadPost = async () => {
+  const loadPost = useCallback(async () => {
     try {
       console.log('PostDetailScreen: Loading post', id);
       setError(null);
@@ -68,7 +64,11 @@ export default function PostDetailScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    loadPost();
+  }, [loadPost]);
 
   const onRefresh = () => {
     console.log('PostDetailScreen: Refreshing post');

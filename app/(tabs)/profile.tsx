@@ -20,123 +20,21 @@ import { designColors, typography, spacing, radius, shadows, layout } from '@/st
 I18nManager.allowRTL(true);
 I18nManager.forceRTL(true);
 
-export default function ProfileScreen() {
-  const { user } = useUser();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const colors = isDark ? designColors.dark : designColors.light;
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'לא נקבע';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('he-IL', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  const statusText = user?.hasSignedAgreement ? 'לקוח פעיל' : 'משתמש רשום';
-  const statusDescription = user?.hasSignedAgreement 
-    ? 'חתמת על הסכם והינך לקוח פעיל במערכת'
-    : 'טרם חתמת על הסכם. פנה למנהל המערכת';
-  const greetingText = user?.hasSignedAgreement 
-    ? `שלום ${user?.fullName || 'משתמש'}, שמחים לראותך!`
-    : `שלום ${user?.fullName || 'משתמש'}`;
-
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <SafeAreaView style={styles.container} edges={['top']}>
-        {/* Modern Header with Gradient */}
-        <LinearGradient
-          colors={[designColors.primary, designColors.primaryDark]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
-        >
-          <View style={styles.headerContent}>
-            {/* Large Avatar with Glow Effect */}
-            <View style={styles.avatarGlow}>
-              <View style={styles.avatar}>
-                <IconSymbol
-                  ios_icon_name="person.fill"
-                  android_material_icon_name="person"
-                  size={56}
-                  color="#FFFFFF"
-                />
-              </View>
-            </View>
-            
-            {/* Personal Greeting */}
-            <Text style={styles.greetingText}>{greetingText}</Text>
-            
-            {/* Status Badge */}
-            <View style={[
-              styles.statusBadge,
-              user?.hasSignedAgreement ? styles.statusBadgeActive : styles.statusBadgeInactive,
-            ]}>
-              <IconSymbol
-                ios_icon_name={user?.hasSignedAgreement ? 'checkmark.circle.fill' : 'info.circle.fill'}
-                android_material_icon_name={user?.hasSignedAgreement ? 'check-circle' : 'info'}
-                size={18}
-                color="#FFFFFF"
-              />
-              <Text style={styles.statusBadgeText}>{statusText}</Text>
-            </View>
-          </View>
-        </LinearGradient>
-
-        {/* Content with Modern Cards */}
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Quick Stats Row (for signed users) */}
-          {user?.hasSignedAgreement && (
-            <View style={styles.statsRow}>
-              <View style={[styles.statCard, { backgroundColor: colors.surface }, isDark && styles.cardDark]}>
-                <View style={[styles.statIconContainer, { backgroundColor: designColors.primaryBg }]}>
-                  Perfect! Now I understand the structure. Let me redesign the profile page and homepage with a modern, personal design, add RTL support for Hebrew, include the company logo on the homepage, and fix the navbar icons. I'll create a more personal, modern experience.
-
-<write file="app/(tabs)/profile.tsx">
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Platform,
-  TouchableOpacity,
-  Image,
-  useColorScheme,
-  I18nManager,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { IconSymbol } from '@/components/IconSymbol';
-import { useUser } from '@/contexts/UserContext';
-import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
-
-// Enable RTL for Hebrew
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
+function formatDate(dateString: string | null) {
+  if (!dateString) return 'לא נקבע';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('he-IL', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
 
 export default function ProfileScreen() {
   const { user } = useUser();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = isDark ? designColors.dark : designColors.light;
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'לא נקבע';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('he-IL', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
 
   const statusText = user?.hasSignedAgreement ? 'לקוח פעיל' : 'משתמש רשום';
   const statusDescription = user?.hasSignedAgreement 

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -43,11 +43,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadPosts();
-  }, [user]);
-
-  const loadPosts = async () => {
+  const loadPosts = useCallback(async () => {
     try {
       console.log('HomeScreen: Loading posts for user', user?.hasContract);
       const fetchedPosts = await api.getPosts(user?.hasContract);
@@ -59,7 +55,11 @@ export default function HomeScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user?.hasContract]);
+
+  useEffect(() => {
+    loadPosts();
+  }, [loadPosts]);
 
   const onRefresh = () => {
     console.log('HomeScreen: Refreshing posts');

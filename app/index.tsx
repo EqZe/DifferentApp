@@ -21,7 +21,7 @@ export default function IndexScreen() {
         router.replace('/register');
       }
     }
-  }, [isLoading, user]);
+  }, [isLoading, user, router]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

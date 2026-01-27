@@ -1,9 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
-import { IconSymbol } from '@/components/IconSymbol';
-import { useUser } from '@/contexts/UserContext';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,6 +10,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '@react-navigation/native';
+import { IconSymbol } from '@/components/IconSymbol';
+import { useUser } from '@/contexts/UserContext';
 import { api, type Task } from '@/utils/api';
 
 const styles = StyleSheet.create({
@@ -131,6 +131,12 @@ const styles = StyleSheet.create({
   },
 });
 
+function formatDate(dateString: string | null) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('he-IL');
+}
+
 export default function TasksScreen() {
   const { user } = useUser();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -138,13 +144,7 @@ export default function TasksScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
 
-  useEffect(() => {
-    if (user) {
-      loadTasks();
-    }
-  }, [user]);
-
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -158,7 +158,13 @@ export default function TasksScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadTasks();
+    }
+  }, [user, loadTasks]);
 
   const onRefresh = () => {
     console.log('TasksScreen: Refreshing tasks');
@@ -193,12 +199,6 @@ export default function TasksScreen() {
       </LinearGradient>
     );
   }
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('he-IL');
-  };
 
   return (
     <LinearGradient colors={['#2784F5', '#1a5fb8']} style={styles.container}>
