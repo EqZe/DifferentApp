@@ -135,10 +135,8 @@ export default function PostDetailScreen() {
   const hasContract = user?.hasContract || false;
   const isLocked = !isPublic && !hasContract;
   const blocks = post.blocks || [];
-  
-  const previewBlockCount = 2;
 
-  console.log('PostDetailScreen: Rendering post', post.title, 'isLocked:', isLocked, 'hasContract:', hasContract, 'blocks:', blocks.length);
+  console.log('PostDetailScreen: Rendering post', post.title, 'visibility:', post.visibility, 'isLocked:', isLocked, 'hasContract:', hasContract, 'blocks:', blocks.length);
 
   return (
     <>
@@ -249,18 +247,18 @@ export default function PostDetailScreen() {
             {/* Article Body - Blocks */}
             <View style={styles.articleBody}>
               {blocks.map((block, index) => {
-                const isTextOrHtml = block.type === 'text' || block.type === 'html';
-                const isInPreviewRange = index < previewBlockCount;
-                const shouldShowPreview = isLocked && isInPreviewRange && isTextOrHtml;
+                const isFirstBlock = index === 0;
+                const shouldShowAsPreview = isLocked && isFirstBlock;
+                const shouldBlur = isLocked && !isFirstBlock;
                 
-                console.log('PostDetailScreen: Rendering block', index, block.type, 'isLocked:', isLocked, 'isPreview:', shouldShowPreview);
+                console.log('PostDetailScreen: Block', index, block.type, 'isLocked:', isLocked, 'isFirstBlock:', isFirstBlock, 'shouldShowAsPreview:', shouldShowAsPreview, 'shouldBlur:', shouldBlur);
                 
                 return (
                   <View key={block.id} style={styles.blockWrapper}>
                     <BlockRenderer 
                       block={block} 
-                      isLocked={isLocked}
-                      isPreview={shouldShowPreview}
+                      isLocked={shouldBlur}
+                      isPreview={shouldShowAsPreview}
                     />
                   </View>
                 );

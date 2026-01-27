@@ -3,11 +3,10 @@ import React, { useState } from 'react';
 import { View, StyleSheet, useColorScheme } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 
 interface HtmlBlockProps {
   data: {
-    content: string;
+    html: string;
   };
   isLocked?: boolean;
   isPreview?: boolean;
@@ -25,14 +24,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  blurOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 10,
-  },
   gradientOverlay: {
     position: 'absolute',
     bottom: 0,
@@ -48,7 +39,7 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   
-  const htmlContent = data.content;
+  const htmlContent = data.html;
   
   console.log('HtmlBlock: Rendering with isLocked:', isLocked, 'isPreview:', isPreview, 'height:', webViewHeight);
   
@@ -65,10 +56,56 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
         }
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 16px;
+          line-height: 1.8;
+          color: ${isDark ? '#E2E8F0' : '#333'};
           padding: 0;
           background: transparent;
           overflow-x: hidden;
-          color: ${isDark ? '#E2E8F0' : '#333'};
+        }
+        h1, h2, h3, h4, h5, h6 {
+          margin: 20px 0 16px 0;
+          color: #2784F5;
+          font-weight: 600;
+          line-height: 1.3;
+        }
+        h1 { font-size: 28px; margin-top: 0; }
+        h2 { font-size: 24px; }
+        h3 { font-size: 20px; }
+        p {
+          margin: 12px 0;
+          line-height: 1.8;
+        }
+        ul, ol {
+          margin: 16px 0;
+          padding-right: 24px;
+        }
+        li {
+          margin: 8px 0;
+          line-height: 1.6;
+        }
+        a {
+          color: #2784F5;
+          text-decoration: none;
+        }
+        strong {
+          font-weight: 600;
+        }
+        em {
+          font-style: italic;
+        }
+        blockquote {
+          margin: 16px 0;
+          padding: 12px 16px;
+          border-right: 4px solid #2784F5;
+          background: ${isDark ? 'rgba(39, 132, 245, 0.1)' : '#f5f5f5'};
+          font-style: italic;
+        }
+        img {
+          max-width: 100%;
+          height: auto;
+          display: block;
+          margin: 16px 0;
         }
       </style>
       <script>
@@ -77,7 +114,6 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
           window.ReactNativeWebView.postMessage(JSON.stringify({ height: height }));
         };
         
-        // Update height when content changes
         const observer = new MutationObserver(() => {
           const height = document.body.scrollHeight;
           window.ReactNativeWebView.postMessage(JSON.stringify({ height: height }));
@@ -100,7 +136,7 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.height) {
-        const newHeight = Math.max(80, data.height + 20);
+        const newHeight = Math.max(100, data.height + 20);
         console.log('HtmlBlock: Setting height to', newHeight);
         setWebViewHeight(newHeight);
       }
@@ -109,11 +145,10 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
     }
   };
 
-  const shouldTruncate = isLocked && isPreview;
-  const shouldBlur = isLocked && !isPreview;
+  const shouldTruncate = isPreview;
   const displayHeight = shouldTruncate ? Math.min(webViewHeight, 150) : webViewHeight;
 
-  console.log('HtmlBlock: shouldTruncate:', shouldTruncate, 'shouldBlur:', shouldBlur, 'displayHeight:', displayHeight);
+  console.log('HtmlBlock: shouldTruncate:', shouldTruncate, 'displayHeight:', displayHeight);
 
   const gradientColors = isDark 
     ? ['rgba(15, 23, 42, 0)', 'rgba(15, 23, 42, 0.7)', 'rgba(15, 23, 42, 0.95)', '#0F172A']
@@ -143,11 +178,6 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
           style={styles.gradientOverlay}
           pointerEvents="none"
         />
-      )}
-      {shouldBlur && (
-        <View style={styles.blurOverlay}>
-          <BlurView intensity={60} style={{ flex: 1 }} tint={isDark ? 'dark' : 'light'} />
-        </View>
       )}
     </View>
   );

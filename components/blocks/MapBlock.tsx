@@ -1,15 +1,16 @@
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, useColorScheme } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { IconSymbol } from '@/components/IconSymbol';
-import { spacing, radius, typography } from '@/styles/designSystem';
+import { designColors, typography, spacing, radius } from '@/styles/designSystem';
 
 interface MapBlockProps {
   data: {
-    latitude?: number;
-    longitude?: number;
-    address?: string;
+    latitude: number;
+    longitude: number;
+    title?: string;
+    description?: string;
   };
   isLocked?: boolean;
 }
@@ -17,69 +18,59 @@ interface MapBlockProps {
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    padding: spacing.lg,
-    backgroundColor: '#f8f9fa',
+    height: 250,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    alignItems: 'center',
-    position: 'relative',
     overflow: 'hidden',
+    position: 'relative',
   },
-  blurOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 10,
+  mapPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  icon: {
-    marginBottom: spacing.md,
-  },
-  title: {
-    ...typography.h4,
-    color: '#333',
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  message: {
+  placeholderText: {
     ...typography.body,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  address: {
-    ...typography.body,
-    color: '#2784F5',
     marginTop: spacing.sm,
     textAlign: 'center',
+  },
+  blurOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radius.lg,
   },
 });
 
 export function MapBlock({ data, isLocked = false }: MapBlockProps) {
-  const address = data.address;
-
-  console.log('MapBlock: Rendering with isLocked:', isLocked, 'address:', address);
-
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const colors = isDark ? designColors.dark : designColors.light;
+  
+  console.log('MapBlock: Rendering with isLocked:', isLocked, 'coords:', data.latitude, data.longitude);
+  
   return (
     <View style={styles.container}>
-      <IconSymbol
-        ios_icon_name="map"
-        android_material_icon_name="map"
-        size={48}
-        color="#2784F5"
-        style={styles.icon}
-      />
-      <Text style={styles.title}>מפה</Text>
-      <Text style={styles.message}>
-        react-native-maps אינו נתמך כרגע ב-Natively
-      </Text>
-      {address && <Text style={styles.address}>{address}</Text>}
+      <View style={[styles.mapPlaceholder, { backgroundColor: colors.backgroundSecondary }]}>
+        <IconSymbol
+          ios_icon_name="map"
+          android_material_icon_name="map"
+          size={48}
+          color={colors.textTertiary}
+        />
+        <Text style={[styles.placeholderText, { color: colors.textTertiary }]}>
+          מפות אינן נתמכות ב-Natively כרגע
+        </Text>
+        {data.title && (
+          <Text style={[styles.placeholderText, { color: colors.text, marginTop: spacing.xs }]}>
+            {data.title}
+          </Text>
+        )}
+      </View>
       {isLocked && (
-        <View style={styles.blurOverlay}>
-          <BlurView intensity={60} style={{ flex: 1 }} tint="light" />
-        </View>
+        <BlurView
+          intensity={80}
+          tint={isDark ? 'dark' : 'light'}
+          style={styles.blurOverlay}
+        />
       )}
     </View>
   );
