@@ -47,7 +47,7 @@ function getTimeBasedGreeting(): string {
 }
 
 export default function HomeScreen() {
-  const { user } = useUser();
+  const { user, isLoading } = useUser();
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -57,6 +57,14 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [greeting, setGreeting] = useState(getTimeBasedGreeting());
+
+  // Redirect to register if user is null
+  useEffect(() => {
+    if (!isLoading && !user) {
+      console.log('HomeScreen: No user found, redirecting to register');
+      router.replace('/register');
+    }
+  }, [user, isLoading, router]);
 
   const loadPosts = useCallback(async () => {
     try {
@@ -73,10 +81,12 @@ export default function HomeScreen() {
   }, [user?.hasContract]);
 
   useEffect(() => {
-    loadPosts();
-    // Update greeting when component mounts
-    setGreeting(getTimeBasedGreeting());
-  }, [loadPosts]);
+    if (user) {
+      loadPosts();
+      // Update greeting when component mounts
+      setGreeting(getTimeBasedGreeting());
+    }
+  }, [loadPosts, user]);
 
   const onRefresh = () => {
     console.log('HomeScreen: Refreshing posts');
@@ -90,6 +100,11 @@ export default function HomeScreen() {
     console.log('HomeScreen: Opening post', postId);
     router.push(`/post/${postId}`);
   };
+
+  // Don't render if no user
+  if (!user) {
+    return null;
+  }
 
   if (loading) {
     return (

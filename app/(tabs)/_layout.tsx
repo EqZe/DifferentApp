@@ -1,15 +1,29 @@
 
-import React from 'react';
-import { Slot } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Slot, useRouter } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import { useUser } from '@/contexts/UserContext';
 import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
 import { Href } from 'expo-router';
 
 export default function TabLayout() {
-  const { user } = useUser();
+  const { user, isLoading } = useUser();
+  const router = useRouter();
 
-  console.log('TabLayout rendering, user:', user?.fullName, 'hasSignedAgreement:', user?.hasSignedAgreement);
+  console.log('TabLayout rendering, user:', user?.fullName, 'hasContract:', user?.hasContract);
+
+  // Redirect to register if user is null
+  useEffect(() => {
+    if (!isLoading && !user) {
+      console.log('TabLayout: No user found, redirecting to register');
+      router.replace('/register');
+    }
+  }, [user, isLoading, router]);
+
+  // Don't render tabs if no user
+  if (!user) {
+    return null;
+  }
 
   // Build tabs based on user status
   const tabs: TabBarItem[] = [
@@ -22,7 +36,7 @@ export default function TabLayout() {
   ];
 
   // Add calculator tab for first-stage users (not signed agreement)
-  if (user && !user.hasSignedAgreement) {
+  if (user && !user.hasContract) {
     console.log('Adding calculator tab for first-stage user');
     tabs.push({
       name: 'calculator',
@@ -33,7 +47,7 @@ export default function TabLayout() {
   }
 
   // Add tasks tab for second-stage users (signed agreement)
-  if (user && user.hasSignedAgreement) {
+  if (user && user.hasContract) {
     console.log('Adding tasks tab for second-stage user');
     tabs.push({
       name: 'tasks',

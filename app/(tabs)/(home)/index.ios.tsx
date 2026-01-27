@@ -46,7 +46,7 @@ function getTimeBasedGreeting(): string {
 }
 
 export default function HomeScreen() {
-  const { user } = useUser();
+  const { user, isLoading } = useUser();
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -57,14 +57,22 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [greeting, setGreeting] = useState(getTimeBasedGreeting());
 
+  // Redirect to register if user is null
+  useEffect(() => {
+    if (!isLoading && !user) {
+      console.log('HomeScreen (iOS): No user found, redirecting to register');
+      router.replace('/register');
+    }
+  }, [user, isLoading, router]);
+
   const loadPosts = useCallback(async () => {
     try {
-      console.log('HomeScreen: Loading posts for user', user?.hasContract);
+      console.log('HomeScreen (iOS): Loading posts for user', user?.hasContract);
       const fetchedPosts = await api.getPosts(user?.hasContract);
-      console.log('HomeScreen: Posts loaded', fetchedPosts.length);
+      console.log('HomeScreen (iOS): Posts loaded', fetchedPosts.length);
       setPosts(fetchedPosts);
     } catch (error) {
-      console.error('HomeScreen: Failed to load posts', error);
+      console.error('HomeScreen (iOS): Failed to load posts', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -72,13 +80,15 @@ export default function HomeScreen() {
   }, [user?.hasContract]);
 
   useEffect(() => {
-    loadPosts();
-    // Update greeting when component mounts
-    setGreeting(getTimeBasedGreeting());
-  }, [loadPosts]);
+    if (user) {
+      loadPosts();
+      // Update greeting when component mounts
+      setGreeting(getTimeBasedGreeting());
+    }
+  }, [loadPosts, user]);
 
   const onRefresh = () => {
-    console.log('HomeScreen: Refreshing posts');
+    console.log('HomeScreen (iOS): Refreshing posts');
     setRefreshing(true);
     // Update greeting on refresh
     setGreeting(getTimeBasedGreeting());
@@ -86,9 +96,14 @@ export default function HomeScreen() {
   };
 
   const handlePostPress = (postId: string) => {
-    console.log('HomeScreen: Opening post', postId);
+    console.log('HomeScreen (iOS): Opening post', postId);
     router.push(`/post/${postId}`);
   };
+
+  // Don't render if no user
+  if (!user) {
+    return null;
+  }
 
   if (loading) {
     return (
