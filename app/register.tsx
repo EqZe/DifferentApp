@@ -12,6 +12,7 @@ import {
   Dimensions,
   Alert,
   Image,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@react-navigation/native';
@@ -30,7 +31,7 @@ import Animated, {
   SlideOutLeft,
 } from 'react-native-reanimated';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -179,373 +180,382 @@ export default function RegisterScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="position"
         style={styles.keyboardView}
+        contentContainerStyle={styles.keyboardContent}
+        keyboardVerticalOffset={0}
       >
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
-            <Animated.View style={[styles.progressBar, progressStyle]} />
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* Logo */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
           </View>
-        </View>
 
-        {/* Content */}
-        <View style={styles.content}>
-          {/* Login Mode */}
-          {isLogin && (
-            <>
-              {step === 1 && (
-                <Animated.View
-                  entering={FadeIn.duration(400)}
-                  exiting={FadeOut.duration(200)}
-                  style={styles.stepContainer}
-                >
-                  <View style={styles.iconCircle}>
-                    <LinearGradient
-                      colors={['#2784F5', '#1E6FD9']}
-                      style={styles.iconGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <IconSymbol
-                        ios_icon_name="envelope.fill"
-                        android_material_icon_name="email"
-                        size={40}
-                        color="#FFFFFF"
-                      />
-                    </LinearGradient>
-                  </View>
-                  
-                  <Text style={[styles.title, { color: colors.text }]}>ברוך שובך!</Text>
-                  <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
-                    מה כתובת האימייל שלך?
-                  </Text>
+          {/* Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
+              <Animated.View style={[styles.progressBar, progressStyle]} />
+            </View>
+          </View>
 
-                  <TextInput
-                    ref={inputRef}
-                    style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-                    placeholder="example@email.com"
-                    placeholderTextColor={colors.text + '66'}
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    textAlign="center"
-                    autoFocus
-                    onSubmitEditing={handleNext}
-                    returnKeyType="next"
-                  />
-                </Animated.View>
-              )}
+          {/* Content */}
+          <View style={styles.content}>
+            {/* Login Mode */}
+            {isLogin && (
+              <>
+                {step === 1 && (
+                  <Animated.View
+                    entering={FadeIn.duration(400)}
+                    exiting={FadeOut.duration(200)}
+                    style={styles.stepContainer}
+                  >
+                    <View style={styles.iconCircle}>
+                      <LinearGradient
+                        colors={['#2784F5', '#1E6FD9']}
+                        style={styles.iconGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <IconSymbol
+                          ios_icon_name="envelope.fill"
+                          android_material_icon_name="email"
+                          size={40}
+                          color="#FFFFFF"
+                        />
+                      </LinearGradient>
+                    </View>
+                    
+                    <Text style={[styles.title, { color: colors.text }]}>ברוך שובך!</Text>
+                    <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
+                      מה כתובת האימייל שלך?
+                    </Text>
 
-              {step === 2 && (
-                <Animated.View
-                  entering={SlideInRight.duration(300)}
-                  exiting={SlideOutLeft.duration(200)}
-                  style={styles.stepContainer}
-                >
-                  <View style={styles.iconCircle}>
-                    <LinearGradient
-                      colors={['#2784F5', '#1E6FD9']}
-                      style={styles.iconGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <IconSymbol
-                        ios_icon_name="lock.fill"
-                        android_material_icon_name="lock"
-                        size={40}
-                        color="#FFFFFF"
-                      />
-                    </LinearGradient>
-                  </View>
-                  
-                  <Text style={[styles.title, { color: colors.text }]}>מה הסיסמה שלך?</Text>
-                  <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
-                    הזן את הסיסמה שלך
-                  </Text>
+                    <TextInput
+                      ref={inputRef}
+                      style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+                      placeholder="example@email.com"
+                      placeholderTextColor={colors.text + '66'}
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      textAlign="center"
+                      autoFocus
+                      onSubmitEditing={handleNext}
+                      returnKeyType="next"
+                    />
+                  </Animated.View>
+                )}
 
-                  <TextInput
-                    ref={inputRef}
-                    style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-                    placeholder="סיסמה"
-                    placeholderTextColor={colors.text + '66'}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    textAlign="center"
-                    onSubmitEditing={handleNext}
-                    returnKeyType="done"
-                  />
-                </Animated.View>
-              )}
-            </>
-          )}
+                {step === 2 && (
+                  <Animated.View
+                    entering={SlideInRight.duration(300)}
+                    exiting={SlideOutLeft.duration(200)}
+                    style={styles.stepContainer}
+                  >
+                    <View style={styles.iconCircle}>
+                      <LinearGradient
+                        colors={['#2784F5', '#1E6FD9']}
+                        style={styles.iconGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <IconSymbol
+                          ios_icon_name="lock.fill"
+                          android_material_icon_name="lock"
+                          size={40}
+                          color="#FFFFFF"
+                        />
+                      </LinearGradient>
+                    </View>
+                    
+                    <Text style={[styles.title, { color: colors.text }]}>מה הסיסמה שלך?</Text>
+                    <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
+                      הזן את הסיסמה שלך
+                    </Text>
 
-          {/* Signup Mode */}
-          {!isLogin && (
-            <>
-              {step === 1 && (
-                <Animated.View
-                  entering={FadeIn.duration(400)}
-                  exiting={FadeOut.duration(200)}
-                  style={styles.stepContainer}
-                >
-                  <View style={styles.iconCircle}>
-                    <LinearGradient
-                      colors={['#2784F5', '#1E6FD9']}
-                      style={styles.iconGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <IconSymbol
-                        ios_icon_name="person.fill"
-                        android_material_icon_name="person"
-                        size={40}
-                        color="#FFFFFF"
-                      />
-                    </LinearGradient>
-                  </View>
-                  
-                  <Text style={[styles.title, { color: colors.text }]}>מה השם שלך?</Text>
-                  <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
-                    נתחיל בהכרות קצרה
-                  </Text>
+                    <TextInput
+                      ref={inputRef}
+                      style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+                      placeholder="סיסמה"
+                      placeholderTextColor={colors.text + '66'}
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry
+                      textAlign="center"
+                      onSubmitEditing={handleNext}
+                      returnKeyType="done"
+                    />
+                  </Animated.View>
+                )}
+              </>
+            )}
 
-                  <TextInput
-                    ref={inputRef}
-                    style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-                    placeholder="שם מלא"
-                    placeholderTextColor={colors.text + '66'}
-                    value={fullName}
-                    onChangeText={setFullName}
-                    autoCapitalize="words"
-                    textAlign="center"
-                    autoFocus
-                    onSubmitEditing={handleNext}
-                    returnKeyType="next"
-                  />
-                </Animated.View>
-              )}
+            {/* Signup Mode */}
+            {!isLogin && (
+              <>
+                {step === 1 && (
+                  <Animated.View
+                    entering={FadeIn.duration(400)}
+                    exiting={FadeOut.duration(200)}
+                    style={styles.stepContainer}
+                  >
+                    <View style={styles.iconCircle}>
+                      <LinearGradient
+                        colors={['#2784F5', '#1E6FD9']}
+                        style={styles.iconGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <IconSymbol
+                          ios_icon_name="person.fill"
+                          android_material_icon_name="person"
+                          size={40}
+                          color="#FFFFFF"
+                        />
+                      </LinearGradient>
+                    </View>
+                    
+                    <Text style={[styles.title, { color: colors.text }]}>מה השם שלך?</Text>
+                    <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
+                      נתחיל בהכרות קצרה
+                    </Text>
 
-              {step === 2 && (
-                <Animated.View
-                  entering={SlideInRight.duration(300)}
-                  exiting={SlideOutLeft.duration(200)}
-                  style={styles.stepContainer}
-                >
-                  <View style={styles.iconCircle}>
-                    <LinearGradient
-                      colors={['#2784F5', '#1E6FD9']}
-                      style={styles.iconGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <IconSymbol
-                        ios_icon_name="location.fill"
-                        android_material_icon_name="location-on"
-                        size={40}
-                        color="#FFFFFF"
-                      />
-                    </LinearGradient>
-                  </View>
-                  
-                  <Text style={[styles.title, { color: colors.text }]}>איפה הבית שלך?</Text>
-                  <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
-                    באיזו עיר אתה בונה את הבית
-                  </Text>
+                    <TextInput
+                      ref={inputRef}
+                      style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+                      placeholder="שם מלא"
+                      placeholderTextColor={colors.text + '66'}
+                      value={fullName}
+                      onChangeText={setFullName}
+                      autoCapitalize="words"
+                      textAlign="center"
+                      autoFocus
+                      onSubmitEditing={handleNext}
+                      returnKeyType="next"
+                    />
+                  </Animated.View>
+                )}
 
-                  <TextInput
-                    ref={inputRef}
-                    style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-                    placeholder="עיר"
-                    placeholderTextColor={colors.text + '66'}
-                    value={city}
-                    onChangeText={setCity}
-                    autoCapitalize="words"
-                    textAlign="center"
-                    onSubmitEditing={handleNext}
-                    returnKeyType="next"
-                  />
-                </Animated.View>
-              )}
+                {step === 2 && (
+                  <Animated.View
+                    entering={SlideInRight.duration(300)}
+                    exiting={SlideOutLeft.duration(200)}
+                    style={styles.stepContainer}
+                  >
+                    <View style={styles.iconCircle}>
+                      <LinearGradient
+                        colors={['#2784F5', '#1E6FD9']}
+                        style={styles.iconGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <IconSymbol
+                          ios_icon_name="location.fill"
+                          android_material_icon_name="location-on"
+                          size={40}
+                          color="#FFFFFF"
+                        />
+                      </LinearGradient>
+                    </View>
+                    
+                    <Text style={[styles.title, { color: colors.text }]}>איפה הבית שלך?</Text>
+                    <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
+                      באיזו עיר אתה בונה את הבית
+                    </Text>
 
-              {step === 3 && (
-                <Animated.View
-                  entering={SlideInRight.duration(300)}
-                  exiting={SlideOutLeft.duration(200)}
-                  style={styles.stepContainer}
-                >
-                  <View style={styles.iconCircle}>
-                    <LinearGradient
-                      colors={['#2784F5', '#1E6FD9']}
-                      style={styles.iconGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <IconSymbol
-                        ios_icon_name="phone.fill"
-                        android_material_icon_name="phone"
-                        size={40}
-                        color="#FFFFFF"
-                      />
-                    </LinearGradient>
-                  </View>
-                  
-                  <Text style={[styles.title, { color: colors.text }]}>מספר הטלפון שלך?</Text>
-                  <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
-                    כדי שנוכל ליצור איתך קשר
-                  </Text>
+                    <TextInput
+                      ref={inputRef}
+                      style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+                      placeholder="עיר"
+                      placeholderTextColor={colors.text + '66'}
+                      value={city}
+                      onChangeText={setCity}
+                      autoCapitalize="words"
+                      textAlign="center"
+                      onSubmitEditing={handleNext}
+                      returnKeyType="next"
+                    />
+                  </Animated.View>
+                )}
 
-                  <TextInput
-                    ref={inputRef}
-                    style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-                    placeholder="05X-XXXXXXX"
-                    placeholderTextColor={colors.text + '66'}
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                    keyboardType="phone-pad"
-                    textAlign="center"
-                    onSubmitEditing={handleNext}
-                    returnKeyType="next"
-                  />
-                </Animated.View>
-              )}
+                {step === 3 && (
+                  <Animated.View
+                    entering={SlideInRight.duration(300)}
+                    exiting={SlideOutLeft.duration(200)}
+                    style={styles.stepContainer}
+                  >
+                    <View style={styles.iconCircle}>
+                      <LinearGradient
+                        colors={['#2784F5', '#1E6FD9']}
+                        style={styles.iconGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <IconSymbol
+                          ios_icon_name="phone.fill"
+                          android_material_icon_name="phone"
+                          size={40}
+                          color="#FFFFFF"
+                        />
+                      </LinearGradient>
+                    </View>
+                    
+                    <Text style={[styles.title, { color: colors.text }]}>מספר הטלפון שלך?</Text>
+                    <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
+                      כדי שנוכל ליצור איתך קשר
+                    </Text>
 
-              {step === 4 && (
-                <Animated.View
-                  entering={SlideInRight.duration(300)}
-                  exiting={SlideOutLeft.duration(200)}
-                  style={styles.stepContainer}
-                >
-                  <View style={styles.iconCircle}>
-                    <LinearGradient
-                      colors={['#2784F5', '#1E6FD9']}
-                      style={styles.iconGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <IconSymbol
-                        ios_icon_name="envelope.fill"
-                        android_material_icon_name="email"
-                        size={40}
-                        color="#FFFFFF"
-                      />
-                    </LinearGradient>
-                  </View>
-                  
-                  <Text style={[styles.title, { color: colors.text }]}>מה האימייל שלך?</Text>
-                  <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
-                    לצורך התחברות למערכת
-                  </Text>
+                    <TextInput
+                      ref={inputRef}
+                      style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+                      placeholder="05X-XXXXXXX"
+                      placeholderTextColor={colors.text + '66'}
+                      value={phoneNumber}
+                      onChangeText={setPhoneNumber}
+                      keyboardType="phone-pad"
+                      textAlign="center"
+                      onSubmitEditing={handleNext}
+                      returnKeyType="next"
+                    />
+                  </Animated.View>
+                )}
 
-                  <TextInput
-                    ref={inputRef}
-                    style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-                    placeholder="example@email.com"
-                    placeholderTextColor={colors.text + '66'}
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    textAlign="center"
-                    onSubmitEditing={handleNext}
-                    returnKeyType="next"
-                  />
-                </Animated.View>
-              )}
+                {step === 4 && (
+                  <Animated.View
+                    entering={SlideInRight.duration(300)}
+                    exiting={SlideOutLeft.duration(200)}
+                    style={styles.stepContainer}
+                  >
+                    <View style={styles.iconCircle}>
+                      <LinearGradient
+                        colors={['#2784F5', '#1E6FD9']}
+                        style={styles.iconGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <IconSymbol
+                          ios_icon_name="envelope.fill"
+                          android_material_icon_name="email"
+                          size={40}
+                          color="#FFFFFF"
+                        />
+                      </LinearGradient>
+                    </View>
+                    
+                    <Text style={[styles.title, { color: colors.text }]}>מה האימייל שלך?</Text>
+                    <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
+                      לצורך התחברות למערכת
+                    </Text>
 
-              {step === 5 && (
-                <Animated.View
-                  entering={SlideInRight.duration(300)}
-                  exiting={SlideOutLeft.duration(200)}
-                  style={styles.stepContainer}
-                >
-                  <View style={styles.iconCircle}>
-                    <LinearGradient
-                      colors={['#2784F5', '#1E6FD9']}
-                      style={styles.iconGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <IconSymbol
-                        ios_icon_name="lock.fill"
-                        android_material_icon_name="lock"
-                        size={40}
-                        color="#FFFFFF"
-                      />
-                    </LinearGradient>
-                  </View>
-                  
-                  <Text style={[styles.title, { color: colors.text }]}>בחר סיסמה</Text>
-                  <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
-                    לפחות 6 תווים
-                  </Text>
+                    <TextInput
+                      ref={inputRef}
+                      style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+                      placeholder="example@email.com"
+                      placeholderTextColor={colors.text + '66'}
+                      value={email}
+                      onChangeText={setEmail}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      textAlign="center"
+                      onSubmitEditing={handleNext}
+                      returnKeyType="next"
+                    />
+                  </Animated.View>
+                )}
 
-                  <TextInput
-                    ref={inputRef}
-                    style={[styles.input, { color: colors.text, borderColor: colors.border }]}
-                    placeholder="סיסמה"
-                    placeholderTextColor={colors.text + '66'}
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                    textAlign="center"
-                    onSubmitEditing={handleNext}
-                    returnKeyType="done"
-                  />
-                </Animated.View>
-              )}
-            </>
-          )}
-        </View>
+                {step === 5 && (
+                  <Animated.View
+                    entering={SlideInRight.duration(300)}
+                    exiting={SlideOutLeft.duration(200)}
+                    style={styles.stepContainer}
+                  >
+                    <View style={styles.iconCircle}>
+                      <LinearGradient
+                        colors={['#2784F5', '#1E6FD9']}
+                        style={styles.iconGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <IconSymbol
+                          ios_icon_name="lock.fill"
+                          android_material_icon_name="lock"
+                          size={40}
+                          color="#FFFFFF"
+                        />
+                      </LinearGradient>
+                    </View>
+                    
+                    <Text style={[styles.title, { color: colors.text }]}>בחר סיסמה</Text>
+                    <Text style={[styles.subtitle, { color: colors.text + '99' }]}>
+                      לפחות 6 תווים
+                    </Text>
 
-        {/* Toggle Login/Signup */}
-        <TouchableOpacity onPress={toggleMode} style={styles.toggleButton}>
-          <Text style={[styles.toggleText, { color: colors.text + '99' }]}>
-            {isLogin ? 'אין לך חשבון? ' : 'כבר יש לך חשבון? '}
-            <Text style={{ color: '#2784F5', fontWeight: '600' }}>
-              {isLogin ? 'הירשם' : 'התחבר'}
+                    <TextInput
+                      ref={inputRef}
+                      style={[styles.input, { color: colors.text, borderColor: colors.border }]}
+                      placeholder="סיסמה"
+                      placeholderTextColor={colors.text + '66'}
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry
+                      textAlign="center"
+                      onSubmitEditing={handleNext}
+                      returnKeyType="done"
+                    />
+                  </Animated.View>
+                )}
+              </>
+            )}
+          </View>
+
+          {/* Toggle Login/Signup */}
+          <TouchableOpacity onPress={toggleMode} style={styles.toggleButton}>
+            <Text style={[styles.toggleText, { color: colors.text + '99' }]}>
+              {isLogin ? 'אין לך חשבון? ' : 'כבר יש לך חשבון? '}
+              <Text style={{ color: '#2784F5', fontWeight: '600' }}>
+                {isLogin ? 'הירשם' : 'התחבר'}
+              </Text>
             </Text>
-          </Text>
-        </TouchableOpacity>
-
-        {/* Continue Button */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[
-              styles.button,
-              !canContinue() && styles.buttonDisabled,
-            ]}
-            onPress={handleNext}
-            disabled={!canContinue() || isLoading}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={canContinue() ? ['#2784F5', '#1E6FD9'] : ['#94A3B8', '#64748B']}
-              style={styles.buttonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.buttonText}>
-                  {(isLogin && step === 2) || (!isLogin && step === 5) ? 'סיום' : 'המשך'}
-                </Text>
-              )}
-            </LinearGradient>
           </TouchableOpacity>
-        </View>
+
+          {/* Continue Button */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[
+                styles.button,
+                !canContinue() && styles.buttonDisabled,
+              ]}
+              onPress={handleNext}
+              disabled={!canContinue() || isLoading}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={canContinue() ? ['#2784F5', '#1E6FD9'] : ['#94A3B8', '#64748B']}
+                style={styles.buttonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.buttonText}>
+                    {(isLogin && step === 2) || (!isLogin && step === 5) ? 'סיום' : 'המשך'}
+                  </Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -557,6 +567,13 @@ const styles = StyleSheet.create({
   },
   keyboardView: {
     flex: 1,
+  },
+  keyboardContent: {
+    flexGrow: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    minHeight: height,
   },
   logoContainer: {
     alignItems: 'center',
@@ -586,6 +603,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
+    minHeight: 400,
   },
   stepContainer: {
     alignItems: 'center',
