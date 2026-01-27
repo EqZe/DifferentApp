@@ -167,8 +167,8 @@ export const api = {
   getPosts: async (hasContract?: boolean): Promise<PostFrontend[]> => {
     console.log('API: Getting posts', { hasContract });
     
-    // Fetch all published posts
-    // RLS policies will automatically filter based on user's contract status
+    // Fetch ALL published posts regardless of visibility
+    // The homepage should show all posts, but locked posts will have restricted preview
     const { data, error } = await supabase
       .from('posts')
       .select('*')
@@ -180,7 +180,7 @@ export const api = {
       throw new Error(error.message || 'Failed to get posts');
     }
 
-    console.log('API: Posts retrieved', data?.length || 0);
+    console.log('API: Posts retrieved', data?.length || 0, 'posts (including contract_only)');
     return data?.map(toCamelCase) || [];
   },
 

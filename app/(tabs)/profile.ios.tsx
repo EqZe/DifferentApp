@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,22 +9,27 @@ import {
   Image,
   useColorScheme,
   I18nManager,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
+import { useRouter } from 'expo-router';
 
 // Enable RTL for Hebrew
 I18nManager.allowRTL(true);
 I18nManager.forceRTL(true);
 
 export default function ProfileScreen() {
-  const { user } = useUser();
+  const { user, setUser } = useUser();
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = isDark ? designColors.dark : designColors.light;
+  
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   function formatDate(dateString: string | null) {
     if (!dateString) return 'לא נקבע';
@@ -35,6 +40,13 @@ export default function ProfileScreen() {
       day: 'numeric',
     });
   }
+
+  const handleLogout = () => {
+    console.log('User logged out');
+    setUser(null);
+    setShowLogoutModal(false);
+    router.replace('/');
+  };
 
   if (!user) {
     return (
@@ -219,8 +231,76 @@ export default function ProfileScreen() {
               </View>
             )}
           </View>
+
+          {/* Logout Button */}
+          <TouchableOpacity
+            style={[styles.logoutButton, { backgroundColor: colors.surface }, isDark && styles.logoutButtonDark]}
+            onPress={() => setShowLogoutModal(true)}
+            activeOpacity={0.7}
+          >
+            <IconSymbol
+              ios_icon_name="arrow.right.square.fill"
+              android_material_icon_name="logout"
+              size={24}
+              color={designColors.error}
+            />
+            <Text style={[styles.logoutButtonText, { color: designColors.error }]}>
+              התנתק מהמערכת
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={[styles.modalIconContainer, { backgroundColor: designColors.errorBg }]}>
+              <IconSymbol
+                ios_icon_name="arrow.right.square.fill"
+                android_material_icon_name="logout"
+                size={32}
+                color={designColors.error}
+              />
+            </View>
+            
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              התנתקות מהמערכת
+            </Text>
+            
+            <Text style={[styles.modalMessage, { color: colors.textSecondary }]}>
+              האם אתה בטוח שברצונך להתנתק מהמערכת?
+            </Text>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel, { backgroundColor: colors.backgroundSecondary }]}
+                onPress={() => setShowLogoutModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.text }]}>
+                  ביטול
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm, { backgroundColor: designColors.error }]}
+                onPress={handleLogout}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                  התנתק
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -352,6 +432,7 @@ const styles = StyleSheet.create({
   // Info Section
   infoSection: {
     gap: spacing.md,
+    marginBottom: spacing.lg,
   },
   infoCard: {
     flexDirection: 'row-reverse',
@@ -385,5 +466,83 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '600',
     textAlign: 'right',
+  },
+  
+  // Logout Button
+  logoutButton: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    ...shadows.sm,
+  },
+  logoutButtonDark: {
+    borderWidth: 1,
+    borderColor: designColors.dark.border,
+  },
+  logoutButtonText: {
+    ...typography.body,
+    fontWeight: '600',
+  },
+  
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: layout.screenPadding,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    alignItems: 'center',
+    ...shadows.xl,
+  },
+  modalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: radius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  modalTitle: {
+    ...typography.h3,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    ...typography.body,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
+    lineHeight: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row-reverse',
+    gap: spacing.md,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    // Background set dynamically
+  },
+  modalButtonConfirm: {
+    // Background set dynamically
+  },
+  modalButtonText: {
+    ...typography.body,
+    fontWeight: '600',
   },
 });
