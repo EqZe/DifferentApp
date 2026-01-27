@@ -143,7 +143,7 @@ export default function ProfileScreen() {
             {!hasContract && (
               <View style={[styles.statusBadge, { backgroundColor: designColors.lockedBg }]}>
                 <Text style={[styles.statusBadgeText, { color: designColors.locked }]}>
-                  פנה ל לחתימה על חוזה
+                  פנה לנציג ההחברה לחתימה על חוזה
                 </Text>
                 <IconSymbol
                   ios_icon_name="info.circle.fill"
