@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { IconSymbol } from '@/components/IconSymbol';
+import { spacing, radius, typography } from '@/styles/designSystem';
 
 interface MapBlockProps {
   data: {
@@ -13,34 +14,33 @@ interface MapBlockProps {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 12,
-    padding: 20,
+    width: '100%',
+    padding: spacing.lg,
     backgroundColor: '#f8f9fa',
-    borderRadius: 12,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: '#e0e0e0',
     alignItems: 'center',
   },
   icon: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.h4,
     color: '#333',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   message: {
-    fontSize: 14,
+    ...typography.body,
     color: '#666',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
   },
   address: {
-    fontSize: 14,
+    ...typography.body,
     color: '#2784F5',
-    marginTop: 8,
+    marginTop: spacing.sm,
     textAlign: 'center',
   },
 });

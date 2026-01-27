@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { View, Image, Text, StyleSheet, ScrollView, ImageSourcePropType } from 'react-native';
+import { spacing, radius, typography } from '@/styles/designSystem';
 
 interface GalleryImage {
   url: string;
@@ -15,26 +16,27 @@ interface GalleryBlockProps {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 12,
+    width: '100%',
   },
   scrollView: {
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
   },
   imageContainer: {
-    marginRight: 12,
+    marginRight: spacing.md,
     width: 200,
   },
   image: {
     width: 200,
     height: 150,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     backgroundColor: '#f0f0f0',
   },
   caption: {
-    marginTop: 6,
-    fontSize: 13,
+    marginTop: spacing.xs,
+    ...typography.caption,
     color: '#666',
     textAlign: 'center',
+    lineHeight: 18,
   },
 });
 

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { View, Image, Text, StyleSheet, ImageSourcePropType } from 'react-native';
+import { spacing, radius, typography } from '@/styles/designSystem';
 
 interface ImageBlockProps {
   data: {
@@ -11,20 +12,21 @@ interface ImageBlockProps {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 12,
+    width: '100%',
   },
   image: {
     width: '100%',
     height: 250,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     backgroundColor: '#f0f0f0',
   },
   caption: {
-    marginTop: 8,
-    fontSize: 14,
+    marginTop: spacing.sm,
+    ...typography.caption,
     color: '#666',
     textAlign: 'center',
     fontStyle: 'italic',
+    lineHeight: 20,
   },
 });
 

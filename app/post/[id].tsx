@@ -83,6 +83,7 @@ export default function PostDetailScreen() {
           options={{
             title: 'טוען...',
             headerShown: true,
+            headerBackTitle: 'חזור',
             headerStyle: {
               backgroundColor: colors.surface,
             },
@@ -106,6 +107,7 @@ export default function PostDetailScreen() {
           options={{
             title: 'שגיאה',
             headerShown: true,
+            headerBackTitle: 'חזור',
             headerStyle: {
               backgroundColor: colors.surface,
             },
@@ -142,6 +144,7 @@ export default function PostDetailScreen() {
           title: '',
           headerShown: true,
           headerTransparent: true,
+          headerBackTitle: 'חזור',
           headerStyle: {
             backgroundColor: 'transparent',
           },
@@ -491,12 +494,12 @@ const styles = StyleSheet.create({
     marginVertical: spacing.lg,
   },
   
-  // Article Body
+  // Article Body - FIXED: Better spacing between blocks
   articleBody: {
     marginBottom: spacing.xl,
   },
   blockWrapper: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.xl,
   },
   
   // Locked Overlay - Premium Design

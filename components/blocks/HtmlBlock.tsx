@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -11,7 +11,7 @@ interface HtmlBlockProps {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 12,
+    width: '100%',
   },
   webview: {
     backgroundColor: 'transparent',
@@ -19,6 +19,8 @@ const styles = StyleSheet.create({
 });
 
 export function HtmlBlock({ data }: HtmlBlockProps) {
+  const [webViewHeight, setWebViewHeight] = useState(200);
+  
   const htmlContent = data.content;
   
   const htmlTemplate = `
@@ -36,8 +38,27 @@ export function HtmlBlock({ data }: HtmlBlockProps) {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           padding: 0;
           background: transparent;
+          overflow-x: hidden;
         }
       </style>
+      <script>
+        window.onload = function() {
+          const height = document.body.scrollHeight;
+          window.ReactNativeWebView.postMessage(JSON.stringify({ height: height }));
+        };
+        
+        // Update height when content changes
+        const observer = new MutationObserver(() => {
+          const height = document.body.scrollHeight;
+          window.ReactNativeWebView.postMessage(JSON.stringify({ height: height }));
+        });
+        
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true
+        });
+      </script>
     </head>
     <body>
       ${htmlContent}
@@ -45,11 +66,21 @@ export function HtmlBlock({ data }: HtmlBlockProps) {
     </html>
   `;
 
-  const contentHeight = htmlContent.length * 0.4;
-  const estimatedHeight = Math.max(80, Math.min(contentHeight, 600));
+  const handleMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.height) {
+        const newHeight = Math.max(80, data.height + 20);
+        console.log('HtmlBlock: Setting height to', newHeight);
+        setWebViewHeight(newHeight);
+      }
+    } catch (error) {
+      console.error('HtmlBlock: Error parsing message', error);
+    }
+  };
 
   return (
-    <View style={[styles.container, { height: estimatedHeight }]}>
+    <View style={[styles.container, { height: webViewHeight }]}>
       <WebView
         source={{ html: htmlTemplate }}
         style={styles.webview}
@@ -58,6 +89,13 @@ export function HtmlBlock({ data }: HtmlBlockProps) {
         showsHorizontalScrollIndicator={false}
         originWhitelist={['*']}
         javaScriptEnabled={true}
+        onMessage={handleMessage}
+        injectedJavaScript={`
+          setTimeout(() => {
+            const height = document.body.scrollHeight;
+            window.ReactNativeWebView.postMessage(JSON.stringify({ height: height }));
+          }, 100);
+        `}
       />
     </View>
   );

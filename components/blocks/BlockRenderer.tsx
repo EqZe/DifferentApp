@@ -7,6 +7,7 @@ import { ImageBlock } from './ImageBlock';
 import { GalleryBlock } from './GalleryBlock';
 import { HtmlBlock } from './HtmlBlock';
 import { MapBlock } from './MapBlock';
+import { spacing, radius, typography } from '@/styles/designSystem';
 
 interface BlockRendererProps {
   block: PostBlock;
@@ -14,14 +15,13 @@ interface BlockRendererProps {
 
 const styles = StyleSheet.create({
   errorContainer: {
-    padding: 16,
+    padding: spacing.md,
     backgroundColor: '#fee',
-    borderRadius: 8,
-    marginVertical: 8,
+    borderRadius: radius.md,
   },
   errorText: {
+    ...typography.body,
     color: '#c00',
-    fontSize: 14,
   },
 });
 
