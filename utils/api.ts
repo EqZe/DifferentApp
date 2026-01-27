@@ -102,12 +102,13 @@ export const api = {
         throw new Error('לא התקבל משתמש מהשרת');
       }
 
-      console.log('API: Sign up successful, creating user profile in database');
+      console.log('API: Sign up successful, creating/updating user profile in database');
       
-      // Create the user profile in the users table
-      const { data: userData, error: insertError } = await supabase
+      // Use upsert to handle cases where the user profile already exists (e.g., from a database trigger)
+      // This prevents duplicate key errors
+      const { data: userData, error: upsertError } = await supabase
         .from('users')
-        .insert({
+        .upsert({
           auth_user_id: authData.user.id,
           full_name: fullName,
           city,
@@ -115,24 +116,23 @@ export const api = {
           email: email,
           has_contract: false,
           travel_date: null,
+        }, {
+          onConflict: 'auth_user_id',
+          ignoreDuplicates: false, // Update existing row if it exists
         })
         .select()
         .single();
 
-      if (insertError) {
-        console.error('API: Failed to create user profile', insertError);
+      if (upsertError) {
+        console.error('API: Failed to create/update user profile', upsertError);
         
         // If profile creation fails, try to clean up the auth user
         await supabase.auth.signOut();
         
-        if (insertError.message.includes('duplicate key')) {
-          throw new Error('המשתמש כבר קיים במערכת');
-        }
-        
-        throw new Error(insertError.message || 'שגיאה ביצירת פרופיל משתמש');
+        throw new Error(upsertError.message || 'שגיאה ביצירת פרופיל משתמש');
       }
 
-      console.log('API: User profile created successfully', userData);
+      console.log('API: User profile created/updated successfully', userData);
       
       const camelData = toCamelCase(userData);
       return {
