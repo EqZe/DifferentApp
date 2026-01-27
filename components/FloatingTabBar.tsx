@@ -7,12 +7,12 @@ import {
   StyleSheet,
   Platform,
   Dimensions,
+  useColorScheme,
 } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
+import { useRouter, usePathname, Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
 import { BlurView } from 'expo-blur';
-import { useTheme } from '@react-navigation/native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -20,7 +20,7 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Href } from 'expo-router';
+import { designColors, typography, spacing, radius, shadows } from '@/styles/designSystem';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -40,41 +40,33 @@ interface FloatingTabBarProps {
 
 export default function FloatingTabBar({
   tabs,
-  containerWidth = screenWidth / 2.5,
-  borderRadius = 35,
-  bottomMargin
+  containerWidth = screenWidth * 0.9,
+  borderRadius = 28,
+  bottomMargin = 16,
 }: FloatingTabBarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const theme = useTheme();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const colors = isDark ? designColors.dark : designColors.light;
   const animatedValue = useSharedValue(0);
 
-  // Improved active tab detection with better path matching
+  // Improved active tab detection
   const activeTabIndex = React.useMemo(() => {
-    console.log('Current pathname:', pathname);
+    console.log('FloatingTabBar: Current pathname:', pathname);
     
-    // Find the best matching tab based on the current pathname
     let bestMatch = -1;
     let bestMatchScore = 0;
 
     tabs.forEach((tab, index) => {
       let score = 0;
 
-      // Exact route match gets highest score
       if (pathname === tab.route) {
         score = 100;
-      }
-      // Check if pathname starts with tab route (for nested routes)
-      else if (pathname.startsWith(tab.route as string)) {
+      } else if (pathname.startsWith(tab.route as string)) {
         score = 80;
-      }
-      // Check if pathname contains the tab name
-      else if (pathname.includes(tab.name)) {
+      } else if (pathname.includes(tab.name)) {
         score = 60;
-      }
-      // Check for partial matches in the route
-      else if (tab.route.includes('/(tabs)/') && pathname.includes(tab.route.split('/(tabs)/')[1])) {
-        score = 40;
       }
 
       if (score > bestMatchScore) {
@@ -83,9 +75,8 @@ export default function FloatingTabBar({
       }
     });
 
-    // Default to first tab if no match found
     const finalIndex = bestMatch >= 0 ? bestMatch : 0;
-    console.log('Active tab index:', finalIndex, 'for tab:', tabs[finalIndex]?.name);
+    console.log('FloatingTabBar: Active tab index:', finalIndex, 'for tab:', tabs[finalIndex]?.name);
     return finalIndex;
   }, [pathname, tabs]);
 
@@ -100,14 +91,14 @@ export default function FloatingTabBar({
   }, [activeTabIndex, animatedValue]);
 
   const handleTabPress = (route: Href) => {
-    console.log('Tab pressed:', route);
+    console.log('FloatingTabBar: Tab pressed:', route);
     router.push(route);
   };
 
   const tabWidthPercent = ((100 / tabs.length) - 1).toFixed(2);
 
   const indicatorStyle = useAnimatedStyle(() => {
-    const tabWidth = (containerWidth - 8) / tabs.length; // Account for container padding (4px on each side)
+    const tabWidth = (containerWidth - 8) / tabs.length;
     return {
       transform: [
         {
@@ -121,58 +112,31 @@ export default function FloatingTabBar({
     };
   });
 
-  // Dynamic styles based on theme
-  const dynamicStyles = {
-    blurContainer: {
-      ...styles.blurContainer,
-      borderWidth: 1.2,
-      borderColor: 'rgba(255, 255, 255, 1)',
-      ...Platform.select({
-        ios: {
-          backgroundColor: theme.dark
-            ? 'rgba(28, 28, 30, 0.8)'
-            : 'rgba(255, 255, 255, 0.6)',
-        },
-        android: {
-          backgroundColor: theme.dark
-            ? 'rgba(28, 28, 30, 0.95)'
-            : 'rgba(255, 255, 255, 0.6)',
-        },
-        web: {
-          backgroundColor: theme.dark
-            ? 'rgba(28, 28, 30, 0.95)'
-            : 'rgba(255, 255, 255, 0.6)',
-          backdropFilter: 'blur(10px)',
-        },
-      }),
-    },
-    background: {
-      ...styles.background,
-    },
-    indicator: {
-      ...styles.indicator,
-      backgroundColor: theme.dark
-        ? 'rgba(255, 255, 255, 0.08)' // Subtle white overlay in dark mode
-        : 'rgba(0, 0, 0, 0.04)', // Subtle black overlay in light mode
-      width: `${tabWidthPercent}%` as `${number}%`, // Dynamic width based on number of tabs
-    },
-  };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <View style={[
-        styles.container,
-        {
-          width: containerWidth,
-          marginBottom: bottomMargin ?? 20
-        }
-      ]}>
+      <View style={[styles.container, { width: containerWidth, marginBottom: bottomMargin }]}>
         <BlurView
-          intensity={80}
-          style={[dynamicStyles.blurContainer, { borderRadius }]}
+          intensity={isDark ? 60 : 80}
+          style={[
+            styles.blurContainer,
+            { borderRadius },
+            isDark ? styles.blurContainerDark : styles.blurContainerLight,
+          ]}
         >
-          <View style={dynamicStyles.background} />
-          <Animated.View style={[dynamicStyles.indicator, indicatorStyle]} />
+          <View style={[
+            styles.background,
+            { backgroundColor: isDark ? 'rgba(30, 41, 59, 0.9)' : 'rgba(255, 255, 255, 0.9)' },
+          ]} />
+          
+          <Animated.View style={[
+            styles.indicator,
+            {
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(39, 132, 245, 0.1)',
+              width: `${tabWidthPercent}%` as `${number}%`,
+            },
+            indicatorStyle,
+          ]} />
+          
           <View style={styles.tabsContainer}>
             {tabs.map((tab, index) => {
               const isActive = activeTabIndex === index;
@@ -189,13 +153,13 @@ export default function FloatingTabBar({
                       android_material_icon_name={tab.icon}
                       ios_icon_name={tab.icon}
                       size={24}
-                      color={isActive ? theme.colors.primary : (theme.dark ? '#98989D' : '#000000')}
+                      color={isActive ? designColors.primary : colors.textTertiary}
                     />
                     <Text
                       style={[
                         styles.tabLabel,
-                        { color: theme.dark ? '#98989D' : '#8E8E93' },
-                        isActive && { color: theme.colors.primary, fontWeight: '600' },
+                        { color: colors.textTertiary },
+                        isActive && { color: designColors.primary, fontWeight: '600' },
                       ]}
                     >
                       {tab.label}
@@ -218,33 +182,36 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 1000,
-    alignItems: 'center', // Center the content
+    alignItems: 'center',
   },
   container: {
-    marginHorizontal: 20,
     alignSelf: 'center',
-    // width and marginBottom handled dynamically via props
   },
   blurContainer: {
     overflow: 'hidden',
-    // borderRadius and other styling applied dynamically
+    ...shadows.lg,
+  },
+  blurContainerLight: {
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+  },
+  blurContainerDark: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   background: {
     ...StyleSheet.absoluteFillObject,
-    // Dynamic styling applied in component
   },
   indicator: {
     position: 'absolute',
     top: 4,
-    left: 2,
+    left: 4,
     bottom: 4,
-    borderRadius: 27,
-    width: `${(100 / 2) - 1}%`, // Default for 2 tabs, will be overridden by dynamic styles
-    // Dynamic styling applied in component
+    borderRadius: 24,
   },
   tabsContainer: {
     flexDirection: 'row',
-    height: 60,
+    height: 64,
     alignItems: 'center',
     paddingHorizontal: 4,
   },
@@ -252,17 +219,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   tabContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: 4,
   },
   tabLabel: {
-    fontSize: 9,
+    ...typography.caption,
     fontWeight: '500',
-    marginTop: 2,
-    // Dynamic styling applied in component
   },
 });

@@ -1,10 +1,5 @@
 
 import React, { useState, useEffect } from 'react';
-import { IconSymbol } from '@/components/IconSymbol';
-import { useUser } from '@/contexts/UserContext';
-import { LinearGradient } from 'expo-linear-gradient';
-import { api, type Post } from '@/utils/api';
-import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -15,117 +10,16 @@ import {
   RefreshControl,
   ActivityIndicator,
   ImageSourcePropType,
+  useColorScheme,
 } from 'react-native';
-import { useTheme } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 20,
-    alignItems: 'center',
-  },
-  logo: {
-    width: 180,
-    height: 180,
-    resizeMode: 'contain',
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    opacity: 0.9,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
-  postCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    overflow: 'hidden',
-  },
-  coverImage: {
-    width: '100%',
-    height: 180,
-    backgroundColor: '#f0f0f0',
-  },
-  postContent: {
-    padding: 20,
-  },
-  postTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2784F5',
-    marginBottom: 8,
-    textAlign: 'right',
-  },
-  visibilityBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-  publicBadge: {
-    backgroundColor: '#e3f2fd',
-  },
-  contractBadge: {
-    backgroundColor: '#fff3e0',
-  },
-  badgeIcon: {
-    marginLeft: 6,
-  },
-  badgeText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  publicBadgeText: {
-    color: '#2784F5',
-  },
-  contractBadgeText: {
-    color: '#F5AD27',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    opacity: 0.8,
-    marginTop: 16,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { IconSymbol } from '@/components/IconSymbol';
+import { useUser } from '@/contexts/UserContext';
+import { api, type Post } from '@/utils/api';
+import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
 
 function resolveImageSource(source: string | number | ImageSourcePropType | undefined): ImageSourcePropType {
   if (!source) return { uri: '' };
@@ -136,10 +30,13 @@ function resolveImageSource(source: string | number | ImageSourcePropType | unde
 export default function HomeScreen() {
   const { user } = useUser();
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const colors = isDark ? designColors.dark : designColors.light;
+  
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { colors } = useTheme();
 
   useEffect(() => {
     loadPosts();
@@ -172,108 +69,378 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <LinearGradient colors={['#2784F5', '#1a5fb8']} style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <SafeAreaView style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
+          <ActivityIndicator size="large" color={designColors.primary} />
         </SafeAreaView>
-      </LinearGradient>
+      </View>
     );
   }
 
   const welcomeText = user?.hasSignedAgreement 
-    ? 'ברוכים הבאים למערכת הליווי שלנו'
+    ? 'ברוכים הבאים למערכת הליווי'
     : 'ברוכים הבאים';
-
   const userName = user?.fullName || '';
+  const userStatus = user?.hasSignedAgreement ? 'לקוח פעיל' : 'משתמש רשום';
 
   return (
-    <LinearGradient colors={['#2784F5', '#1a5fb8']} style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <Image
-            source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
-            style={styles.logo}
-          />
-          <Text style={styles.title}>{welcomeText}</Text>
-          {user && (
-            <Text style={styles.subtitle}>
-              {userName}
-            </Text>
-          )}
-        </View>
+        {/* Header with gradient background */}
+        <LinearGradient
+          colors={[designColors.primary, designColors.primaryDark]}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <Image
+              source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
+              style={styles.logo}
+            />
+            <Text style={styles.welcomeText}>{welcomeText}</Text>
+            {user && (
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>{userName}</Text>
+                <View style={styles.statusBadge}>
+                  <IconSymbol
+                    ios_icon_name="checkmark.circle.fill"
+                    android_material_icon_name="check-circle"
+                    size={14}
+                    color="#FFFFFF"
+                  />
+                  <Text style={styles.statusText}>{userStatus}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </LinearGradient>
 
+        {/* Content */}
         <ScrollView
           style={styles.content}
+          contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#FFFFFF"
+              tintColor={designColors.primary}
             />
           }
         >
+          {/* Section Header */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>תוכן ומידע</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+              כל המידע החשוב במקום אחד
+            </Text>
+          </View>
+
+          {/* Posts Grid */}
           {posts.length === 0 ? (
             <View style={styles.emptyState}>
-              <IconSymbol
-                ios_icon_name="doc.text"
-                android_material_icon_name="description"
-                size={64}
-                color="#FFFFFF"
-              />
-              <Text style={styles.emptyText}>אין תוכן זמין כרגע</Text>
+              <View style={[styles.emptyIconContainer, { backgroundColor: colors.backgroundSecondary }]}>
+                <IconSymbol
+                  ios_icon_name="doc.text"
+                  android_material_icon_name="description"
+                  size={48}
+                  color={colors.textTertiary}
+                />
+              </View>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>אין תוכן זמין</Text>
+              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                התוכן יתעדכן בקרוב
+              </Text>
             </View>
           ) : (
-            posts.map((post) => {
-              const postTitle = post.title;
-              const coverImage = post.coverImage;
-              const visibility = post.visibility;
-              const isPublic = visibility === 'public';
-              const badgeText = isPublic ? 'ציבורי' : 'חוזה בלבד';
+            <View style={styles.postsGrid}>
+              {posts.map((post) => {
+                const isPublic = post.visibility === 'public';
+                const isLocked = !isPublic && !user?.hasContract;
+                
+                return (
+                  <TouchableOpacity
+                    key={post.id}
+                    style={[
+                      styles.postCard,
+                      { backgroundColor: colors.surface },
+                      isDark && styles.postCardDark,
+                    ]}
+                    onPress={() => handlePostPress(post.id)}
+                    activeOpacity={0.7}
+                  >
+                    {/* Cover Image */}
+                    {post.coverImage && (
+                      <View style={styles.coverImageContainer}>
+                        <Image
+                          source={resolveImageSource(post.coverImage)}
+                          style={styles.coverImage}
+                          resizeMode="cover"
+                        />
+                        {isLocked && (
+                          <View style={styles.lockedOverlay}>
+                            <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+                            <View style={styles.lockIconContainer}>
+                              <IconSymbol
+                                ios_icon_name="lock.fill"
+                                android_material_icon_name="lock"
+                                size={24}
+                                color="#FFFFFF"
+                              />
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    )}
 
-              return (
-                <TouchableOpacity
-                  key={post.id}
-                  style={styles.postCard}
-                  onPress={() => handlePostPress(post.id)}
-                  activeOpacity={0.7}
-                >
-                  {coverImage && (
-                    <Image
-                      source={resolveImageSource(coverImage)}
-                      style={styles.coverImage}
-                      resizeMode="cover"
-                    />
-                  )}
-                  
-                  <View style={styles.postContent}>
-                    <Text style={styles.postTitle}>{postTitle}</Text>
-                    
-                    <View style={[
-                      styles.visibilityBadge,
-                      isPublic ? styles.publicBadge : styles.contractBadge
-                    ]}>
-                      <IconSymbol
-                        ios_icon_name={isPublic ? 'globe' : 'lock.fill'}
-                        android_material_icon_name={isPublic ? 'public' : 'lock'}
-                        size={16}
-                        color={isPublic ? '#2784F5' : '#F5AD27'}
-                        style={styles.badgeIcon}
-                      />
-                      <Text style={[
-                        styles.badgeText,
-                        isPublic ? styles.publicBadgeText : styles.contractBadgeText
-                      ]}>
-                        {badgeText}
-                      </Text>
+                    {/* Card Content */}
+                    <View style={styles.postCardContent}>
+                      <View style={styles.postHeader}>
+                        <Text style={[styles.postTitle, { color: colors.text }]} numberOfLines={2}>
+                          {post.title}
+                        </Text>
+                        
+                        {/* Visibility Badge */}
+                        <View style={[
+                          styles.visibilityBadge,
+                          isPublic ? styles.publicBadge : styles.contractBadge,
+                        ]}>
+                          <IconSymbol
+                            ios_icon_name={isPublic ? 'globe' : 'lock.fill'}
+                            android_material_icon_name={isPublic ? 'public' : 'lock'}
+                            size={12}
+                            color={isPublic ? designColors.primary : designColors.secondary}
+                          />
+                          <Text style={[
+                            styles.badgeText,
+                            isPublic ? styles.publicBadgeText : styles.contractBadgeText,
+                          ]}>
+                            {isPublic ? 'ציבורי' : 'חוזה בלבד'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Locked State Message */}
+                      {isLocked && (
+                        <View style={styles.lockedMessage}>
+                          <IconSymbol
+                            ios_icon_name="info.circle"
+                            android_material_icon_name="info"
+                            size={16}
+                            color={designColors.locked}
+                          />
+                          <Text style={styles.lockedMessageText}>
+                            זמין לאחר חתימת חוזה
+                          </Text>
+                        </View>
+                      )}
+
+                      {/* Action Arrow */}
+                      <View style={styles.postFooter}>
+                        <Text style={[styles.readMoreText, { color: designColors.primary }]}>
+                          קרא עוד
+                        </Text>
+                        <IconSymbol
+                          ios_icon_name="chevron.left"
+                          android_material_icon_name="chevron-left"
+                          size={16}
+                          color={designColors.primary}
+                        />
+                      </View>
                     </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            })
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           )}
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    paddingHorizontal: layout.screenPadding,
+  },
+  headerContent: {
+    alignItems: 'center',
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
+    marginBottom: spacing.md,
+  },
+  welcomeText: {
+    ...typography.h2,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  userInfo: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  userName: {
+    ...typography.bodyLarge,
+    color: '#FFFFFF',
+    opacity: 0.95,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.full,
+  },
+  statusText: {
+    ...typography.caption,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing.lg,
+    paddingBottom: 120,
+  },
+  sectionHeader: {
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    ...typography.h3,
+    marginBottom: spacing.xs,
+  },
+  sectionSubtitle: {
+    ...typography.bodySmall,
+  },
+  postsGrid: {
+    gap: spacing.md,
+  },
+  postCard: {
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  postCardDark: {
+    borderWidth: 1,
+    borderColor: designColors.dark.border,
+  },
+  coverImageContainer: {
+    width: '100%',
+    height: 180,
+    backgroundColor: designColors.light.backgroundSecondary,
+    position: 'relative',
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  lockedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  postCardContent: {
+    padding: spacing.lg,
+  },
+  postHeader: {
+    marginBottom: spacing.md,
+  },
+  postTitle: {
+    ...typography.h4,
+    marginBottom: spacing.sm,
+    textAlign: 'right',
+  },
+  visibilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.full,
+    alignSelf: 'flex-start',
+  },
+  publicBadge: {
+    backgroundColor: designColors.primaryBg,
+  },
+  contractBadge: {
+    backgroundColor: designColors.secondaryBg,
+  },
+  badgeText: {
+    ...typography.caption,
+    fontWeight: '600',
+  },
+  publicBadgeText: {
+    color: designColors.primary,
+  },
+  contractBadgeText: {
+    color: designColors.secondary,
+  },
+  lockedMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: designColors.lockedBg,
+    borderRadius: radius.sm,
+    marginBottom: spacing.md,
+  },
+  lockedMessageText: {
+    ...typography.labelSmall,
+    color: designColors.locked,
+  },
+  postFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: spacing.xs,
+  },
+  readMoreText: {
+    ...typography.label,
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxxl,
+  },
+  emptyIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: radius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  emptyTitle: {
+    ...typography.h3,
+    marginBottom: spacing.xs,
+  },
+  emptySubtitle: {
+    ...typography.body,
+    textAlign: 'center',
+  },
+});
