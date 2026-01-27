@@ -90,17 +90,6 @@ export default function ProfileScreen() {
             isDark && styles.statusCardDark,
           ]}>
             <View style={styles.statusHeader}>
-              <View style={[
-                styles.statusIconContainer,
-                hasContract ? styles.statusIconActive : styles.statusIconInactive,
-              ]}>
-                <IconSymbol
-                  ios_icon_name={hasContract ? 'checkmark.seal.fill' : 'lock.fill'}
-                  android_material_icon_name={hasContract ? 'verified' : 'lock'}
-                  size={32}
-                  color="#FFFFFF"
-                />
-              </View>
               <View style={styles.statusTextContainer}>
                 <Text style={[styles.statusTitle, { color: colors.text }]}>
                   סטטוס חוזה
@@ -112,33 +101,44 @@ export default function ProfileScreen() {
                   {hasContract ? 'חוזה פעיל' : 'ללא חוזה'}
                 </Text>
               </View>
+              <View style={[
+                styles.statusIconContainer,
+                hasContract ? styles.statusIconActive : styles.statusIconInactive,
+              ]}>
+                <IconSymbol
+                  ios_icon_name={hasContract ? 'checkmark.seal.fill' : 'lock.fill'}
+                  android_material_icon_name={hasContract ? 'verified' : 'lock'}
+                  size={32}
+                  color="#FFFFFF"
+                />
+              </View>
             </View>
             
             {hasContract && (
               <View style={[styles.statusBadge, { backgroundColor: designColors.successBg }]}>
+                <Text style={[styles.statusBadgeText, { color: designColors.success }]}>
+                  יש לך גישה לכל התכנים והליווי האישי
+                </Text>
                 <IconSymbol
                   ios_icon_name="checkmark.circle.fill"
                   android_material_icon_name="check-circle"
                   size={16}
                   color={designColors.success}
                 />
-                <Text style={[styles.statusBadgeText, { color: designColors.success }]}>
-                  יש לך גישה לכל התכנים והליווי האישי
-                </Text>
               </View>
             )}
             
             {!hasContract && (
               <View style={[styles.statusBadge, { backgroundColor: designColors.lockedBg }]}>
+                <Text style={[styles.statusBadgeText, { color: designColors.locked }]}>
+                  פנה למנהל המערכת לחתימה על חוזה
+                </Text>
                 <IconSymbol
                   ios_icon_name="info.circle.fill"
                   android_material_icon_name="info"
                   size={16}
                   color={designColors.locked}
                 />
-                <Text style={[styles.statusBadgeText, { color: designColors.locked }]}>
-                  פנה למנהל המערכת לחתימה על חוזה
-                </Text>
               </View>
             )}
           </View>
@@ -151,14 +151,6 @@ export default function ProfileScreen() {
               { backgroundColor: colors.surface },
               isDark && styles.infoCardDark,
             ]}>
-              <View style={[styles.infoIconContainer, { backgroundColor: designColors.primaryBg }]}>
-                <IconSymbol
-                  ios_icon_name="phone.fill"
-                  android_material_icon_name="phone"
-                  size={24}
-                  color={designColors.primary}
-                />
-              </View>
               <View style={styles.infoTextContainer}>
                 <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>
                   טלפון
@@ -166,6 +158,14 @@ export default function ProfileScreen() {
                 <Text style={[styles.infoValue, { color: colors.text }]}>
                   {user.phoneNumber}
                 </Text>
+              </View>
+              <View style={[styles.infoIconContainer, { backgroundColor: designColors.primaryBg }]}>
+                <IconSymbol
+                  ios_icon_name="phone.fill"
+                  android_material_icon_name="phone"
+                  size={24}
+                  color={designColors.primary}
+                />
               </View>
             </View>
 
@@ -175,14 +175,6 @@ export default function ProfileScreen() {
               { backgroundColor: colors.surface },
               isDark && styles.infoCardDark,
             ]}>
-              <View style={[styles.infoIconContainer, { backgroundColor: designColors.secondaryBg }]}>
-                <IconSymbol
-                  ios_icon_name="location.fill"
-                  android_material_icon_name="location-on"
-                  size={24}
-                  color={designColors.secondary}
-                />
-              </View>
               <View style={styles.infoTextContainer}>
                 <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>
                   עיר
@@ -190,6 +182,14 @@ export default function ProfileScreen() {
                 <Text style={[styles.infoValue, { color: colors.text }]}>
                   {user.city}
                 </Text>
+              </View>
+              <View style={[styles.infoIconContainer, { backgroundColor: designColors.secondaryBg }]}>
+                <IconSymbol
+                  ios_icon_name="location.fill"
+                  android_material_icon_name="location-on"
+                  size={24}
+                  color={designColors.secondary}
+                />
               </View>
             </View>
 
@@ -200,14 +200,6 @@ export default function ProfileScreen() {
                 { backgroundColor: colors.surface },
                 isDark && styles.infoCardDark,
               ]}>
-                <View style={[styles.infoIconContainer, { backgroundColor: designColors.primaryBg }]}>
-                  <IconSymbol
-                    ios_icon_name="calendar"
-                    android_material_icon_name="calendar-today"
-                    size={24}
-                    color={designColors.primary}
-                  />
-                </View>
                 <View style={styles.infoTextContainer}>
                   <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>
                     תאריך נסיעה
@@ -215,6 +207,14 @@ export default function ProfileScreen() {
                   <Text style={[styles.infoValue, { color: colors.text }]}>
                     {travelDateFormatted}
                   </Text>
+                </View>
+                <View style={[styles.infoIconContainer, { backgroundColor: designColors.primaryBg }]}>
+                  <IconSymbol
+                    ios_icon_name="calendar"
+                    android_material_icon_name="calendar-today"
+                    size={24}
+                    color={designColors.primary}
+                  />
                 </View>
               </View>
             )}
@@ -236,6 +236,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...typography.body,
+    textAlign: 'center',
   },
   
   // Header
@@ -265,10 +266,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     marginBottom: spacing.xs,
+    textAlign: 'center',
   },
   userCity: {
     ...typography.body,
     color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
   },
   
   // Content
@@ -293,7 +296,7 @@ const styles = StyleSheet.create({
     borderColor: designColors.dark.border,
   },
   statusHeader: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     marginBottom: spacing.md,
   },
@@ -303,7 +306,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: spacing.md,
+    marginRight: spacing.md,
   },
   statusIconActive: {
     backgroundColor: designColors.success,
@@ -313,14 +316,17 @@ const styles = StyleSheet.create({
   },
   statusTextContainer: {
     flex: 1,
+    alignItems: 'flex-end',
   },
   statusTitle: {
     ...typography.labelSmall,
     marginBottom: spacing.xs / 2,
+    textAlign: 'right',
   },
   statusValue: {
     ...typography.h3,
     fontWeight: '700',
+    textAlign: 'right',
   },
   statusValueActive: {
     color: designColors.success,
@@ -329,7 +335,7 @@ const styles = StyleSheet.create({
     color: designColors.locked,
   },
   statusBadge: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.sm,
@@ -348,7 +354,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   infoCard: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     borderRadius: radius.md,
     padding: spacing.md,
@@ -364,17 +370,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: spacing.md,
+    marginRight: spacing.md,
   },
   infoTextContainer: {
     flex: 1,
+    alignItems: 'flex-end',
   },
   infoLabel: {
     ...typography.caption,
     marginBottom: spacing.xs / 2,
+    textAlign: 'right',
   },
   infoValue: {
     ...typography.body,
     fontWeight: '600',
+    textAlign: 'right',
   },
 });
