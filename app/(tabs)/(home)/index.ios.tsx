@@ -68,7 +68,6 @@ export default function HomeScreen() {
   const loadPosts = useCallback(async () => {
     try {
       console.log('HomeScreen (iOS): Loading ALL posts (public + contract_only)');
-      // FIXED: Remove hasContract parameter - fetch ALL posts
       const fetchedPosts = await api.getPosts();
       console.log('HomeScreen (iOS): Posts loaded', fetchedPosts.length, 'posts');
       console.log('HomeScreen (iOS): Post visibilities:', fetchedPosts.map(p => ({ title: p.title, visibility: p.visibility })));
@@ -95,7 +94,7 @@ export default function HomeScreen() {
     // Update greeting on refresh
     setGreeting(getTimeBasedGreeting());
     
-    // FIXED: Refresh user data from database to get latest hasContract value
+    // Refresh user data from database to get latest hasContract value
     await refreshUser();
     
     // Then load posts
@@ -182,8 +181,9 @@ export default function HomeScreen() {
           ) : (
             <View style={styles.postsGrid}>
               {posts.map((post) => {
+                const isContractOnly = post.visibility === 'contract_only';
                 const isPublic = post.visibility === 'public';
-                const isLocked = !isPublic && !user?.hasContract;
+                const isLocked = isContractOnly && !user?.hasContract;
                 
                 return (
                   <TouchableOpacity
@@ -218,23 +218,40 @@ export default function HomeScreen() {
                           </View>
                         )}
                         
-                        {/* Category Badge on Image */}
-                        <View style={styles.imageBadgeContainer}>
-                          <View style={[
-                            styles.imageBadge,
-                            isPublic ? styles.publicImageBadge : styles.contractImageBadge,
-                          ]}>
-                            <IconSymbol
-                              ios_icon_name={isPublic ? 'globe' : 'lock.fill'}
-                              android_material_icon_name={isPublic ? 'public' : 'lock'}
-                              size={10}
-                              color="#FFFFFF"
-                            />
-                            <Text style={styles.imageBadgeText}>
-                              {isPublic ? 'ציבורי' : 'חוזה'}
-                            </Text>
+                        {/* Gold Badge for contract_only posts - Visible to ALL logged-in users */}
+                        {isContractOnly && (
+                          <View style={styles.imageBadgeContainer}>
+                            <LinearGradient
+                              colors={['#FFD700', '#FFA500']}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={styles.goldBadge}
+                            >
+                              <IconSymbol
+                                ios_icon_name="star.fill"
+                                android_material_icon_name="star"
+                                size={12}
+                                color="#FFFFFF"
+                              />
+                              <Text style={styles.goldBadgeText}>חוזה</Text>
+                            </LinearGradient>
                           </View>
-                        </View>
+                        )}
+                        
+                        {/* Blue Badge for public posts */}
+                        {isPublic && (
+                          <View style={styles.imageBadgeContainer}>
+                            <View style={styles.publicImageBadge}>
+                              <IconSymbol
+                                ios_icon_name="globe"
+                                android_material_icon_name="public"
+                                size={10}
+                                color="#FFFFFF"
+                              />
+                              <Text style={styles.imageBadgeText}>ציבורי</Text>
+                            </View>
+                          </View>
+                        )}
                       </View>
                     )}
 
@@ -382,20 +399,39 @@ const styles = StyleSheet.create({
     top: spacing.sm,
     right: spacing.sm,
   },
-  imageBadge: {
+  
+  // GOLD BADGE for contract_only posts - Premium look
+  goldBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs / 2,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm + 2,
+    borderRadius: radius.full,
+    ...shadows.lg,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  goldBadgeText: {
+    ...typography.caption,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 11,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  
+  // Blue badge for public posts
+  publicImageBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs / 2,
     paddingVertical: spacing.xs / 2,
     paddingHorizontal: spacing.sm,
     borderRadius: radius.full,
-    ...shadows.sm,
-  },
-  publicImageBadge: {
     backgroundColor: 'rgba(39, 132, 245, 0.95)',
-  },
-  contractImageBadge: {
-    backgroundColor: 'rgba(245, 173, 39, 0.95)',
+    ...shadows.sm,
   },
   imageBadgeText: {
     ...typography.caption,
