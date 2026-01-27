@@ -1,6 +1,6 @@
 
 import { supabase } from '@/lib/supabase';
-import type { User, Post, Task } from '@/lib/supabase';
+import type { User, Post, PostBlock, Task } from '@/lib/supabase';
 
 // Helper function to convert snake_case to camelCase for frontend compatibility
 function toCamelCase<T extends Record<string, any>>(obj: T): any {
@@ -33,21 +33,29 @@ export interface UserFrontend {
   city: string;
   phoneNumber: string;
   hasSignedAgreement: boolean;
+  hasContract: boolean;
   travelDate: string | null;
+  createdAt: string;
+}
+
+export interface PostBlockFrontend {
+  id: string;
+  postId: string;
+  type: 'text' | 'image' | 'gallery' | 'html' | 'map';
+  data: any;
+  order: number;
   createdAt: string;
 }
 
 export interface PostFrontend {
   id: string;
   title: string;
-  content: string;
-  imageUrl: string | null;
-  videoUrl: string | null;
-  buttonText: string | null;
-  buttonLink: string | null;
-  isPreAgreement: boolean;
-  orderIndex: number;
+  coverImage: string | null;
+  isPublished: boolean;
+  visibility: 'public' | 'contract_only';
   createdAt: string;
+  updatedAt: string;
+  blocks?: PostBlockFrontend[];
 }
 
 export interface TaskFrontend {
@@ -157,21 +165,16 @@ export const api = {
   },
 
   // Posts endpoints
-  getPosts: async (hasSignedAgreement?: boolean): Promise<PostFrontend[]> => {
-    console.log('API: Getting posts', { hasSignedAgreement });
+  getPosts: async (hasContract?: boolean): Promise<PostFrontend[]> => {
+    console.log('API: Getting posts', { hasContract });
     
-    let query = supabase
+    // Fetch all published posts
+    // RLS policies will automatically filter based on user's contract status
+    const { data, error } = await supabase
       .from('posts')
       .select('*')
-      .order('order_index', { ascending: true });
-
-    // If hasSignedAgreement is false, only show pre-agreement posts
-    // If hasSignedAgreement is true, show all posts
-    if (hasSignedAgreement === false) {
-      query = query.eq('is_pre_agreement', true);
-    }
-
-    const { data, error } = await query;
+      .eq('is_published', true)
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('API: Get posts failed', error);
@@ -182,77 +185,60 @@ export const api = {
     return data?.map(toCamelCase) || [];
   },
 
-  createPost: async (post: {
-    title: string;
-    content: string;
-    imageUrl?: string | null;
-    videoUrl?: string | null;
-    buttonText?: string | null;
-    buttonLink?: string | null;
-    isPreAgreement?: boolean;
-    orderIndex?: number;
-  }): Promise<PostFrontend> => {
-    console.log('API: Creating post', post);
+  getPostById: async (postId: string): Promise<PostFrontend | null> => {
+    console.log('API: Getting post by ID', postId);
     
     const { data, error } = await supabase
       .from('posts')
-      .insert({
-        title: post.title,
-        content: post.content,
-        image_url: post.imageUrl || null,
-        video_url: post.videoUrl || null,
-        button_text: post.buttonText || null,
-        button_link: post.buttonLink || null,
-        is_pre_agreement: post.isPreAgreement ?? true,
-        order_index: post.orderIndex ?? 0,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('API: Create post failed', error);
-      throw new Error(error.message || 'Failed to create post');
-    }
-
-    console.log('API: Post created', data);
-    return toCamelCase(data);
-  },
-
-  updatePost: async (postId: string, updates: Partial<PostFrontend>): Promise<PostFrontend> => {
-    console.log('API: Updating post', { postId, updates });
-    
-    const updateData = toSnakeCase(updates);
-
-    const { data, error } = await supabase
-      .from('posts')
-      .update(updateData)
+      .select('*')
       .eq('id', postId)
-      .select()
+      .eq('is_published', true)
       .single();
 
     if (error) {
-      console.error('API: Update post failed', error);
-      throw new Error(error.message || 'Failed to update post');
+      if (error.code === 'PGRST116') {
+        console.log('API: Post not found', postId);
+        return null;
+      }
+      console.error('API: Get post failed', error);
+      throw new Error(error.message || 'Failed to get post');
     }
 
-    console.log('API: Post updated', data);
+    console.log('API: Post retrieved', data);
     return toCamelCase(data);
   },
 
-  deletePost: async (postId: string): Promise<void> => {
-    console.log('API: Deleting post', postId);
+  getPostBlocks: async (postId: string): Promise<PostBlockFrontend[]> => {
+    console.log('API: Getting post blocks', postId);
     
-    const { error } = await supabase
-      .from('posts')
-      .delete()
-      .eq('id', postId);
+    const { data, error } = await supabase
+      .from('post_blocks')
+      .select('*')
+      .eq('post_id', postId)
+      .order('order', { ascending: true });
 
     if (error) {
-      console.error('API: Delete post failed', error);
-      throw new Error(error.message || 'Failed to delete post');
+      console.error('API: Get post blocks failed', error);
+      throw new Error(error.message || 'Failed to get post blocks');
     }
 
-    console.log('API: Post deleted');
+    console.log('API: Post blocks retrieved', data?.length || 0);
+    return data?.map(toCamelCase) || [];
+  },
+
+  getPostWithBlocks: async (postId: string): Promise<PostFrontend | null> => {
+    console.log('API: Getting post with blocks', postId);
+    
+    const post = await api.getPostById(postId);
+    if (!post) {
+      return null;
+    }
+
+    const blocks = await api.getPostBlocks(postId);
+    return {
+      ...post,
+      blocks,
+    };
   },
 
   // Tasks endpoints
@@ -355,4 +341,9 @@ export const api = {
 };
 
 // Export types for use in components
-export type { UserFrontend as User, PostFrontend as Post, TaskFrontend as Task };
+export type { 
+  UserFrontend as User, 
+  PostFrontend as Post, 
+  PostBlockFrontend as PostBlock,
+  TaskFrontend as Task 
+};

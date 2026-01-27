@@ -4,6 +4,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { api, type Post } from '@/utils/api';
+import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -11,9 +12,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Linking,
   RefreshControl,
   ActivityIndicator,
+  ImageSourcePropType,
 } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -55,43 +56,56 @@ const styles = StyleSheet.create({
   postCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  coverImage: {
+    width: '100%',
+    height: 180,
+    backgroundColor: '#f0f0f0',
+  },
+  postContent: {
+    padding: 20,
   },
   postTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#2784F5',
-    marginBottom: 12,
+    marginBottom: 8,
+    textAlign: 'right',
   },
-  postContent: {
-    fontSize: 16,
-    color: '#333333',
-    lineHeight: 24,
-    marginBottom: 12,
-  },
-  postImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  postButton: {
-    backgroundColor: '#F5AD27',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+  visibilityBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     marginTop: 8,
   },
-  postButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  publicBadge: {
+    backgroundColor: '#e3f2fd',
+  },
+  contractBadge: {
+    backgroundColor: '#fff3e0',
+  },
+  badgeIcon: {
+    marginLeft: 6,
+  },
+  badgeText: {
+    fontSize: 13,
     fontWeight: '600',
+  },
+  publicBadgeText: {
+    color: '#2784F5',
+  },
+  contractBadgeText: {
+    color: '#F5AD27',
   },
   emptyState: {
     flex: 1,
@@ -104,6 +118,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     opacity: 0.8,
+    marginTop: 16,
   },
   loadingContainer: {
     flex: 1,
@@ -112,8 +127,15 @@ const styles = StyleSheet.create({
   },
 });
 
+function resolveImageSource(source: string | number | ImageSourcePropType | undefined): ImageSourcePropType {
+  if (!source) return { uri: '' };
+  if (typeof source === 'string') return { uri: source };
+  return source as ImageSourcePropType;
+}
+
 export default function HomeScreen() {
   const { user } = useUser();
+  const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -125,8 +147,8 @@ export default function HomeScreen() {
 
   const loadPosts = async () => {
     try {
-      console.log('HomeScreen: Loading posts for user', user?.hasSignedAgreement);
-      const fetchedPosts = await api.getPosts(user?.hasSignedAgreement);
+      console.log('HomeScreen: Loading posts for user', user?.hasContract);
+      const fetchedPosts = await api.getPosts(user?.hasContract);
       console.log('HomeScreen: Posts loaded', fetchedPosts.length);
       setPosts(fetchedPosts);
     } catch (error) {
@@ -143,11 +165,9 @@ export default function HomeScreen() {
     loadPosts();
   };
 
-  const handleButtonPress = (link: string) => {
-    console.log('HomeScreen: Opening link', link);
-    Linking.openURL(link).catch((err) => {
-      console.error('HomeScreen: Failed to open link', err);
-    });
+  const handlePostPress = (postId: string) => {
+    console.log('HomeScreen: Opening post', postId);
+    router.push(`/post/${postId}`);
   };
 
   if (loading) {
@@ -164,6 +184,8 @@ export default function HomeScreen() {
     ? 'ברוכים הבאים למערכת הליווי שלנו'
     : 'ברוכים הבאים';
 
+  const userName = user?.fullName || '';
+
   return (
     <LinearGradient colors={['#2784F5', '#1a5fb8']} style={styles.container}>
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -175,7 +197,7 @@ export default function HomeScreen() {
           <Text style={styles.title}>{welcomeText}</Text>
           {user && (
             <Text style={styles.subtitle}>
-              {user.fullName}
+              {userName}
             </Text>
           )}
         </View>
@@ -202,28 +224,53 @@ export default function HomeScreen() {
               <Text style={styles.emptyText}>אין תוכן זמין כרגע</Text>
             </View>
           ) : (
-            posts.map((post) => (
-              <View key={post.id} style={styles.postCard}>
-                <Text style={styles.postTitle}>{post.title}</Text>
-                <Text style={styles.postContent}>{post.content}</Text>
-                
-                {post.imageUrl && (
-                  <Image
-                    source={{ uri: post.imageUrl }}
-                    style={styles.postImage}
-                  />
-                )}
+            posts.map((post) => {
+              const postTitle = post.title;
+              const coverImage = post.coverImage;
+              const visibility = post.visibility;
+              const isPublic = visibility === 'public';
+              const badgeText = isPublic ? 'ציבורי' : 'חוזה בלבד';
 
-                {post.buttonText && post.buttonLink && (
-                  <TouchableOpacity
-                    style={styles.postButton}
-                    onPress={() => handleButtonPress(post.buttonLink!)}
-                  >
-                    <Text style={styles.postButtonText}>{post.buttonText}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))
+              return (
+                <TouchableOpacity
+                  key={post.id}
+                  style={styles.postCard}
+                  onPress={() => handlePostPress(post.id)}
+                  activeOpacity={0.7}
+                >
+                  {coverImage && (
+                    <Image
+                      source={resolveImageSource(coverImage)}
+                      style={styles.coverImage}
+                      resizeMode="cover"
+                    />
+                  )}
+                  
+                  <View style={styles.postContent}>
+                    <Text style={styles.postTitle}>{postTitle}</Text>
+                    
+                    <View style={[
+                      styles.visibilityBadge,
+                      isPublic ? styles.publicBadge : styles.contractBadge
+                    ]}>
+                      <IconSymbol
+                        ios_icon_name={isPublic ? 'globe' : 'lock.fill'}
+                        android_material_icon_name={isPublic ? 'public' : 'lock'}
+                        size={16}
+                        color={isPublic ? '#2784F5' : '#F5AD27'}
+                        style={styles.badgeIcon}
+                      />
+                      <Text style={[
+                        styles.badgeText,
+                        isPublic ? styles.publicBadgeText : styles.contractBadgeText
+                      ]}>
+                        {badgeText}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
           )}
         </ScrollView>
       </SafeAreaView>

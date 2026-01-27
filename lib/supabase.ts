@@ -19,6 +19,7 @@ export interface User {
   city: string;
   phone_number: string;
   has_signed_agreement: boolean;
+  has_contract: boolean;
   travel_date: string | null;
   created_at: string;
 }
@@ -26,13 +27,19 @@ export interface User {
 export interface Post {
   id: string;
   title: string;
-  content: string;
-  image_url: string | null;
-  video_url: string | null;
-  button_text: string | null;
-  button_link: string | null;
-  is_pre_agreement: boolean;
-  order_index: number;
+  cover_image: string | null;
+  is_published: boolean;
+  visibility: 'public' | 'contract_only';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PostBlock {
+  id: string;
+  post_id: string;
+  type: 'text' | 'image' | 'gallery' | 'html' | 'map';
+  data: any; // JSONB data specific to block type
+  order: number;
   created_at: string;
 }
 
