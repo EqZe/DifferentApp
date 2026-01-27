@@ -136,8 +136,6 @@ export default function PostDetailScreen() {
   const blocks = post.blocks || [];
   
   const previewBlockCount = 2;
-  const visibleBlocks = isLocked ? blocks.slice(0, previewBlockCount) : blocks;
-  const hasMoreBlocks = isLocked && blocks.length > previewBlockCount;
 
   return (
     <>
@@ -247,16 +245,17 @@ export default function PostDetailScreen() {
 
             {/* Article Body - Blocks */}
             <View style={styles.articleBody}>
-              {visibleBlocks.map((block, index) => {
+              {blocks.map((block, index) => {
                 const isTextOrHtml = block.type === 'text' || block.type === 'html';
-                const isPreviewBlock = isLocked && index < previewBlockCount;
+                const isInPreviewRange = index < previewBlockCount;
+                const shouldShowPreview = isLocked && isInPreviewRange && isTextOrHtml;
                 
                 return (
                   <View key={block.id} style={styles.blockWrapper}>
                     <BlockRenderer 
                       block={block} 
                       isLocked={isLocked}
-                      isPreview={isPreviewBlock && isTextOrHtml}
+                      isPreview={shouldShowPreview}
                     />
                   </View>
                 );
@@ -264,7 +263,7 @@ export default function PostDetailScreen() {
             </View>
 
             {/* Locked Content Message & CTA */}
-            {isLocked && hasMoreBlocks && (
+            {isLocked && blocks.length > 0 && (
               <View style={styles.lockedContentContainer}>
                 {/* Gradient Fade */}
                 <LinearGradient

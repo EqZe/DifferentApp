@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useColorScheme } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -29,13 +29,15 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 80,
+    height: 100,
     zIndex: 10,
   },
 });
 
 export function TextBlock({ data, isLocked = false, isPreview = false }: TextBlockProps) {
   const [webViewHeight, setWebViewHeight] = useState(200);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   
   const htmlContent = data.html;
   
@@ -54,7 +56,7 @@ export function TextBlock({ data, isLocked = false, isPreview = false }: TextBlo
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           font-size: 16px;
           line-height: 1.8;
-          color: #333;
+          color: ${isDark ? '#E2E8F0' : '#333'};
           padding: 0;
           background: transparent;
           overflow-x: hidden;
@@ -94,7 +96,7 @@ export function TextBlock({ data, isLocked = false, isPreview = false }: TextBlo
           margin: 16px 0;
           padding: 12px 16px;
           border-right: 4px solid #2784F5;
-          background: #f5f5f5;
+          background: ${isDark ? 'rgba(39, 132, 245, 0.1)' : '#f5f5f5'};
           font-style: italic;
         }
         img {
@@ -143,7 +145,11 @@ export function TextBlock({ data, isLocked = false, isPreview = false }: TextBlo
   };
 
   const shouldTruncate = isLocked && isPreview;
-  const displayHeight = shouldTruncate ? Math.min(webViewHeight, 120) : webViewHeight;
+  const displayHeight = shouldTruncate ? Math.min(webViewHeight, 150) : webViewHeight;
+
+  const gradientColors = isDark 
+    ? ['rgba(15, 23, 42, 0)', 'rgba(15, 23, 42, 0.7)', 'rgba(15, 23, 42, 0.95)', '#0F172A']
+    : ['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.7)', 'rgba(255, 255, 255, 0.95)', '#FFFFFF'];
 
   return (
     <View style={[styles.container, shouldTruncate && styles.previewContainer, { height: displayHeight }]}>
@@ -165,7 +171,7 @@ export function TextBlock({ data, isLocked = false, isPreview = false }: TextBlo
       />
       {shouldTruncate && (
         <LinearGradient
-          colors={['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.8)', 'rgba(255, 255, 255, 1)']}
+          colors={gradientColors}
           style={styles.gradientOverlay}
           pointerEvents="none"
         />

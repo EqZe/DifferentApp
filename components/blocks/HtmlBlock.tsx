@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useColorScheme } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 
 interface HtmlBlockProps {
@@ -20,6 +21,10 @@ const styles = StyleSheet.create({
   webview: {
     backgroundColor: 'transparent',
   },
+  previewContainer: {
+    overflow: 'hidden',
+    position: 'relative',
+  },
   blurOverlay: {
     position: 'absolute',
     top: 0,
@@ -28,10 +33,20 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 10,
   },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    zIndex: 10,
+  },
 });
 
 export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlockProps) {
   const [webViewHeight, setWebViewHeight] = useState(200);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   
   const htmlContent = data.content;
   
@@ -51,6 +66,7 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
           padding: 0;
           background: transparent;
           overflow-x: hidden;
+          color: ${isDark ? '#E2E8F0' : '#333'};
         }
       </style>
       <script>
@@ -91,8 +107,16 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
     }
   };
 
+  const shouldTruncate = isLocked && isPreview;
+  const shouldBlur = isLocked && !isPreview;
+  const displayHeight = shouldTruncate ? Math.min(webViewHeight, 150) : webViewHeight;
+
+  const gradientColors = isDark 
+    ? ['rgba(15, 23, 42, 0)', 'rgba(15, 23, 42, 0.7)', 'rgba(15, 23, 42, 0.95)', '#0F172A']
+    : ['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.7)', 'rgba(255, 255, 255, 0.95)', '#FFFFFF'];
+
   return (
-    <View style={[styles.container, { height: webViewHeight }]}>
+    <View style={[styles.container, shouldTruncate && styles.previewContainer, { height: displayHeight }]}>
       <WebView
         source={{ html: htmlTemplate }}
         style={styles.webview}
@@ -109,9 +133,16 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
           }, 100);
         `}
       />
-      {isLocked && (
+      {shouldTruncate && (
+        <LinearGradient
+          colors={gradientColors}
+          style={styles.gradientOverlay}
+          pointerEvents="none"
+        />
+      )}
+      {shouldBlur && (
         <View style={styles.blurOverlay}>
-          <BlurView intensity={60} style={{ flex: 1 }} tint="light" />
+          <BlurView intensity={60} style={{ flex: 1 }} tint={isDark ? 'dark' : 'light'} />
         </View>
       )}
     </View>
