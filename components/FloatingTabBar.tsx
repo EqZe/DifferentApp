@@ -155,9 +155,8 @@ export default function FloatingTabBar({
                 >
                   <View style={styles.tabContent}>
                     <View style={styles.iconWrapper}>
-                      <IconSymbol
-                        android_material_icon_name={tab.icon}
-                        ios_icon_name={tab.icon}
+                      <MaterialIcons
+                        name={tab.icon}
                         size={26}
                         color={iconColor}
                       />

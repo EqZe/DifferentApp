@@ -26,8 +26,10 @@ const materialToSFSymbol: Record<string, string> = {
   'email': 'envelope.fill',
   'phone': 'phone.fill',
   'calendar-today': 'calendar',
+  'event': 'calendar.badge.clock',
   'access-time': 'clock.fill',
   'location-on': 'location.fill',
+  'location-city': 'building.2.fill',
   'favorite': 'heart.fill',
   'star': 'star.fill',
   'share': 'square.and.arrow.up',
@@ -39,7 +41,16 @@ const materialToSFSymbol: Record<string, string> = {
   'arrow-back': 'arrow.left',
   'arrow-forward': 'arrow.right',
   'description': 'doc.text.fill',
+  'article': 'doc.text.fill',
   'savings': 'dollarsign.circle.fill',
+  'verified': 'checkmark.seal.fill',
+  'verified-user': 'person.badge.shield.checkmark.fill',
+  'schedule': 'clock.fill',
+  'badge': 'person.text.rectangle.fill',
+  'flight': 'airplane',
+  'flight-takeoff': 'airplane.departure',
+  'help': 'questionmark.bubble.fill',
+  'chat': 'message.fill',
 };
 
 export function IconSymbol({

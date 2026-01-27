@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   ImageSourcePropType,
   useColorScheme,
+  I18nManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +21,10 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { api, type Post } from '@/utils/api';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
+
+// Enable RTL for Hebrew
+I18nManager.allowRTL(true);
+I18nManager.forceRTL(true);
 
 function resolveImageSource(source: string | number | ImageSourcePropType | undefined): ImageSourcePropType {
   if (!source) return { uri: '' };
@@ -81,34 +86,37 @@ export default function HomeScreen() {
     ? 'ברוכים הבאים למערכת הליווי'
     : 'ברוכים הבאים';
   const userName = user?.fullName || '';
-  const userStatus = user?.hasSignedAgreement ? 'לקוח פעיל' : 'משתמש רשום';
+  const personalGreeting = user?.hasSignedAgreement 
+    ? `${userName}, שמחים שאתה איתנו!`
+    : `${userName}`;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <SafeAreaView style={styles.container} edges={['top']}>
-        {/* Header with gradient background */}
+        {/* Modern Header with Company Logo */}
         <LinearGradient
           colors={[designColors.primary, designColors.primaryDark]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={styles.header}
         >
           <View style={styles.headerContent}>
-            <Image
-              source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
-              style={styles.logo}
-            />
+            {/* Company Logo */}
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+            
+            {/* Welcome Text */}
             <Text style={styles.welcomeText}>{welcomeText}</Text>
+            
+            {/* Personal Greeting */}
             {user && (
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>{userName}</Text>
-                <View style={styles.statusBadge}>
-                  <IconSymbol
-                    ios_icon_name="checkmark.circle.fill"
-                    android_material_icon_name="check-circle"
-                    size={14}
-                    color="#FFFFFF"
-                  />
-                  <Text style={styles.statusText}>{userStatus}</Text>
-                </View>
+              <View style={styles.userGreeting}>
+                <Text style={styles.userGreetingText}>{personalGreeting}</Text>
               </View>
             )}
           </View>
@@ -129,10 +137,22 @@ export default function HomeScreen() {
         >
           {/* Section Header */}
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>תוכן ומידע</Text>
-            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
-              כל המידע החשוב במקום אחד
-            </Text>
+            <View style={styles.sectionTitleRow}>
+              <View style={[styles.sectionIconCircle, { backgroundColor: designColors.primaryBg }]}>
+                <IconSymbol
+                  ios_icon_name="doc.text.fill"
+                  android_material_icon_name="article"
+                  size={24}
+                  color={designColors.primary}
+                />
+              </View>
+              <View style={styles.sectionTitleContent}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>תוכן ומידע</Text>
+                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+                  כל המידע החשוב שלך במקום אחד
+                </Text>
+              </View>
+            </View>
           </View>
 
           {/* Posts Grid */}
@@ -142,11 +162,11 @@ export default function HomeScreen() {
                 <IconSymbol
                   ios_icon_name="doc.text"
                   android_material_icon_name="description"
-                  size={48}
+                  size={56}
                   color={colors.textTertiary}
                 />
               </View>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>אין תוכן זמין</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>אין תוכן זמין כרגע</Text>
               <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                 התוכן יתעדכן בקרוב
               </Text>
@@ -178,12 +198,12 @@ export default function HomeScreen() {
                         />
                         {isLocked && (
                           <View style={styles.lockedOverlay}>
-                            <BlurView intensity={30} style={StyleSheet.absoluteFill} />
+                            <BlurView intensity={40} style={StyleSheet.absoluteFill} />
                             <View style={styles.lockIconContainer}>
                               <IconSymbol
                                 ios_icon_name="lock.fill"
                                 android_material_icon_name="lock"
-                                size={24}
+                                size={28}
                                 color="#FFFFFF"
                               />
                             </View>
@@ -199,7 +219,7 @@ export default function HomeScreen() {
                             <IconSymbol
                               ios_icon_name={isPublic ? 'globe' : 'lock.fill'}
                               android_material_icon_name={isPublic ? 'public' : 'lock'}
-                              size={10}
+                              size={12}
                               color="#FFFFFF"
                             />
                             <Text style={styles.imageBadgeText}>
@@ -221,9 +241,9 @@ export default function HomeScreen() {
                       {isLocked && (
                         <View style={styles.lockedMessage}>
                           <IconSymbol
-                            ios_icon_name="info.circle"
+                            ios_icon_name="info.circle.fill"
                             android_material_icon_name="info"
-                            size={14}
+                            size={16}
                             color={designColors.locked}
                           />
                           <Text style={styles.lockedMessageText}>
@@ -235,15 +255,15 @@ export default function HomeScreen() {
                       {/* Action Footer */}
                       <View style={styles.postFooter}>
                         <View style={styles.readMoreContainer}>
-                          <Text style={[styles.readMoreText, { color: designColors.primary }]}>
-                            קרא עוד
-                          </Text>
                           <IconSymbol
                             ios_icon_name="chevron.left"
                             android_material_icon_name="chevron-left"
-                            size={16}
+                            size={18}
                             color={designColors.primary}
                           />
+                          <Text style={[styles.readMoreText, { color: designColors.primary }]}>
+                            קרא עוד
+                          </Text>
                         </View>
                       </View>
                     </View>
@@ -269,44 +289,43 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: spacing.md,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xxl,
     paddingHorizontal: layout.screenPadding,
   },
   headerContent: {
     alignItems: 'center',
   },
+  logoContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    padding: spacing.md,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
   logo: {
-    width: 100,
-    height: 100,
-    resizeMode: 'contain',
-    marginBottom: spacing.md,
+    width: '100%',
+    height: '100%',
   },
   welcomeText: {
     ...typography.h2,
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: spacing.sm,
+    fontWeight: '700',
   },
-  userInfo: {
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  userName: {
-    ...typography.bodyLarge,
-    color: '#FFFFFF',
-    opacity: 0.95,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
+  userGreeting: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
     borderRadius: radius.full,
   },
-  statusText: {
-    ...typography.caption,
+  userGreetingText: {
+    ...typography.bodyLarge,
     color: '#FFFFFF',
     fontWeight: '600',
   },
@@ -321,14 +340,27 @@ const styles = StyleSheet.create({
   sectionHeader: {
     marginBottom: spacing.lg,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  sectionIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sectionTitleContent: {
+    flex: 1,
+  },
   sectionTitle: {
     ...typography.h3,
-    marginBottom: spacing.xs,
-    textAlign: 'right',
+    marginBottom: spacing.xs / 2,
   },
   sectionSubtitle: {
     ...typography.bodySmall,
-    textAlign: 'right',
   },
   postsGrid: {
     gap: spacing.lg,
@@ -346,7 +378,7 @@ const styles = StyleSheet.create({
   },
   coverImageContainer: {
     width: '100%',
-    height: 200,
+    height: 220,
     backgroundColor: designColors.light.backgroundSecondary,
     position: 'relative',
   },
@@ -360,12 +392,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   lockIconContainer: {
-    width: 64,
-    height: 64,
+    width: 72,
+    height: 72,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
+    ...shadows.xl,
   },
   imageBadgeContainer: {
     position: 'absolute',
@@ -377,20 +410,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.full,
     ...shadows.md,
   },
   publicImageBadge: {
-    backgroundColor: 'rgba(39, 132, 245, 0.9)',
+    backgroundColor: 'rgba(39, 132, 245, 0.95)',
   },
   contractImageBadge: {
-    backgroundColor: 'rgba(245, 173, 39, 0.9)',
+    backgroundColor: 'rgba(245, 173, 39, 0.95)',
   },
   imageBadgeText: {
     ...typography.caption,
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 11,
   },
   
@@ -403,11 +436,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     textAlign: 'right',
     lineHeight: 28,
+    fontWeight: '600',
   },
   lockedMessage: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: spacing.sm,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     backgroundColor: designColors.lockedBg,
@@ -419,6 +453,7 @@ const styles = StyleSheet.create({
     color: designColors.locked,
     flex: 1,
     textAlign: 'right',
+    fontWeight: '600',
   },
   postFooter: {
     flexDirection: 'row',
@@ -432,7 +467,7 @@ const styles = StyleSheet.create({
   },
   readMoreText: {
     ...typography.label,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   
   // Empty State
@@ -441,8 +476,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxxl,
   },
   emptyIconContainer: {
-    width: 96,
-    height: 96,
+    width: 120,
+    height: 120,
     borderRadius: radius.full,
     justifyContent: 'center',
     alignItems: 'center',
@@ -450,7 +485,8 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...typography.h3,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
+    fontWeight: '600',
   },
   emptySubtitle: {
     ...typography.body,
