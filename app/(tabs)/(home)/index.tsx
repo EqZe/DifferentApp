@@ -22,6 +22,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { api, type Post } from '@/utils/api';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
+import LottieView from 'lottie-react-native';
 
 // Enable RTL for Hebrew
 I18nManager.allowRTL(true);
@@ -128,27 +129,42 @@ export default function HomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <SafeAreaView style={styles.container} edges={['top']}>
-        {/* Minimal Modern Header - Reduced Size */}
-        <LinearGradient
-          colors={[designColors.primary, designColors.primaryDark]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
-        >
-          <View style={styles.headerContent}>
-            {/* Company Logo - Smaller */}
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
+        {/* Header with Lottie Animation Background */}
+        <View style={styles.headerWrapper}>
+          {/* Blue Gradient Background */}
+          <LinearGradient
+            colors={[designColors.primary, designColors.primaryDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          
+          {/* Lottie Animation Layer */}
+          <LottieView
+            source={{ uri: 'https://lottie.host/fcc59560-b2cd-4dad-85d1-02d5cf35c039/OcOTugphwV.json' }}
+            autoPlay
+            loop
+            style={styles.lottieAnimation}
+            resizeMode="cover"
+          />
+          
+          {/* Header Content on Top */}
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              {/* Company Logo */}
+              <View style={styles.logoContainer}>
+                <Image
+                  source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
+              
+              {/* Dynamic Time-Based Greeting */}
+              <Text style={styles.greetingText}>{personalizedGreeting}</Text>
             </View>
-            
-            {/* Dynamic Time-Based Greeting */}
-            <Text style={styles.greetingText}>{personalizedGreeting}</Text>
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Content */}
         <ScrollView
@@ -314,11 +330,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   
-  // Minimal Header - Reduced Size
+  // Header Wrapper with Lottie Background
+  headerWrapper: {
+    height: 200,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  lottieAnimation: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0.6,
+  },
   header: {
+    flex: 1,
     paddingTop: Platform.OS === 'android' ? spacing.lg : spacing.sm,
     paddingBottom: spacing.lg,
     paddingHorizontal: layout.screenPadding,
+    justifyContent: 'center',
   },
   headerContent: {
     flexDirection: 'row',
