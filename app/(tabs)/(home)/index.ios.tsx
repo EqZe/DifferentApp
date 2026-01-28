@@ -168,7 +168,7 @@ export default function HomeScreen() {
       <View style={styles.gradientSeparator}>
         <LinearGradient
           colors={[
-            '#addaf0',
+            '#169fde',
             isDark ? designColors.dark.background : designColors.light.background,
           ]}
           locations={[0, 1]}
