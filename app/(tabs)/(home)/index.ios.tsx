@@ -340,6 +340,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   
+  // Header Wrapper with Lottie Background - Fixed at top with z-index
 headerWrapper: {
   height: 240,
   position: 'absolute',
