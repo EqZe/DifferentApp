@@ -397,14 +397,14 @@ lottieAnimation: {
   },
 
   // Gradient Transition from Header to Content
-  gradientTransition: {
-    position: 'absolute',
-    bottom: -40,
-    left: 0,
-    right: 0,
-    height: 80,
-		zIndex: 13,
-  },
+gradientTransition: {
+  position: 'absolute',
+  bottom: -40,
+  left: 0,
+  right: 0,
+  height: 80,
+		zIndex: 13,  // ❌ Tab character before zIndex
+},
   
   content: {
     flex: 1,
