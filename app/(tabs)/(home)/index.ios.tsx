@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: '100%',
-		z
+    zIndex: 10,
     opacity: 0.6,
   },
   header: {
