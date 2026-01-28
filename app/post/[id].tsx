@@ -234,9 +234,6 @@ export default function PostDetailScreen() {
                     size={14}
                     color={colors.textTertiary}
                   />
-                  <Text style={[styles.metaText, { color: colors.textTertiary }]}>
-                    זמן קריאה: {Math.max(2, Math.ceil(blocks.length * 0.5))} דקות
-                  </Text>
                 </View>
               </View>
             </View>
