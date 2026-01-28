@@ -340,16 +340,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   
-  // Header Wrapper with Lottie Background - Fixed at top with z-index
-  headerWrapper: {
-    height: 240,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-		zIndex: 10,
-    overflow: 'visible',
-  },
+headerWrapper: {
+  height: 240,
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+		zIndex: 10,  // ❌ Tab character before zIndex
+  overflow: 'visible',
+},
   lottieAnimation: {
     position: 'absolute',
     top: 0,
