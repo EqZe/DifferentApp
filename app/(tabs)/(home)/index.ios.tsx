@@ -162,19 +162,18 @@ export default function HomeScreen() {
           </View>
         </SafeAreaView>
 
-        {/* Gradient Transition Overlay - Modern smooth blend */}
-        <LinearGradient
-          colors={[
-            'transparent',
-            isDark ? 'rgba(18, 18, 18, 0.1)' : 'rgba(255, 255, 255, 0.1)',
-            isDark ? 'rgba(18, 18, 18, 0.4)' : 'rgba(255, 255, 255, 0.4)',
-            isDark ? 'rgba(18, 18, 18, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-            isDark ? designColors.dark.background : designColors.light.background,
-          ]}
-          locations={[0, 0.3, 0.6, 0.85, 1]}
-          style={styles.gradientTransition}
-          pointerEvents="none"
-        />
+        {/* Modern Wave Separator - Clean transition */}
+        <View style={styles.waveSeparator}>
+          <LinearGradient
+            colors={[
+              designColors.primary,
+              designColors.primaryDark,
+              isDark ? designColors.dark.background : designColors.light.background,
+            ]}
+            locations={[0, 0.7, 1]}
+            style={styles.waveGradient}
+          />
+        </View>
       </View>
 
       {/* Content - Scrollable area below header */}
@@ -387,7 +386,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   
-  // Dynamic Greeting - Prominent Typography
+  // Dynamic Greeting - Prominent Typography - RTL Aligned
   greetingText: {
     ...typography.h2,
     color: '#FFFFFF',
@@ -395,25 +394,33 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     flex: 1,
     marginRight: spacing.md,
+    alignSelf: 'flex-end',
+    writingDirection: 'rtl',
   },
 
-  // Gradient Transition from Header to Content - Modern smooth blend
-  gradientTransition: {
+  // Modern Wave Separator - Clean transition between sections
+  waveSeparator: {
     position: 'absolute',
-    bottom: -60,
+    bottom: -30,
     left: 0,
     right: 0,
-    height: 120,
+    height: 60,
     zIndex: 13,
+    overflow: 'hidden',
+  },
+  waveGradient: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   
   content: {
     flex: 1,
-    marginTop: 180,
+    marginTop: 240,
   },
   contentContainer: {
     paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.lg,
     paddingBottom: 120,
   },
   postsGrid: {
