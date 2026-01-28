@@ -325,7 +325,7 @@ export default function PostDetailScreen() {
                       color={designColors.primary}
                     />
                     <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-                      פנה למנהל המערכת לפרטים נוספים על חתימת חוזה
+                      פנה לנציג החברה על חתימת חוזה
                     </Text>
                   </View>
                 </View>
