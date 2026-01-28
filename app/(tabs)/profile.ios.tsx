@@ -82,13 +82,19 @@ export default function ProfileScreen() {
     }
   };
 
+  // Extract theme colors based on color scheme
+  const backgroundColor = isDark ? designColors.dark.background : designColors.light.background;
+  const surfaceColor = isDark ? designColors.dark.surface : designColors.light.surface;
+  const textColor = isDark ? designColors.dark.text : designColors.light.text;
+  const textSecondaryColor = isDark ? designColors.dark.textSecondary : designColors.light.textSecondary;
+
   // Show loading state while user data is being fetched
   if (!user || isRefreshing) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: designColors.background[isDark ? 'dark' : 'light'] }]} edges={['top']}>
+      <SafeAreaView style={[styles.container, { backgroundColor }]} edges={['top']}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={designColors.primary.main} />
-          <Text style={[styles.loadingText, { color: designColors.text[isDark ? 'dark' : 'light'] }]}>
+          <ActivityIndicator size="large" color={designColors.primary} />
+          <Text style={[styles.loadingText, { color: textColor }]}>
             טוען פרטי משתמש...
           </Text>
         </View>
@@ -106,7 +112,7 @@ export default function ProfileScreen() {
   const travelDateText = formatDate(user?.travelDate);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: designColors.background[isDark ? 'dark' : 'light'] }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]} edges={['top']}>
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -116,7 +122,7 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
             <LinearGradient
-              colors={[designColors.primary.main, designColors.primary.dark]}
+              colors={[designColors.primary, designColors.primaryDark]}
               style={styles.avatarGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -130,7 +136,7 @@ export default function ProfileScreen() {
             </LinearGradient>
           </View>
           
-          <Text style={[styles.name, { color: designColors.text[isDark ? 'dark' : 'light'] }]}>
+          <Text style={[styles.name, { color: textColor }]}>
             {fullNameText}
           </Text>
           
@@ -160,8 +166,8 @@ export default function ProfileScreen() {
           <View style={[
             styles.card,
             {
-              backgroundColor: designColors.surface[isDark ? 'dark' : 'light'],
-              ...shadows.medium,
+              backgroundColor: surfaceColor,
+              ...shadows.md,
             }
           ]}>
             <View style={styles.cardIcon}>
@@ -169,14 +175,14 @@ export default function ProfileScreen() {
                 ios_icon_name="envelope.fill"
                 android_material_icon_name="email"
                 size={24}
-                color={designColors.primary.main}
+                color={designColors.primary}
               />
             </View>
             <View style={styles.cardContent}>
-              <Text style={[styles.cardLabel, { color: designColors.textSecondary[isDark ? 'dark' : 'light'] }]}>
+              <Text style={[styles.cardLabel, { color: textSecondaryColor }]}>
                 אימייל
               </Text>
-              <Text style={[styles.cardValue, { color: designColors.text[isDark ? 'dark' : 'light'] }]}>
+              <Text style={[styles.cardValue, { color: textColor }]}>
                 {emailText}
               </Text>
             </View>
@@ -186,8 +192,8 @@ export default function ProfileScreen() {
           <View style={[
             styles.card,
             {
-              backgroundColor: designColors.surface[isDark ? 'dark' : 'light'],
-              ...shadows.medium,
+              backgroundColor: surfaceColor,
+              ...shadows.md,
             }
           ]}>
             <View style={styles.cardIcon}>
@@ -195,14 +201,14 @@ export default function ProfileScreen() {
                 ios_icon_name="phone.fill"
                 android_material_icon_name="phone"
                 size={24}
-                color={designColors.primary.main}
+                color={designColors.primary}
               />
             </View>
             <View style={styles.cardContent}>
-              <Text style={[styles.cardLabel, { color: designColors.textSecondary[isDark ? 'dark' : 'light'] }]}>
+              <Text style={[styles.cardLabel, { color: textSecondaryColor }]}>
                 טלפון
               </Text>
-              <Text style={[styles.cardValue, { color: designColors.text[isDark ? 'dark' : 'light'] }]}>
+              <Text style={[styles.cardValue, { color: textColor }]}>
                 {phoneText}
               </Text>
             </View>
@@ -212,8 +218,8 @@ export default function ProfileScreen() {
           <View style={[
             styles.card,
             {
-              backgroundColor: designColors.surface[isDark ? 'dark' : 'light'],
-              ...shadows.medium,
+              backgroundColor: surfaceColor,
+              ...shadows.md,
             }
           ]}>
             <View style={styles.cardIcon}>
@@ -221,14 +227,14 @@ export default function ProfileScreen() {
                 ios_icon_name="location.fill"
                 android_material_icon_name="location-on"
                 size={24}
-                color={designColors.primary.main}
+                color={designColors.primary}
               />
             </View>
             <View style={styles.cardContent}>
-              <Text style={[styles.cardLabel, { color: designColors.textSecondary[isDark ? 'dark' : 'light'] }]}>
+              <Text style={[styles.cardLabel, { color: textSecondaryColor }]}>
                 עיר
               </Text>
-              <Text style={[styles.cardValue, { color: designColors.text[isDark ? 'dark' : 'light'] }]}>
+              <Text style={[styles.cardValue, { color: textColor }]}>
                 {cityText}
               </Text>
             </View>
@@ -238,8 +244,8 @@ export default function ProfileScreen() {
           <View style={[
             styles.card,
             {
-              backgroundColor: designColors.surface[isDark ? 'dark' : 'light'],
-              ...shadows.medium,
+              backgroundColor: surfaceColor,
+              ...shadows.md,
             }
           ]}>
             <View style={styles.cardIcon}>
@@ -251,7 +257,7 @@ export default function ProfileScreen() {
               />
             </View>
             <View style={styles.cardContent}>
-              <Text style={[styles.cardLabel, { color: designColors.textSecondary[isDark ? 'dark' : 'light'] }]}>
+              <Text style={[styles.cardLabel, { color: textSecondaryColor }]}>
                 סטטוס חוזה
               </Text>
               <Text style={[
@@ -268,8 +274,8 @@ export default function ProfileScreen() {
             <View style={[
               styles.card,
               {
-                backgroundColor: designColors.surface[isDark ? 'dark' : 'light'],
-                ...shadows.medium,
+                backgroundColor: surfaceColor,
+                ...shadows.md,
               }
             ]}>
               <View style={styles.cardIcon}>
@@ -277,14 +283,14 @@ export default function ProfileScreen() {
                   ios_icon_name="calendar"
                   android_material_icon_name="calendar-today"
                   size={24}
-                  color={designColors.primary.main}
+                  color={designColors.primary}
                 />
               </View>
               <View style={styles.cardContent}>
-                <Text style={[styles.cardLabel, { color: designColors.textSecondary[isDark ? 'dark' : 'light'] }]}>
+                <Text style={[styles.cardLabel, { color: textSecondaryColor }]}>
                   תאריך נסיעה
                 </Text>
-                <Text style={[styles.cardValue, { color: designColors.text[isDark ? 'dark' : 'light'] }]}>
+                <Text style={[styles.cardValue, { color: textColor }]}>
                   {travelDateText}
                 </Text>
               </View>
@@ -325,12 +331,12 @@ export default function ProfileScreen() {
         <View style={styles.modalOverlay}>
           <View style={[
             styles.modalContent,
-            { backgroundColor: designColors.surface[isDark ? 'dark' : 'light'] }
+            { backgroundColor: surfaceColor }
           ]}>
-            <Text style={[styles.modalTitle, { color: designColors.text[isDark ? 'dark' : 'light'] }]}>
+            <Text style={[styles.modalTitle, { color: textColor }]}>
               התנתקות
             </Text>
-            <Text style={[styles.modalMessage, { color: designColors.textSecondary[isDark ? 'dark' : 'light'] }]}>
+            <Text style={[styles.modalMessage, { color: textSecondaryColor }]}>
               האם אתה בטוח שברצונך להתנתק?
             </Text>
             
@@ -339,7 +345,7 @@ export default function ProfileScreen() {
                 style={[styles.modalButton, styles.modalButtonCancel]}
                 onPress={() => setShowLogoutModal(false)}
               >
-                <Text style={[styles.modalButtonText, { color: designColors.text[isDark ? 'dark' : 'light'] }]}>
+                <Text style={[styles.modalButtonText, { color: textColor }]}>
                   ביטול
                 </Text>
               </TouchableOpacity>
@@ -392,7 +398,7 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     overflow: 'hidden',
     marginBottom: spacing.md,
-    ...shadows.large,
+    ...shadows.lg,
   },
   avatarGradient: {
     width: '100%',
@@ -408,7 +414,7 @@ const styles = StyleSheet.create({
   contractBadge: {
     borderRadius: radius.full,
     overflow: 'hidden',
-    ...shadows.small,
+    ...shadows.sm,
   },
   contractBadgeGradient: {
     flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -456,7 +462,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
     borderRadius: radius.lg,
     overflow: 'hidden',
-    ...shadows.medium,
+    ...shadows.md,
   },
   logoutGradient: {
     flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -482,7 +488,7 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: radius.xl,
     padding: spacing.xl,
-    ...shadows.large,
+    ...shadows.lg,
   },
   modalTitle: {
     fontSize: 24,
