@@ -299,22 +299,7 @@ export default function PostDetailScreen() {
                   <Text style={[styles.lockMessageText, { color: colors.textSecondary }]}>
                     תוכן זה זמין לאחר חתימת חוזה
                   </Text>
-                  
-                  {/* CTA Button */}
-                  <TouchableOpacity 
-                    style={[styles.ctaButton, { backgroundColor: designColors.secondary }]}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.ctaButtonText}>
-                      חתום חוזה כדי לפתוח את הפוסט
-                    </Text>
-                    <IconSymbol
-                      ios_icon_name="arrow.left"
-                      android_material_icon_name="arrow-back"
-                      size={20}
-                      color="#FFFFFF"
-                    />
-                  </TouchableOpacity>
+                
                   
                   {/* Additional Info */}
                   <View style={[styles.infoBox, { backgroundColor: colors.backgroundSecondary }]}>
