@@ -350,17 +350,17 @@ headerWrapper: {
 		zIndex: 10,  // ❌ Tab character before zIndex
   overflow: 'visible',
 },
-  lottieAnimation: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-		zIndex: 11,
-    opacity: 0.6,
-  },
+lottieAnimation: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  width: '100%',
+  height: '100%',
+		zIndex: 11,  // ❌ Tab character before zIndex
+  opacity: 0.6,
+},
   header: {
     flex: 1,
     paddingHorizontal: layout.screenPadding,
