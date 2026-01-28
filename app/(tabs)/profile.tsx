@@ -154,7 +154,7 @@ export default function ProfileScreen() {
                   size={16}
                   color="#FFFFFF"
                 />
-                <Text style={styles.contractBadgeText}לקוח מוסמך</Text>
+                <Text style={styles.contractBadgeText}>חוזה חתום</Text>
               </LinearGradient>
             </View>
           )}
