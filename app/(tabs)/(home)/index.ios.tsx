@@ -168,7 +168,7 @@ export default function HomeScreen() {
       <View style={styles.gradientSeparator}>
         <LinearGradient
           colors={[
-            '#5cbae6',
+            '#addaf0',
             isDark ? designColors.dark.background : designColors.light.background,
           ]}
           locations={[0, 1]}
@@ -392,8 +392,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'right',
     fontWeight: '700',
-    flex: 1,
-    marginRight: spacing.md,
+    marginLeft: spacing.md,
     alignSelf: 'flex-end',
     writingDirection: 'rtl',
   },
