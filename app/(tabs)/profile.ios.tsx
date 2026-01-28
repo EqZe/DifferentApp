@@ -22,15 +22,20 @@ import { designColors, typography, spacing, radius, shadows, layout } from '@/st
 
 const isRTL = I18nManager.isRTL;
 
-function formatDate(dateString: string | null): string {
+function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return 'לא נקבע';
   
-  const date = new Date(dateString);
-  const day = date.getDate();
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
-  
-  return `${day}/${month}/${year}`;
+  try {
+    const date = new Date(dateString);
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    console.error('ProfileScreen (iOS): Error formatting date', error);
+    return 'לא נקבע';
+  }
 }
 
 export default function ProfileScreen() {
@@ -91,12 +96,14 @@ export default function ProfileScreen() {
     );
   }
 
-  const fullNameText = user.fullName || 'משתמש';
-  const emailText = user.email || 'לא זמין';
-  const phoneText = user.phoneNumber || 'לא זמין';
-  const cityText = user.city || 'לא זמין';
-  const contractStatusText = user.hasContract ? 'יש חוזה' : 'אין חוזה';
-  const travelDateText = formatDate(user.travelDate);
+  // Safely extract user data with fallbacks
+  const fullNameText = user?.fullName || 'משתמש';
+  const emailText = user?.email || 'לא זמין';
+  const phoneText = user?.phoneNumber || 'לא זמין';
+  const cityText = user?.city || 'לא זמין';
+  const hasContract = user?.hasContract || false;
+  const contractStatusText = hasContract ? 'יש חוזה' : 'אין חוזה';
+  const travelDateText = formatDate(user?.travelDate);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: designColors.background[isDark ? 'dark' : 'light'] }]} edges={['top']}>
@@ -127,7 +134,7 @@ export default function ProfileScreen() {
             {fullNameText}
           </Text>
           
-          {user.hasContract && (
+          {hasContract && (
             <View style={styles.contractBadge}>
               <LinearGradient
                 colors={['#FFD700', '#FFA500']}
@@ -240,7 +247,7 @@ export default function ProfileScreen() {
                 ios_icon_name="doc.text.fill"
                 android_material_icon_name="description"
                 size={24}
-                color={user.hasContract ? '#10B981' : '#EF4444'}
+                color={hasContract ? '#10B981' : '#EF4444'}
               />
             </View>
             <View style={styles.cardContent}>
@@ -249,7 +256,7 @@ export default function ProfileScreen() {
               </Text>
               <Text style={[
                 styles.cardValue,
-                { color: user.hasContract ? '#10B981' : '#EF4444' }
+                { color: hasContract ? '#10B981' : '#EF4444' }
               ]}>
                 {contractStatusText}
               </Text>
@@ -257,7 +264,7 @@ export default function ProfileScreen() {
           </View>
 
           {/* Travel Date Card (only if has contract) */}
-          {user.hasContract && (
+          {hasContract && (
             <View style={[
               styles.card,
               {
