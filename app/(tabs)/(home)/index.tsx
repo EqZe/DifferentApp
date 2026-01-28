@@ -148,7 +148,7 @@ export default function HomeScreen() {
             resizeMode="cover"
           />
           
-          {/* Header Content on Top */}
+          {/* Header Content - Aligned to Bottom with Gap */}
           <View style={styles.header}>
             <View style={styles.headerContent}>
               {/* Company Logo */}
@@ -164,6 +164,18 @@ export default function HomeScreen() {
               <Text style={styles.greetingText}>{personalizedGreeting}</Text>
             </View>
           </View>
+
+          {/* Gradient Transition Overlay */}
+          <LinearGradient
+            colors={[
+              'transparent',
+              isDark ? 'rgba(18, 18, 18, 0.3)' : 'rgba(255, 255, 255, 0.3)',
+              isDark ? 'rgba(18, 18, 18, 0.7)' : 'rgba(255, 255, 255, 0.7)',
+              isDark ? designColors.dark.background : designColors.light.background,
+            ]}
+            locations={[0, 0.5, 0.8, 1]}
+            style={styles.gradientTransition}
+          />
         </View>
 
         {/* Content */}
@@ -332,9 +344,9 @@ const styles = StyleSheet.create({
   
   // Header Wrapper with Lottie Background
   headerWrapper: {
-    height: 200,
+    height: 220,
     position: 'relative',
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   lottieAnimation: {
     position: 'absolute',
@@ -349,14 +361,15 @@ const styles = StyleSheet.create({
   header: {
     flex: 1,
     paddingTop: Platform.OS === 'android' ? spacing.lg : spacing.sm,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.md,
     paddingHorizontal: layout.screenPadding,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
   },
   headerContent: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
+    paddingBottom: spacing.md,
   },
   logoContainer: {
     width: 48,
@@ -381,13 +394,24 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: spacing.md,
   },
+
+  // Gradient Transition from Header to Content
+  gradientTransition: {
+    position: 'absolute',
+    bottom: -40,
+    left: 0,
+    right: 0,
+    height: 80,
+    zIndex: 1,
+  },
   
   content: {
     flex: 1,
+    marginTop: -40,
   },
   contentContainer: {
     paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl + spacing.lg,
     paddingBottom: 120,
   },
   postsGrid: {
