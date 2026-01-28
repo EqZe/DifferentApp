@@ -225,6 +225,8 @@ export default function PostDetailScreen() {
                 {post.title}
               </Text>
 
+            </View>
+
             {/* Article Divider */}
             <View style={[styles.articleDivider, { backgroundColor: colors.border }]} />
 
