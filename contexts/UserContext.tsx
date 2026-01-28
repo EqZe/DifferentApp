@@ -23,30 +23,47 @@ export function UserProvider({ children }: { children: ReactNode }) {
     console.log('UserContext: Initializing Supabase Auth session');
     
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('UserContext: Initial session', session ? 'found' : 'not found');
-      setSession(session);
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('UserContext: Error getting initial session', error);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('UserContext: Initial session check', session ? 'session found' : 'no session');
+      
       if (session) {
+        console.log('UserContext: Session exists, user ID:', session.user.id);
+        console.log('UserContext: Session expires at:', new Date(session.expires_at! * 1000).toLocaleString());
+        setSession(session);
         loadUserProfile(session.user.id);
       } else {
+        console.log('UserContext: No existing session found');
         setIsLoading(false);
       }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('UserContext: Auth state changed', _event, session ? 'session exists' : 'no session');
+      console.log('UserContext: Auth state changed -', _event, session ? 'session exists' : 'no session');
+      
+      if (session) {
+        console.log('UserContext: New session for user:', session.user.id);
+      }
+      
       setSession(session);
       
       if (session) {
         loadUserProfile(session.user.id);
       } else {
+        console.log('UserContext: Session cleared, logging out user');
         setUserState(null);
         setIsLoading(false);
       }
     });
 
     return () => {
+      console.log('UserContext: Cleaning up auth subscription');
       subscription.unsubscribe();
     };
   }, []);
@@ -55,7 +72,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       console.log('UserContext: Loading user profile for auth user', authUserId);
       const userData = await api.getUserByAuthId(authUserId);
-      console.log('UserContext: User profile loaded', userData.fullName, 'hasContract:', userData.hasContract);
+      console.log('UserContext: User profile loaded successfully -', userData.fullName, 'hasContract:', userData.hasContract);
       setUserState(userData);
     } catch (error) {
       console.error('UserContext: Error loading user profile:', error);
@@ -79,7 +96,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       console.log('UserContext: Refreshing user data from database');
       const freshUserData = await api.getUserByAuthId(session.user.id);
-      console.log('UserContext: User data refreshed, hasContract:', freshUserData.hasContract);
+      console.log('UserContext: User data refreshed successfully, hasContract:', freshUserData.hasContract);
       setUserState(freshUserData);
     } catch (error) {
       console.error('UserContext: Failed to refresh user data', error);

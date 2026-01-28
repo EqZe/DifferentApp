@@ -1,16 +1,71 @@
 
 import { createClient } from '@supabase/supabase-js';
+import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 const supabaseUrl = 'https://pgrcmurwamszgjsdbgtq.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBncmNtdXJ3YW1zemdqc2RiZ3RxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTAxMTgsImV4cCI6MjA4NDA2NjExOH0.w0__VSxi7gxMcgd6q5ILlnCahGObfsC08qCiOpj4Vqg';
 
+// Custom storage adapter for React Native
+// Uses SecureStore on native platforms (iOS/Android) and AsyncStorage on web
+const ExpoSecureStoreAdapter = {
+  getItem: async (key: string) => {
+    try {
+      if (Platform.OS === 'web') {
+        // Use AsyncStorage for web
+        const value = await AsyncStorage.getItem(key);
+        console.log('Storage: Retrieved from AsyncStorage (web)', key, value ? 'found' : 'not found');
+        return value;
+      } else {
+        // Use SecureStore for native
+        const value = await SecureStore.getItemAsync(key);
+        console.log('Storage: Retrieved from SecureStore (native)', key, value ? 'found' : 'not found');
+        return value;
+      }
+    } catch (error) {
+      console.error('Storage: Error getting item', key, error);
+      return null;
+    }
+  },
+  setItem: async (key: string, value: string) => {
+    try {
+      if (Platform.OS === 'web') {
+        // Use AsyncStorage for web
+        await AsyncStorage.setItem(key, value);
+        console.log('Storage: Saved to AsyncStorage (web)', key);
+      } else {
+        // Use SecureStore for native
+        await SecureStore.setItemAsync(key, value);
+        console.log('Storage: Saved to SecureStore (native)', key);
+      }
+    } catch (error) {
+      console.error('Storage: Error setting item', key, error);
+    }
+  },
+  removeItem: async (key: string) => {
+    try {
+      if (Platform.OS === 'web') {
+        // Use AsyncStorage for web
+        await AsyncStorage.removeItem(key);
+        console.log('Storage: Removed from AsyncStorage (web)', key);
+      } else {
+        // Use SecureStore for native
+        await SecureStore.deleteItemAsync(key);
+        console.log('Storage: Removed from SecureStore (native)', key);
+      }
+    } catch (error) {
+      console.error('Storage: Error removing item', key, error);
+    }
+  },
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,
+    storage: ExpoSecureStoreAdapter,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
-    // Disable email confirmation for immediate access
-    flowType: 'pkce',
+    persistSession: true,
+    detectSessionInUrl: false,
   },
 });
 
