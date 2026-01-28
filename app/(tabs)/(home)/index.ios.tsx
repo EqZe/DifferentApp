@@ -403,6 +403,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 80,
+		    zIndex: 10,
+
   },
   
   content: {
