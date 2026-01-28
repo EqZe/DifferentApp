@@ -393,6 +393,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     flex: 1,
     marginRight: spacing.md,
+		marginBottom: spacing.sm
   },
 
   // Gradient Transition from Header to Content
