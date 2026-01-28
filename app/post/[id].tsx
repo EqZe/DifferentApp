@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
     ...typography.h3,
     textAlign: 'center',
     marginBottom: spacing.lg,
-    fontWeight: '600',
+    fontWeight: '400',
   },
   
   // CTA Button
