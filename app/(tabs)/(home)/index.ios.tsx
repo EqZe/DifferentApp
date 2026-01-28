@@ -130,7 +130,7 @@ export default function HomeScreen() {
       <View style={styles.headerWrapper}>
         {/* Blue Gradient Background */}
         <LinearGradient
-          colors={[designColors.primary, designColors.primaryDark]}
+          colors={[#addaf0, designColors.primaryDark]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
