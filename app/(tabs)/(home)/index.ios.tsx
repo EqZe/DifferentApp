@@ -397,13 +397,35 @@ lottieAnimation: {
   },
 
   // Gradient Transition from Header to Content
+headerWrapper: {
+  height: 240,
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  zIndex: 10,  // ✅ Fixed - uses spaces
+  overflow: 'visible',
+},
+
+lottieAnimation: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  width: '100%',
+  height: '100%',
+  zIndex: 11,  // ✅ Fixed - uses spaces
+  opacity: 0.6,
+},
+
 gradientTransition: {
   position: 'absolute',
   bottom: -40,
   left: 0,
   right: 0,
   height: 80,
-		zIndex: 13,  // ❌ Tab character before zIndex
+  zIndex: 13,  // ✅ Fixed - uses spaces
 },
   
   content: {
