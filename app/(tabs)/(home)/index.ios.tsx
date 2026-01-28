@@ -162,15 +162,16 @@ export default function HomeScreen() {
           </View>
         </SafeAreaView>
 
-        {/* Gradient Transition Overlay */}
+        {/* Gradient Transition Overlay - Modern smooth blend */}
         <LinearGradient
           colors={[
             'transparent',
-            isDark ? 'rgba(18, 18, 18, 0.3)' : 'rgba(255, 255, 255, 0.3)',
-            isDark ? 'rgba(18, 18, 18, 0.7)' : 'rgba(255, 255, 255, 0.7)',
+            isDark ? 'rgba(18, 18, 18, 0.1)' : 'rgba(255, 255, 255, 0.1)',
+            isDark ? 'rgba(18, 18, 18, 0.4)' : 'rgba(255, 255, 255, 0.4)',
+            isDark ? 'rgba(18, 18, 18, 0.8)' : 'rgba(255, 255, 255, 0.8)',
             isDark ? designColors.dark.background : designColors.light.background,
           ]}
-          locations={[0, 0.5, 0.8, 1]}
+          locations={[0, 0.3, 0.6, 0.85, 1]}
           style={styles.gradientTransition}
           pointerEvents="none"
         />
@@ -396,19 +397,19 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
 
-  // Gradient Transition from Header to Content
+  // Gradient Transition from Header to Content - Modern smooth blend
   gradientTransition: {
     position: 'absolute',
-    bottom: -40,
+    bottom: -60,
     left: 0,
     right: 0,
-    height: 80,
+    height: 120,
     zIndex: 13,
   },
   
   content: {
     flex: 1,
-    marginTop: 200,
+    marginTop: 180,
   },
   contentContainer: {
     paddingHorizontal: layout.screenPadding,
