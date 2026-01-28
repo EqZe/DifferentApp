@@ -225,19 +225,6 @@ export default function PostDetailScreen() {
                 {post.title}
               </Text>
 
-              {/* Article Meta */}
-              <View style={styles.articleMeta}>
-                <View style={styles.metaItem}>
-                  <IconSymbol
-                    ios_icon_name="clock"
-                    android_material_icon_name="access-time"
-                    size={14}
-                    color={colors.textTertiary}
-                  />
-                </View>
-              </View>
-            </View>
-
             {/* Article Divider */}
             <View style={[styles.articleDivider, { backgroundColor: colors.border }]} />
 
