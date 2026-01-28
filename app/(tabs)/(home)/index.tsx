@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   logoContainer: {
-    width: 48,
+    width: 70,
     height: 48,
     borderRadius: radius.md,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
