@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -61,20 +60,20 @@ export default function HomeScreen() {
   // Redirect to register if user is null
   useEffect(() => {
     if (!isLoading && !user) {
-      console.log('HomeScreen (iOS): No user found, redirecting to register');
+      console.log('HomeScreen: No user found, redirecting to register');
       router.replace('/register');
     }
   }, [user, isLoading, router]);
 
   const loadPosts = useCallback(async () => {
     try {
-      console.log('HomeScreen (iOS): Loading ALL posts (public + contract_only)');
+      console.log('HomeScreen: Loading ALL posts (public + contract_only)');
       const fetchedPosts = await api.getPosts();
-      console.log('HomeScreen (iOS): Posts loaded', fetchedPosts.length, 'posts');
-      console.log('HomeScreen (iOS): Post visibilities:', fetchedPosts.map(p => ({ title: p.title, visibility: p.visibility })));
+      console.log('HomeScreen: Posts loaded', fetchedPosts.length, 'posts');
+      console.log('HomeScreen: Post visibilities:', fetchedPosts.map(p => ({ title: p.title, visibility: p.visibility })));
       setPosts(fetchedPosts);
     } catch (error) {
-      console.error('HomeScreen (iOS): Failed to load posts', error);
+      console.error('HomeScreen: Failed to load posts', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -90,7 +89,7 @@ export default function HomeScreen() {
   }, [loadPosts, user]);
 
   const onRefresh = async () => {
-    console.log('HomeScreen (iOS): Refreshing posts and user data');
+    console.log('HomeScreen: Refreshing posts and user data');
     setRefreshing(true);
     // Update greeting on refresh
     setGreeting(getTimeBasedGreeting());
@@ -103,7 +102,7 @@ export default function HomeScreen() {
   };
 
   const handlePostPress = (postId: string) => {
-    console.log('HomeScreen (iOS): Opening post', postId);
+    console.log('HomeScreen: Opening post', postId);
     router.push(`/post/${postId}`);
   };
 
@@ -341,31 +340,32 @@ const styles = StyleSheet.create({
   },
   
   // Header Wrapper with Lottie Background - Fixed at top with z-index
-headerWrapper: {
-  height: 240,
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-		zIndex: 10,  // ❌ Tab character before zIndex
-  overflow: 'visible',
-},
-lottieAnimation: {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  width: '100%',
-  height: '100%',
-		zIndex: 11,  // ❌ Tab character before zIndex
-  opacity: 0.6,
-},
+  headerWrapper: {
+    height: 240,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    overflow: 'visible',
+  },
+  lottieAnimation: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 11,
+    opacity: 0.6,
+  },
   header: {
     flex: 1,
     paddingHorizontal: layout.screenPadding,
     justifyContent: 'flex-end',
     paddingBottom: spacing.sm,
+    zIndex: 12,
   },
   headerContent: {
     flexDirection: 'row',
@@ -397,36 +397,14 @@ lottieAnimation: {
   },
 
   // Gradient Transition from Header to Content
-headerWrapper: {
-  height: 240,
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  zIndex: 10,  // ✅ Fixed - uses spaces
-  overflow: 'visible',
-},
-
-lottieAnimation: {
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  width: '100%',
-  height: '100%',
-  zIndex: 11,  // ✅ Fixed - uses spaces
-  opacity: 0.6,
-},
-
-gradientTransition: {
-  position: 'absolute',
-  bottom: -40,
-  left: 0,
-  right: 0,
-  height: 80,
-  zIndex: 13,  // ✅ Fixed - uses spaces
-},
+  gradientTransition: {
+    position: 'absolute',
+    bottom: -40,
+    left: 0,
+    right: 0,
+    height: 80,
+    zIndex: 13,
+  },
   
   content: {
     flex: 1,
@@ -587,32 +565,3 @@ gradientTransition: {
     textAlign: 'center',
   },
 });
-</write file>
-
-Perfect! I've fixed all three issues:
-
-## ✅ Changes Made:
-
-### 1. **Fixed Scrolling Issue - Posts No Longer Overlap Header**
-   - Changed `headerWrapper` from `position: 'relative'` to `position: 'absolute'` with `zIndex: 10`
-   - This keeps the blue section fixed at the top and prevents posts from scrolling over it
-   - Added `pointerEvents="none"` to the gradient transition so it doesn't block touch events
-
-### 2. **Moved Text and Logo Closer to Bottom Edge**
-   - Changed `paddingBottom` in `header` from `spacing.md` to `spacing.sm` (smaller gap)
-   - Removed extra `paddingBottom` from `headerContent`
-   - The logo and greeting text are now closer to the bottom edge but still have a small gap
-
-### 3. **Made Company Logo Bigger**
-   - Increased logo size from `48x48` to `80x80` pixels
-   - The logo is now significantly more prominent
-
-### Technical Implementation:
-- The header is now **absolutely positioned** at the top with a high z-index (10)
-- The ScrollView content starts with `marginTop: 200` to account for the fixed header
-- The gradient transition smoothly blends the header into the content area
-- Both platform-specific files (base and iOS) have been updated identically
-
-The blue section will now stay fixed at the top while posts scroll underneath it (but are hidden by the blue section), the logo is bigger, and the text/logo are positioned closer to the bottom edge with a small gap. 🎉
-
-**Verified:** All changes follow atomic JSX rules, no logic in JSX, and both platform files are synchronized.
