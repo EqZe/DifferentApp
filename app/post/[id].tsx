@@ -297,7 +297,7 @@ export default function PostDetailScreen() {
                   
                   {/* Lock Message */}
                   <Text style={[styles.lockMessageText, { color: colors.textSecondary }]}>
-                   התוכן יהיה 
+                   התוכן יהיה זמין לקראת הנסיעה
                   </Text>
                 
                   
