@@ -404,7 +404,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: 80,
 		zIndex: 13,
-
   },
   
   content: {
