@@ -297,6 +297,7 @@ export default function PostDetailScreen() {
                   
                   {/* Lock Message */}
                   <Text style={[styles.lockMessageText, { color: colors.textSecondary }]}>
+                    תוכן זה זמין לאחר חתימת חוזה
                   </Text>
                 
                   
@@ -309,7 +310,7 @@ export default function PostDetailScreen() {
                       color={designColors.primary}
                     />
                     <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-                      פנה לנציג החברה על חתימת חוזה
+                      פנה לנציג החברה לצורך חתימה על חוזה
                     </Text>
                   </View>
                 </View>
