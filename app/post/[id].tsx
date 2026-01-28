@@ -297,7 +297,6 @@ export default function PostDetailScreen() {
                   
                   {/* Lock Message */}
                   <Text style={[styles.lockMessageText, { color: colors.textSecondary }]}>
-                    תוכן זה זמין לאחר חתימת חוזה
                   </Text>
                 
                   
