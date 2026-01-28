@@ -162,21 +162,21 @@ export default function HomeScreen() {
           </View>
         </SafeAreaView>
 
-        {/* Modern Wave Separator - Clean transition */}
-        <View style={styles.waveSeparator}>
-          <LinearGradient
-            colors={[
-              designColors.primary,
-              designColors.primaryDark,
-              isDark ? designColors.dark.background : designColors.light.background,
-            ]}
-            locations={[0, 0.7, 1]}
-            style={styles.waveGradient}
-          />
-        </View>
       </View>
 
-      {/* Content - Scrollable area below header */}
+      {/* Modern Gradient Separator - Between header and content */}
+      <View style={styles.gradientSeparator}>
+        <LinearGradient
+          colors={[
+            designColors.primaryDark,
+            isDark ? designColors.dark.background : designColors.light.background,
+          ]}
+          locations={[0, 1]}
+          style={styles.gradientFill}
+        />
+      </View>
+
+      {/* Content - Scrollable area below gradient */}
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
@@ -398,17 +398,16 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
 
-  // Modern Wave Separator - Clean transition between sections
-  waveSeparator: {
+  // Gradient Separator - Modern transition between header and content
+  gradientSeparator: {
     position: 'absolute',
-    bottom: -30,
+    top: 240,
     left: 0,
     right: 0,
-    height: 60,
-    zIndex: 13,
-    overflow: 'hidden',
+    height: 80,
+    zIndex: 5,
   },
-  waveGradient: {
+  gradientFill: {
     flex: 1,
     width: '100%',
     height: '100%',
@@ -416,7 +415,7 @@ const styles = StyleSheet.create({
   
   content: {
     flex: 1,
-    marginTop: 240,
+    marginTop: 320,
   },
   contentContainer: {
     paddingHorizontal: layout.screenPadding,
