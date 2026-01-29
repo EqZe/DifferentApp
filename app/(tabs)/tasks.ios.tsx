@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  I18nManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +16,14 @@ import { useTheme } from '@react-navigation/native';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { api, type Task } from '@/utils/api';
+import ConfettiCannon from 'react-native-confetti-cannon';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 
 const styles = StyleSheet.create({
   container: {
@@ -52,6 +61,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
+    // RTL layout - flip horizontally
+    transform: [{ scaleX: -1 }],
   },
   taskCardCompleted: {
     opacity: 0.6,
@@ -61,6 +72,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 8,
+    // Flip content back to normal inside flipped card
+    transform: [{ scaleX: -1 }],
   },
   taskTitle: {
     fontSize: 18,
@@ -78,12 +91,16 @@ const styles = StyleSheet.create({
     color: '#666666',
     lineHeight: 20,
     marginBottom: 12,
+    // Flip content back to normal inside flipped card
+    transform: [{ scaleX: -1 }],
   },
   taskFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 8,
+    // Flip content back to normal inside flipped card
+    transform: [{ scaleX: -1 }],
   },
   taskDate: {
     fontSize: 14,
@@ -129,6 +146,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  confettiContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+    pointerEvents: 'none',
+  },
 });
 
 function formatDate(dateString: string | null) {
@@ -143,6 +169,7 @@ export default function TasksScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
+  const confettiRef = useRef<any>(null);
 
   const loadTasks = useCallback(async () => {
     if (!user) return;
@@ -172,12 +199,45 @@ export default function TasksScreen() {
     loadTasks();
   };
 
-  const handleCompleteTask = async (taskId: string, requiresPending: boolean) => {
+  const handleCompleteTask = async (taskId: string, requiresPending: boolean, currentStatus: string) => {
     try {
-      console.log('TasksScreen: Updating task status', { taskId, requiresPending });
+      console.log('TasksScreen: User tapped complete button', { taskId, requiresPending, currentStatus });
+      
+      // Optimistically update UI immediately
+      setTasks((prevTasks) =>
+        prevTasks.map((task) => {
+          if (task.id === taskId) {
+            let newStatus: 'YET' | 'PENDING' | 'DONE';
+            
+            if (requiresPending) {
+              if (currentStatus === 'YET') {
+                newStatus = 'PENDING';
+              } else if (currentStatus === 'PENDING') {
+                newStatus = 'DONE';
+              } else {
+                newStatus = 'DONE';
+              }
+            } else {
+              newStatus = 'DONE';
+            }
+            
+            return { ...task, status: newStatus };
+          }
+          return task;
+        })
+      );
+      
+      // Trigger confetti if task is being completed to DONE
+      const willBeDone = (!requiresPending) || (requiresPending && currentStatus === 'PENDING');
+      if (willBeDone) {
+        console.log('TasksScreen: Task completed! Triggering confetti animation 🎉');
+        confettiRef.current?.start();
+      }
+      
+      // Update backend
       const updatedTask = await api.completeTask(taskId, requiresPending);
       
-      // Update local state with the new task data
+      // Update with server response (in case of any discrepancies)
       setTasks((prevTasks) =>
         prevTasks.map((task) =>
           task.id === taskId ? updatedTask : task
@@ -187,6 +247,8 @@ export default function TasksScreen() {
       console.log('TasksScreen: Task status updated successfully to', updatedTask.status);
     } catch (error) {
       console.error('TasksScreen: Failed to update task status', error);
+      // Revert optimistic update on error
+      loadTasks();
     }
   };
 
@@ -283,7 +345,10 @@ export default function TasksScreen() {
                   )}
 
                   <View style={styles.taskFooter}>
-                    <Text style={styles.taskDate}>תאריך יעד: {dueDateText}</Text>
+                    <Text style={styles.taskDate}>
+                      {dueDateText}
+                    </Text>
+                    <Text style={styles.taskDate}>תאריך יעד:</Text>
                     
                     {isDone ? (
                       <View style={styles.completedBadge}>
@@ -292,14 +357,14 @@ export default function TasksScreen() {
                     ) : isPending ? (
                       <TouchableOpacity
                         style={[styles.completeButton, { backgroundColor: '#F5AD27' }]}
-                        onPress={() => handleCompleteTask(task.id, task.requiresPending)}
+                        onPress={() => handleCompleteTask(task.id, task.requiresPending, task.status)}
                       >
                         <Text style={styles.completeButtonText}>{buttonText}</Text>
                       </TouchableOpacity>
                     ) : (
                       <TouchableOpacity
                         style={styles.completeButton}
-                        onPress={() => handleCompleteTask(task.id, task.requiresPending)}
+                        onPress={() => handleCompleteTask(task.id, task.requiresPending, task.status)}
                       >
                         <Text style={styles.completeButtonText}>{buttonText}</Text>
                       </TouchableOpacity>
@@ -310,6 +375,19 @@ export default function TasksScreen() {
             })
           )}
         </ScrollView>
+
+        {/* Confetti animation overlay */}
+        <View style={styles.confettiContainer}>
+          <ConfettiCannon
+            ref={confettiRef}
+            count={150}
+            origin={{ x: -10, y: 0 }}
+            autoStart={false}
+            fadeOut={true}
+            fallSpeed={2500}
+            colors={['#2784F5', '#F5AD27', '#4CAF50', '#FF6B6B', '#FFD93D', '#6BCF7F']}
+          />
+        </View>
       </SafeAreaView>
     </LinearGradient>
   );
