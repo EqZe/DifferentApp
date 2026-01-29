@@ -82,9 +82,10 @@ export interface TaskFrontend {
   title: string;
   description: string | null;
   dueDate: string | null;
-  isCompleted: boolean;
-  reminderSent: boolean;
+  status: 'YET' | 'PENDING' | 'DONE'; // Task status
+  requiresPending: boolean; // Whether task requires PENDING status before DONE
   createdAt: string;
+  updatedAt: string;
 }
 
 export const api = {
@@ -498,10 +499,24 @@ export const api = {
   getTasks: async (authUserId: string): Promise<TaskFrontend[]> => {
     console.log('API: Getting tasks for user', authUserId);
     
+    // Query user_tasks with joined tasks_metadata to get title and description
     const { data, error } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('auth_user_id', authUserId);
+      .from('user_tasks')
+      .select(`
+        id,
+        auth_user_id,
+        due_date,
+        status,
+        created_at,
+        updated_at,
+        tasks_metadata (
+          title,
+          description,
+          requires_pending
+        )
+      `)
+      .eq('auth_user_id', authUserId)
+      .order('due_date', { ascending: true });
 
     if (error) {
       console.error('API: Get tasks failed', error);
@@ -509,11 +524,20 @@ export const api = {
     }
 
     console.log('API: Tasks retrieved', data?.length || 0);
-    return data?.map((task) => {
-      const camelTask = toCamelCase(task);
+    
+    // Transform the data to match TaskFrontend interface
+    return data?.map((task: any) => {
+      const metadata = task.tasks_metadata;
       return {
-        ...camelTask,
-        userId: camelTask.authUserId,
+        id: task.id,
+        userId: task.auth_user_id,
+        title: metadata?.title || 'משימה ללא כותרת',
+        description: metadata?.description || null,
+        dueDate: task.due_date,
+        status: task.status,
+        requiresPending: metadata?.requires_pending || false,
+        createdAt: task.created_at,
+        updatedAt: task.updated_at,
       };
     }) || [];
   },
@@ -522,15 +546,17 @@ export const api = {
     authUserId: string,
     task: { title: string; description?: string | null; dueDate: string }
   ): Promise<TaskFrontend> => {
-    console.log('API: Creating task', { authUserId, task });
+    console.log('API: Creating custom task (not from template)', { authUserId, task });
     
+    // Note: This creates a custom task without a template
+    // For template-based tasks, they are auto-created when travel_date is set
     const { data, error } = await supabase
-      .from('tasks')
+      .from('user_tasks')
       .insert({
         auth_user_id: authUserId,
-        title: task.title,
-        description: task.description || null,
+        task_metadata_id: null, // Custom task without template
         due_date: task.dueDate,
+        status: 'YET',
       })
       .select()
       .single();
@@ -540,65 +566,117 @@ export const api = {
       throw new Error(error.message || 'שגיאה ביצירת משימה');
     }
 
-    console.log('API: Task created', data);
-    const camelTask = toCamelCase(data);
+    console.log('API: Custom task created', data);
     return {
-      ...camelTask,
-      userId: camelTask.authUserId,
+      id: data.id,
+      userId: data.auth_user_id,
+      title: task.title,
+      description: task.description || null,
+      dueDate: data.due_date,
+      status: data.status,
+      requiresPending: false,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
     };
   },
 
-  completeTask: async (taskId: string): Promise<TaskFrontend> => {
-    console.log('API: Completing task', taskId);
+  completeTask: async (taskId: string, requiresPending: boolean): Promise<TaskFrontend> => {
+    console.log('API: Updating task status', { taskId, requiresPending });
     
-    const { data, error } = await supabase
-      .from('tasks')
-      .update({ is_completed: true })
+    // First, get the current task to check its status
+    const { data: currentTask, error: fetchError } = await supabase
+      .from('user_tasks')
+      .select(`
+        id,
+        auth_user_id,
+        status,
+        due_date,
+        created_at,
+        updated_at,
+        tasks_metadata (
+          title,
+          description,
+          requires_pending
+        )
+      `)
       .eq('id', taskId)
-      .select()
+      .single();
+
+    if (fetchError) {
+      console.error('API: Fetch task failed', fetchError);
+      throw new Error(fetchError.message || 'שגיאה בטעינת משימה');
+    }
+
+    // Determine next status based on current status and requirements
+    let newStatus: 'YET' | 'PENDING' | 'DONE';
+    const currentStatus = currentTask.status;
+    
+    if (requiresPending) {
+      // Task requires PENDING before DONE
+      if (currentStatus === 'YET') {
+        newStatus = 'PENDING';
+      } else if (currentStatus === 'PENDING') {
+        newStatus = 'DONE';
+      } else {
+        newStatus = 'DONE'; // Already done
+      }
+    } else {
+      // Task can go directly to DONE
+      newStatus = 'DONE';
+    }
+
+    console.log('API: Transitioning task from', currentStatus, 'to', newStatus);
+
+    const { data, error } = await supabase
+      .from('user_tasks')
+      .update({ 
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', taskId)
+      .select(`
+        id,
+        auth_user_id,
+        due_date,
+        status,
+        created_at,
+        updated_at,
+        tasks_metadata (
+          title,
+          description,
+          requires_pending
+        )
+      `)
       .single();
 
     if (error) {
-      console.error('API: Complete task failed', error);
-      throw new Error(error.message || 'שגיאה בסימון משימה כהושלמה');
+      console.error('API: Update task status failed', error);
+      throw new Error(error.message || 'שגיאה בעדכון סטטוס משימה');
     }
 
-    console.log('API: Task completed', data);
-    const camelTask = toCamelCase(data);
+    console.log('API: Task status updated', data);
+    const metadata = data.tasks_metadata;
     return {
-      ...camelTask,
-      userId: camelTask.authUserId,
+      id: data.id,
+      userId: data.auth_user_id,
+      title: metadata?.title || 'משימה ללא כותרת',
+      description: metadata?.description || null,
+      dueDate: data.due_date,
+      status: data.status,
+      requiresPending: metadata?.requires_pending || false,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
     };
   },
 
-  updateTaskReminder: async (taskId: string, reminderSent: boolean): Promise<TaskFrontend> => {
-    console.log('API: Updating task reminder', { taskId, reminderSent });
-    
-    const { data, error } = await supabase
-      .from('tasks')
-      .update({ reminder_sent: reminderSent })
-      .eq('id', taskId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('API: Update task reminder failed', error);
-      throw new Error(error.message || 'שגיאה בעדכון תזכורת');
-    }
-
-    console.log('API: Task reminder updated', data);
-    const camelTask = toCamelCase(data);
-    return {
-      ...camelTask,
-      userId: camelTask.authUserId,
-    };
-  },
+  // Note: Reminder functionality removed as user_tasks doesn't have reminder_sent field
+  // Reminders should be handled by a separate notification system
 
   deleteTask: async (taskId: string): Promise<void> => {
     console.log('API: Deleting task', taskId);
     
     const { error } = await supabase
-      .from('tasks')
+      .from('user_tasks')
       .delete()
       .eq('id', taskId);
 

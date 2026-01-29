@@ -172,21 +172,21 @@ export default function TasksScreen() {
     loadTasks();
   };
 
-  const handleCompleteTask = async (taskId: string) => {
+  const handleCompleteTask = async (taskId: string, requiresPending: boolean) => {
     try {
-      console.log('TasksScreen: Completing task', taskId);
-      await api.completeTask(taskId);
+      console.log('TasksScreen: Updating task status', { taskId, requiresPending });
+      const updatedTask = await api.completeTask(taskId, requiresPending);
       
-      // Update local state
+      // Update local state with the new task data
       setTasks((prevTasks) =>
         prevTasks.map((task) =>
-          task.id === taskId ? { ...task, isCompleted: true } : task
+          task.id === taskId ? updatedTask : task
         )
       );
       
-      console.log('TasksScreen: Task completed successfully');
+      console.log('TasksScreen: Task status updated successfully to', updatedTask.status);
     } catch (error) {
-      console.error('TasksScreen: Failed to complete task', error);
+      console.error('TasksScreen: Failed to update task status', error);
     }
   };
 
@@ -231,35 +231,48 @@ export default function TasksScreen() {
             </View>
           ) : (
             tasks.map((task) => {
-              const isCompleted = task.isCompleted;
+              const isDone = task.status === 'DONE';
+              const isPending = task.status === 'PENDING';
               const dueDateText = formatDate(task.dueDate);
+              
+              // Determine button text based on status and requirements
+              let buttonText = 'התחל משימה';
+              if (task.requiresPending) {
+                if (task.status === 'YET') {
+                  buttonText = 'התחל משימה';
+                } else if (task.status === 'PENDING') {
+                  buttonText = 'סמן כהושלם';
+                }
+              } else {
+                buttonText = 'סמן כהושלם';
+              }
               
               return (
                 <View
                   key={task.id}
                   style={[
                     styles.taskCard,
-                    isCompleted && styles.taskCardCompleted,
+                    isDone && styles.taskCardCompleted,
                   ]}
                 >
                   <View style={styles.taskHeader}>
                     <Text
                       style={[
                         styles.taskTitle,
-                        isCompleted && styles.taskTitleCompleted,
+                        isDone && styles.taskTitleCompleted,
                       ]}
                     >
                       {task.title}
                     </Text>
                     <IconSymbol
                       ios_icon_name={
-                        isCompleted ? 'checkmark.circle.fill' : 'circle'
+                        isDone ? 'checkmark.circle.fill' : isPending ? 'clock.fill' : 'circle'
                       }
                       android_material_icon_name={
-                        isCompleted ? 'check-circle' : 'radio-button-unchecked'
+                        isDone ? 'check-circle' : isPending ? 'schedule' : 'radio-button-unchecked'
                       }
                       size={24}
-                      color={isCompleted ? '#4CAF50' : '#CCCCCC'}
+                      color={isDone ? '#4CAF50' : isPending ? '#F5AD27' : '#CCCCCC'}
                     />
                   </View>
 
@@ -272,16 +285,23 @@ export default function TasksScreen() {
                   <View style={styles.taskFooter}>
                     <Text style={styles.taskDate}>תאריך יעד: {dueDateText}</Text>
                     
-                    {isCompleted ? (
+                    {isDone ? (
                       <View style={styles.completedBadge}>
                         <Text style={styles.completedBadgeText}>הושלם</Text>
                       </View>
+                    ) : isPending ? (
+                      <TouchableOpacity
+                        style={[styles.completeButton, { backgroundColor: '#F5AD27' }]}
+                        onPress={() => handleCompleteTask(task.id, task.requiresPending)}
+                      >
+                        <Text style={styles.completeButtonText}>{buttonText}</Text>
+                      </TouchableOpacity>
                     ) : (
                       <TouchableOpacity
                         style={styles.completeButton}
-                        onPress={() => handleCompleteTask(task.id)}
+                        onPress={() => handleCompleteTask(task.id, task.requiresPending)}
                       >
-                        <Text style={styles.completeButtonText}>סמן כהושלם</Text>
+                        <Text style={styles.completeButtonText}>{buttonText}</Text>
                       </TouchableOpacity>
                     )}
                   </View>

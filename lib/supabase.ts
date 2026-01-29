@@ -117,10 +117,21 @@ export interface PostBlock {
 export interface Task {
   id: string;
   auth_user_id: string;
-  title: string;
-  description: string | null;
+  task_metadata_id: string | null;
+  status: 'YET' | 'PENDING' | 'DONE';
   due_date: string | null;
-  is_completed: boolean;
-  reminder_sent: boolean;
   created_at: string;
+  updated_at: string;
+}
+
+export interface TaskMetadata {
+  id: string;
+  title: string;
+  description: string;
+  due_date_offset_days: number;
+  requires_pending: boolean;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
