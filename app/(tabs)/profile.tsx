@@ -54,10 +54,29 @@ export default function ProfileScreen() {
       if (session && (!user || !user.fullName)) {
         console.log('ProfileScreen: User data incomplete, refreshing...');
         setIsRefreshing(true);
+        const loadStartTime = Date.now();
+        
         try {
           await refreshUser();
+          
+          // Ensure loading animation displays for at least 1 second
+          const loadDuration = Date.now() - loadStartTime;
+          const remainingTime = Math.max(0, 1000 - loadDuration);
+          
+          if (remainingTime > 0) {
+            console.log('ProfileScreen: Waiting', remainingTime, 'ms to ensure 1 second minimum loading display');
+            await new Promise(resolve => setTimeout(resolve, remainingTime));
+          }
         } catch (error) {
           console.error('ProfileScreen: Failed to refresh user data', error);
+          
+          // Still ensure 1 second minimum display even on error
+          const loadDuration = Date.now() - loadStartTime;
+          const remainingTime = Math.max(0, 1000 - loadDuration);
+          
+          if (remainingTime > 0) {
+            await new Promise(resolve => setTimeout(resolve, remainingTime));
+          }
         } finally {
           setIsRefreshing(false);
         }

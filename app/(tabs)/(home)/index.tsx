@@ -99,13 +99,32 @@ export default function HomeScreen() {
   }, [user, isLoading, router]);
 
   const loadCategories = useCallback(async () => {
+    const loadStartTime = Date.now();
+    
     try {
       console.log('HomeScreen: Loading categories from new structure');
       const fetchedCategories = await api.getCategories();
       console.log('HomeScreen: Categories loaded:', fetchedCategories.map(c => `${c.name} (id: ${c.id}, icon: ${c.iconName})`));
       setCategories(fetchedCategories);
+      
+      // Ensure loading animation displays for at least 1 second
+      const loadDuration = Date.now() - loadStartTime;
+      const remainingTime = Math.max(0, 1000 - loadDuration);
+      
+      if (remainingTime > 0) {
+        console.log('HomeScreen: Waiting', remainingTime, 'ms to ensure 1 second minimum loading display');
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
     } catch (error) {
       console.error('HomeScreen: Failed to load categories', error);
+      
+      // Still ensure 1 second minimum display even on error
+      const loadDuration = Date.now() - loadStartTime;
+      const remainingTime = Math.max(0, 1000 - loadDuration);
+      
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

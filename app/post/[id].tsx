@@ -45,6 +45,8 @@ export default function PostDetailScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const loadPost = useCallback(async () => {
+    const loadStartTime = Date.now();
+    
     try {
       console.log('PostDetailScreen: Loading post', id);
       setError(null);
@@ -58,9 +60,26 @@ export default function PostDetailScreen() {
         console.log('PostDetailScreen: Post loaded with blocks', fetchedPost.blocks?.length || 0);
         setPost(fetchedPost);
       }
+      
+      // Ensure loading animation displays for at least 1 second
+      const loadDuration = Date.now() - loadStartTime;
+      const remainingTime = Math.max(0, 1000 - loadDuration);
+      
+      if (remainingTime > 0) {
+        console.log('PostDetailScreen: Waiting', remainingTime, 'ms to ensure 1 second minimum loading display');
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
     } catch (err) {
       console.error('PostDetailScreen: Failed to load post', err);
       setError('שגיאה בטעינת הפוסט');
+      
+      // Still ensure 1 second minimum display even on error
+      const loadDuration = Date.now() - loadStartTime;
+      const remainingTime = Math.max(0, 1000 - loadDuration);
+      
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

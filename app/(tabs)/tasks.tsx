@@ -216,13 +216,32 @@ export default function TasksScreen() {
   const loadTasks = useCallback(async () => {
     if (!user) return;
 
+    const loadStartTime = Date.now();
+
     try {
       console.log('TasksScreen: Loading tasks for user', user.id);
       const fetchedTasks = await api.getTasks(user.id);
       console.log('TasksScreen: Tasks loaded', fetchedTasks.length);
       setTasks(fetchedTasks);
+      
+      // Ensure loading animation displays for at least 1 second
+      const loadDuration = Date.now() - loadStartTime;
+      const remainingTime = Math.max(0, 1000 - loadDuration);
+      
+      if (remainingTime > 0) {
+        console.log('TasksScreen: Waiting', remainingTime, 'ms to ensure 1 second minimum loading display');
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
     } catch (error) {
       console.error('TasksScreen: Failed to load tasks', error);
+      
+      // Still ensure 1 second minimum display even on error
+      const loadDuration = Date.now() - loadStartTime;
+      const remainingTime = Math.max(0, 1000 - loadDuration);
+      
+      if (remainingTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
