@@ -267,7 +267,7 @@ export default function HomeScreen() {
                             source={resolveImageSource(category.coverImage)}
                             style={styles.categoryImage}
                             resizeMode="cover"
-                            blurRadius={8}
+                            blurRadius={4}
                           />
                           {/* Centered Icon on Blurred Image */}
                           <View style={styles.categoryIconOverlay}>
