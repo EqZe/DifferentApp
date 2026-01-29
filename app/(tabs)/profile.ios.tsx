@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   useColorScheme,
   I18nManager,
   Modal,
@@ -19,8 +18,11 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { api } from '@/utils/api';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
+import LottieView from 'lottie-react-native';
 
-const isRTL = I18nManager.isRTL;
+// Enable RTL for Hebrew
+I18nManager.allowRTL(true);
+I18nManager.forceRTL(true);
 
 function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return 'לא נקבע';
@@ -83,22 +85,19 @@ export default function ProfileScreen() {
   };
 
   // Extract theme colors based on color scheme
-  const backgroundColor = isDark ? designColors.dark.background : designColors.light.background;
-  const surfaceColor = isDark ? designColors.dark.surface : designColors.light.surface;
-  const textColor = isDark ? designColors.dark.text : designColors.light.text;
-  const textSecondaryColor = isDark ? designColors.dark.textSecondary : designColors.light.textSecondary;
+  const colors = isDark ? designColors.dark : designColors.light;
 
   // Show loading state while user data is being fetched
   if (!user || isRefreshing) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor }]} edges={['top']}>
-        <View style={styles.loadingContainer}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={designColors.primary} />
-          <Text style={[styles.loadingText, { color: textColor }]}>
+          <Text style={[styles.loadingText, { color: colors.text }]}>
             טוען פרטי משתמש...
           </Text>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
     );
   }
 
@@ -108,45 +107,55 @@ export default function ProfileScreen() {
   const phoneText = user?.phoneNumber || 'לא זמין';
   const cityText = user?.city || 'לא זמין';
   const hasContract = user?.hasContract || false;
-  const contractStatusText = hasContract ? 'יש חוזה' : 'אין חוזה';
+  const contractStatusText = hasContract ? 'פעיל' : 'לא פעיל';
   const travelDateText = formatDate(user?.travelDate);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]} edges={['top']}>
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Modern Header with Gradient and Lottie */}
+      <View style={styles.headerWrapper}>
+        {/* Blue Gradient Background */}
+        <LinearGradient
+          colors={[designColors.primary, designColors.primaryDark]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        
+        {/* Lottie Animation Layer */}
+        <LottieView
+          source={{ uri: 'https://lottie.host/fcc59560-b2cd-4dad-85d1-02d5cf35c039/OcOTugphwV.json' }}
+          autoPlay
+          loop
+          style={styles.lottieAnimation}
+          resizeMode="cover"
+        />
+        
+        {/* Header Content */}
+        <SafeAreaView style={styles.header} edges={['top']}>
+          {/* Avatar Container */}
           <View style={styles.avatarContainer}>
-            <LinearGradient
-              colors={[designColors.primary, designColors.primaryDark]}
-              style={styles.avatarGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
+            <View style={styles.avatarBackground}>
               <IconSymbol
                 ios_icon_name="person.fill"
                 android_material_icon_name="person"
-                size={48}
+                size={56}
                 color="#FFFFFF"
               />
-            </LinearGradient>
+            </View>
           </View>
           
-          <Text style={[styles.name, { color: textColor }]}>
-            {fullNameText}
-          </Text>
+          {/* User Name */}
+          <Text style={styles.userName}>{fullNameText}</Text>
           
+          {/* Contract Badge */}
           {hasContract && (
             <View style={styles.contractBadge}>
               <LinearGradient
                 colors={['#FFD700', '#FFA500']}
-                style={styles.contractBadgeGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
+                style={styles.contractBadgeGradient}
               >
                 <IconSymbol
                   ios_icon_name="checkmark.seal.fill"
@@ -154,131 +163,122 @@ export default function ProfileScreen() {
                   size={16}
                   color="#FFFFFF"
                 />
-                <Text style={styles.contractBadgeText}>לקוח מוסמך</Text>
+                <Text style={styles.contractBadgeText}>חוזה חתום</Text>
               </LinearGradient>
             </View>
           )}
-        </View>
+        </SafeAreaView>
+      </View>
 
-        {/* Info Cards */}
-        <View style={styles.cardsContainer}>
+      {/* Gradient Separator */}
+      <View style={styles.gradientSeparator}>
+        <LinearGradient
+          colors={[
+            '#5cbae6',
+            isDark ? designColors.dark.background : designColors.light.background,
+          ]}
+          locations={[0, 1]}
+          style={styles.gradientFill}
+        />
+      </View>
+
+      {/* Content Section */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Info Section Header */}
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          פרטים אישיים
+        </Text>
+
+        {/* Info Cards Grid - 2 columns */}
+        <View style={styles.cardsGrid}>
           {/* Email Card */}
-          <View style={[
-            styles.card,
-            {
-              backgroundColor: surfaceColor,
-              ...shadows.md,
-            }
-          ]}>
-            <View style={styles.cardIcon}>
+          <View style={[styles.infoCard, { backgroundColor: colors.surface }, isDark && styles.cardDark]}>
+            <View style={styles.cardIconContainer}>
               <IconSymbol
                 ios_icon_name="envelope.fill"
                 android_material_icon_name="email"
-                size={24}
+                size={20}
                 color={designColors.primary}
               />
             </View>
-            <View style={styles.cardContent}>
-              <Text style={[styles.cardLabel, { color: textSecondaryColor }]}>
-                אימייל
-              </Text>
-              <Text style={[styles.cardValue, { color: textColor }]}>
-                {emailText}
-              </Text>
-            </View>
+            <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>
+              אימייל
+            </Text>
+            <Text style={[styles.cardValue, { color: colors.text }]} numberOfLines={1}>
+              {emailText}
+            </Text>
           </View>
 
           {/* Phone Card */}
-          <View style={[
-            styles.card,
-            {
-              backgroundColor: surfaceColor,
-              ...shadows.md,
-            }
-          ]}>
-            <View style={styles.cardIcon}>
+          <View style={[styles.infoCard, { backgroundColor: colors.surface }, isDark && styles.cardDark]}>
+            <View style={styles.cardIconContainer}>
               <IconSymbol
                 ios_icon_name="phone.fill"
                 android_material_icon_name="phone"
-                size={24}
+                size={20}
                 color={designColors.primary}
               />
             </View>
-            <View style={styles.cardContent}>
-              <Text style={[styles.cardLabel, { color: textSecondaryColor }]}>
-                טלפון
-              </Text>
-              <Text style={[styles.cardValue, { color: textColor }]}>
-                {phoneText}
-              </Text>
-            </View>
+            <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>
+              טלפון
+            </Text>
+            <Text style={[styles.cardValue, { color: colors.text }]} numberOfLines={1}>
+              {phoneText}
+            </Text>
           </View>
 
           {/* City Card */}
-          <View style={[
-            styles.card,
-            {
-              backgroundColor: surfaceColor,
-              ...shadows.md,
-            }
-          ]}>
-            <View style={styles.cardIcon}>
+          <View style={[styles.infoCard, { backgroundColor: colors.surface }, isDark && styles.cardDark]}>
+            <View style={styles.cardIconContainer}>
               <IconSymbol
                 ios_icon_name="location.fill"
                 android_material_icon_name="location-on"
-                size={24}
+                size={20}
                 color={designColors.primary}
               />
             </View>
-            <View style={styles.cardContent}>
-              <Text style={[styles.cardLabel, { color: textSecondaryColor }]}>
-                עיר
-              </Text>
-              <Text style={[styles.cardValue, { color: textColor }]}>
-                {cityText}
-              </Text>
-            </View>
+            <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>
+              עיר
+            </Text>
+            <Text style={[styles.cardValue, { color: colors.text }]} numberOfLines={1}>
+              {cityText}
+            </Text>
           </View>
 
           {/* Contract Status Card */}
-          <View style={[
-            styles.card,
-            {
-              backgroundColor: surfaceColor,
-              ...shadows.md,
-            }
-          ]}>
-            <View style={styles.cardIcon}>
+          <View style={[styles.infoCard, { backgroundColor: colors.surface }, isDark && styles.cardDark]}>
+            <View style={styles.cardIconContainer}>
               <IconSymbol
                 ios_icon_name="doc.text.fill"
                 android_material_icon_name="description"
-                size={24}
+                size={20}
                 color={hasContract ? '#10B981' : '#EF4444'}
               />
             </View>
-            <View style={styles.cardContent}>
-              <Text style={[styles.cardLabel, { color: textSecondaryColor }]}>
-                סטטוס חוזה
-              </Text>
-              <Text style={[
-                styles.cardValue,
-                { color: hasContract ? '#10B981' : '#EF4444' }
-              ]}>
-                {contractStatusText}
-              </Text>
-            </View>
+            <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>
+              סטטוס חוזה
+            </Text>
+            <Text style={[
+              styles.cardValue,
+              { color: hasContract ? '#10B981' : '#EF4444' }
+            ]} numberOfLines={1}>
+              {contractStatusText}
+            </Text>
           </View>
+        </View>
 
-          {/* Travel Date Card (only if has contract) */}
-          {hasContract && (
-            <View style={[
-              styles.card,
-              {
-                backgroundColor: surfaceColor,
-                ...shadows.md,
-              }
-            ]}>
-              <View style={styles.cardIcon}>
+        {/* Travel Date Card - Full Width if has contract */}
+        {hasContract && (
+          <>
+            <Text style={[styles.sectionTitle, { color: colors.text, marginTop: spacing.xl }]}>
+              מידע נוסף
+            </Text>
+            <View style={[styles.fullWidthCard, { backgroundColor: colors.surface }, isDark && styles.cardDark]}>
+              <View style={styles.fullWidthCardIcon}>
                 <IconSymbol
                   ios_icon_name="calendar"
                   android_material_icon_name="calendar-today"
@@ -286,17 +286,17 @@ export default function ProfileScreen() {
                   color={designColors.primary}
                 />
               </View>
-              <View style={styles.cardContent}>
-                <Text style={[styles.cardLabel, { color: textSecondaryColor }]}>
+              <View style={styles.fullWidthCardContent}>
+                <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>
                   תאריך נסיעה
                 </Text>
-                <Text style={[styles.cardValue, { color: textColor }]}>
+                <Text style={[styles.cardValue, { color: colors.text, fontSize: 20 }]}>
                   {travelDateText}
                 </Text>
               </View>
             </View>
-          )}
-        </View>
+          </>
+        )}
 
         {/* Logout Button */}
         <TouchableOpacity
@@ -313,7 +313,7 @@ export default function ProfileScreen() {
             <IconSymbol
               ios_icon_name="arrow.right.square.fill"
               android_material_icon_name="logout"
-              size={24}
+              size={22}
               color="#FFFFFF"
             />
             <Text style={styles.logoutText}>התנתק</Text>
@@ -329,23 +329,32 @@ export default function ProfileScreen() {
         onRequestClose={() => setShowLogoutModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalContent,
-            { backgroundColor: surfaceColor }
-          ]}>
-            <Text style={[styles.modalTitle, { color: textColor }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalIconContainer}>
+              <View style={styles.modalIconCircle}>
+                <IconSymbol
+                  ios_icon_name="exclamationmark.triangle.fill"
+                  android_material_icon_name="warning"
+                  size={32}
+                  color="#EF4444"
+                />
+              </View>
+            </View>
+            
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
               התנתקות
             </Text>
-            <Text style={[styles.modalMessage, { color: textSecondaryColor }]}>
-              האם אתה בטוח שברצונך להתנתק?
+            <Text style={[styles.modalMessage, { color: colors.textSecondary }]}>
+              האם אתה בטוח שברצונך להתנתק מהמערכת?
             </Text>
             
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
+                style={[styles.modalButton, styles.modalButtonCancel, { backgroundColor: colors.backgroundSecondary }]}
                 onPress={() => setShowLogoutModal(false)}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.modalButtonText, { color: textColor }]}>
+                <Text style={[styles.modalButtonText, { color: colors.text }]}>
                   ביטול
                 </Text>
               </TouchableOpacity>
@@ -353,16 +362,24 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonConfirm]}
                 onPress={handleLogout}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
-                  התנתק
-                </Text>
+                <LinearGradient
+                  colors={['#EF4444', '#DC2626']}
+                  style={styles.modalButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Text style={[styles.modalButtonText, { color: '#FFFFFF' }]}>
+                    התנתק
+                  </Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -377,47 +394,66 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   loadingText: {
-    fontSize: 16,
+    ...typography.body,
     fontWeight: '600',
   },
-  scrollView: {
-    flex: 1,
+  
+  // Modern Header with Gradient
+  headerWrapper: {
+    height: 280,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    overflow: 'visible',
   },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  header: {
-    alignItems: 'center',
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  avatarContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    overflow: 'hidden',
-    marginBottom: spacing.md,
-    ...shadows.lg,
-  },
-  avatarGradient: {
+  lottieAnimation: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
     height: '100%',
+    zIndex: 11,
+    opacity: 0.6,
+  },
+  header: {
+    flex: 1,
+    paddingHorizontal: layout.screenPadding,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 12,
   },
-  name: {
-    fontSize: 28,
+  avatarContainer: {
+    marginBottom: spacing.md,
+  },
+  avatarBackground: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    ...shadows.xl,
+  },
+  userName: {
+    ...typography.h1,
+    color: '#FFFFFF',
     fontWeight: '700',
     marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   contractBadge: {
     borderRadius: radius.full,
     overflow: 'hidden',
-    ...shadows.sm,
+    ...shadows.lg,
   },
   contractBadgeGradient: {
-    flexDirection: isRTL ? 'row-reverse' : 'row',
+    flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -425,39 +461,106 @@ const styles = StyleSheet.create({
   },
   contractBadgeText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
   },
-  cardsContainer: {
+
+  // Gradient Separator
+  gradientSeparator: {
+    position: 'absolute',
+    top: 280,
+    left: 0,
+    right: 0,
+    height: 60,
+    zIndex: 5,
+  },
+  gradientFill: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  
+  // Content Section
+  content: {
+    flex: 1,
+    marginTop: 340,
+  },
+  contentContainer: {
+    paddingHorizontal: layout.screenPadding,
+    paddingBottom: 100,
+  },
+  
+  // Section Title
+  sectionTitle: {
+    ...typography.h3,
+    fontWeight: '700',
+    marginBottom: spacing.md,
+    textAlign: 'right',
+  },
+  
+  // Info Cards Grid - 2 columns
+  cardsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
-    marginTop: spacing.lg,
+    marginBottom: spacing.md,
   },
-  card: {
-    flexDirection: isRTL ? 'row-reverse' : 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
+  infoCard: {
+    width: '47%',
+    padding: spacing.md,
     borderRadius: radius.lg,
-    gap: spacing.md,
+    ...shadows.sm,
+    minHeight: 110,
   },
-  cardIcon: {
-    width: 48,
-    height: 48,
+  cardDark: {
+    borderWidth: 1,
+    borderColor: designColors.dark.border,
+  },
+  cardIconContainer: {
+    width: 40,
+    height: 40,
     borderRadius: radius.md,
     backgroundColor: 'rgba(39, 132, 245, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  cardContent: {
-    flex: 1,
+    marginBottom: spacing.sm,
+    alignSelf: 'flex-end',
   },
   cardLabel: {
-    fontSize: 14,
-    marginBottom: 4,
+    ...typography.caption,
+    marginBottom: spacing.xs / 2,
+    textAlign: 'right',
   },
   cardValue: {
-    fontSize: 18,
+    ...typography.body,
     fontWeight: '600',
+    textAlign: 'right',
   },
+  
+  // Full Width Card
+  fullWidthCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    ...shadows.sm,
+    marginBottom: spacing.md,
+  },
+  fullWidthCardIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(39, 132, 245, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: spacing.md,
+  },
+  fullWidthCardContent: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  
+  // Logout Button
   logoutButton: {
     marginTop: spacing.xl,
     borderRadius: radius.lg,
@@ -465,60 +568,79 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   logoutGradient: {
-    flexDirection: isRTL ? 'row-reverse' : 'row',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md + 2,
     gap: spacing.sm,
   },
   logoutText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
   },
+  
+  // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.lg,
   },
   modalContent: {
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 380,
     borderRadius: radius.xl,
     padding: spacing.xl,
-    ...shadows.lg,
+    ...shadows.xl,
+  },
+  modalIconContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  modalIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 24,
+    ...typography.h2,
     fontWeight: '700',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   modalMessage: {
-    fontSize: 16,
+    ...typography.body,
     marginBottom: spacing.xl,
     textAlign: 'center',
+    lineHeight: 24,
   },
   modalButtons: {
-    flexDirection: isRTL ? 'row-reverse' : 'row',
+    flexDirection: 'row',
     gap: spacing.md,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: spacing.md,
     borderRadius: radius.md,
-    alignItems: 'center',
+    overflow: 'hidden',
   },
   modalButtonCancel: {
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    paddingVertical: spacing.md,
+    alignItems: 'center',
   },
   modalButtonConfirm: {
-    backgroundColor: '#EF4444',
+    overflow: 'hidden',
+  },
+  modalButtonGradient: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
   },
   modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...typography.body,
+    fontWeight: '700',
   },
 });
