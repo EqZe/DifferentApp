@@ -53,7 +53,6 @@ export interface PostFrontend {
   coverImage: string | null;
   isPublished: boolean;
   visibility: 'public' | 'contract_only';
-  category: string; // Legacy field - kept for backward compatibility
   categoryId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -420,25 +419,15 @@ export const api = {
     return toCamelCase(data);
   },
 
-  getPostsByCategory: async (categoryIdOrName: string): Promise<PostFrontend[]> => {
-    console.log('API: Getting posts for category', categoryIdOrName);
+  getPostsByCategory: async (categoryId: string): Promise<PostFrontend[]> => {
+    console.log('API: Getting posts for category ID', categoryId);
     
-    // Check if it's a UUID (category_id) or a name (legacy)
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryIdOrName);
-    
-    let query = supabase
+    const { data, error } = await supabase
       .from('posts')
       .select('*')
-      .eq('is_published', true);
-    
-    if (isUUID) {
-      query = query.eq('category_id', categoryIdOrName);
-    } else {
-      // Legacy: search by category name
-      query = query.eq('category', categoryIdOrName);
-    }
-    
-    const { data, error } = await query.order('created_at', { ascending: false });
+      .eq('is_published', true)
+      .eq('category_id', categoryId)
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('API: Get posts by category failed', error);
