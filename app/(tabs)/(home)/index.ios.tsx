@@ -250,7 +250,6 @@ export default function HomeScreen() {
                   key={category.id}
                   style={[
                     styles.categoryCard,
-                    { backgroundColor: colors.surface },
                     isDark && styles.categoryCardDark,
                   ]}
                   onPress={() => handleCategoryPress(category.id, category.name)}
@@ -429,29 +428,26 @@ const styles = StyleSheet.create({
     gap: CARD_GAP,
   },
   
-  // Category Card - Bolder with Enhanced Shadows
+  // Category Card - Modern with clean shadow
   categoryCard: {
     width: CARD_WIDTH,
     borderRadius: radius.lg,
     overflow: 'hidden',
-    // Enhanced shadow for bold appearance
+    backgroundColor: '#FFFFFF',
+    // Modern shadow
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 6,
+      height: 4,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 12,
-    // Add 2px border for more definition
-    borderWidth: 2,
-    borderColor: 'rgba(39, 159, 222, 0.1)',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
   },
   categoryCardDark: {
-    borderWidth: 2,
-    borderColor: 'rgba(39, 159, 222, 0.3)',
-    shadowColor: '#279FDE',
-    shadowOpacity: 0.2,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
   },
   categoryImageContainer: {
     width: '100%',
