@@ -217,25 +217,25 @@ export default function TasksScreen() {
     const loadStartTime = Date.now();
 
     try {
-      console.log('TasksScreen: Loading tasks for user', user.id);
+      console.log('TasksScreen (iOS): Loading tasks for user', user.id);
       const fetchedTasks = await api.getTasks(user.id);
-      console.log('TasksScreen: Tasks loaded', fetchedTasks.length);
+      console.log('TasksScreen (iOS): Tasks loaded', fetchedTasks.length);
       setTasks(fetchedTasks);
       
-      // Ensure loading animation displays for at least 1 second
+      // Ensure loading animation displays for at least 2 seconds
       const loadDuration = Date.now() - loadStartTime;
-      const remainingTime = Math.max(0, 1000 - loadDuration);
+      const remainingTime = Math.max(0, 2000 - loadDuration);
       
       if (remainingTime > 0) {
-        console.log('TasksScreen: Waiting', remainingTime, 'ms to ensure 1 second minimum loading display');
+        console.log('TasksScreen (iOS): Waiting', remainingTime, 'ms to ensure 2 second minimum loading display');
         await new Promise(resolve => setTimeout(resolve, remainingTime));
       }
     } catch (error) {
-      console.error('TasksScreen: Failed to load tasks', error);
+      console.error('TasksScreen (iOS): Failed to load tasks', error);
       
-      // Still ensure 1 second minimum display even on error
+      // Still ensure 2 second minimum display even on error
       const loadDuration = Date.now() - loadStartTime;
-      const remainingTime = Math.max(0, 1000 - loadDuration);
+      const remainingTime = Math.max(0, 2000 - loadDuration);
       
       if (remainingTime > 0) {
         await new Promise(resolve => setTimeout(resolve, remainingTime));
@@ -253,14 +253,14 @@ export default function TasksScreen() {
   }, [user, loadTasks]);
 
   const onRefresh = () => {
-    console.log('TasksScreen: Refreshing tasks');
+    console.log('TasksScreen (iOS): Refreshing tasks');
     setRefreshing(true);
     loadTasks();
   };
 
   const handleCompleteTask = async (taskId: string, requiresPending: boolean, currentStatus: string) => {
     try {
-      console.log('TasksScreen: User tapped complete button', { taskId, requiresPending, currentStatus });
+      console.log('TasksScreen (iOS): User tapped complete button', { taskId, requiresPending, currentStatus });
       
       // Optimistically update UI immediately
       setTasks((prevTasks) =>
@@ -289,7 +289,7 @@ export default function TasksScreen() {
       // Trigger confetti if task is being completed to DONE
       const willBeDone = (!requiresPending) || (requiresPending && currentStatus === 'PENDING');
       if (willBeDone) {
-        console.log('TasksScreen: Task completed! Triggering confetti animation 🎉');
+        console.log('TasksScreen (iOS): Task completed! Triggering confetti animation 🎉');
         confettiRef.current?.start();
       }
       
@@ -303,9 +303,9 @@ export default function TasksScreen() {
         )
       );
       
-      console.log('TasksScreen: Task status updated successfully to', updatedTask.status);
+      console.log('TasksScreen (iOS): Task status updated successfully to', updatedTask.status);
     } catch (error) {
-      console.error('TasksScreen: Failed to update task status', error);
+      console.error('TasksScreen (iOS): Failed to update task status', error);
       // Revert optimistic update on error
       loadTasks();
     }

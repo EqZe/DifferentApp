@@ -135,36 +135,46 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Modern Header with Gradient and Lottie */}
+      {/* Modern Header with Enhanced Gradient */}
       <View style={styles.headerWrapper}>
-        {/* Blue Gradient Background */}
+        {/* Enhanced Multi-layer Gradient Background */}
         <LinearGradient
-          colors={[designColors.primary, designColors.primaryDark]}
+          colors={isDark 
+            ? ['#1e3a8a', '#2563eb', '#3b82f6'] 
+            : ['#2563eb', '#3b82f6', '#60a5fa']
+          }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
         
-        {/* Lottie Animation Layer - 15% smaller */}
-        <LottieView
-          source={{ uri: 'https://lottie.host/200cc226-843c-464f-a346-c8faad8e7407/8Y1UmkMrvF.json' }}
-          autoPlay
-          loop
-          style={styles.lottieAnimation}
-          resizeMode="cover"
-        />
+        {/* Subtle Overlay Pattern */}
+        <View style={styles.patternOverlay} />
+        
+        {/* Lottie Animation Layer - Centered and Lower */}
+        <View style={styles.lottieContainer}>
+          <LottieView
+            source={{ uri: 'https://lottie.host/200cc226-843c-464f-a346-c8faad8e7407/8Y1UmkMrvF.json' }}
+            autoPlay
+            loop
+            style={styles.lottieAnimation}
+            resizeMode="contain"
+          />
+        </View>
         
         {/* Header Content */}
         <SafeAreaView style={styles.header} edges={['top']}>
           {/* Avatar Container */}
           <View style={styles.avatarContainer}>
             <View style={styles.avatarBackground}>
-              <IconSymbol
-                ios_icon_name="person.fill"
-                android_material_icon_name="person"
-                size={56}
-                color="#FFFFFF"
-              />
+              <View style={styles.avatarRing}>
+                <IconSymbol
+                  ios_icon_name="person.fill"
+                  android_material_icon_name="person"
+                  size={56}
+                  color="#FFFFFF"
+                />
+              </View>
             </View>
           </View>
           
@@ -193,14 +203,14 @@ export default function ProfileScreen() {
         </SafeAreaView>
       </View>
 
-      {/* Gradient Separator */}
-      <View style={styles.gradientSeparator}>
+      {/* Smooth Curved Separator */}
+      <View style={styles.curvedSeparator}>
         <LinearGradient
           colors={[
-            '#5cbae6',
+            isDark ? '#3b82f6' : '#60a5fa',
             isDark ? designColors.dark.background : designColors.light.background,
           ]}
-          locations={[0, 1]}
+          locations={[0, 0.8]}
           style={styles.gradientFill}
         />
       </View>
@@ -425,9 +435,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   
-  // Modern Header with Gradient
+  // Enhanced Modern Header
   headerWrapper: {
-    height: 280,
+    height: 300,
     position: 'absolute',
     top: 0,
     left: 0,
@@ -435,23 +445,36 @@ const styles = StyleSheet.create({
     zIndex: 10,
     overflow: 'visible',
   },
-  lottieAnimation: {
+  patternOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    width: '85%',
-    height: '85%',
-    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    zIndex: 10,
+  },
+  lottieContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 11,
-    opacity: 0.6,
+  },
+  lottieAnimation: {
+    width: 240,
+    height: 240,
+    opacity: 0.4,
   },
   header: {
     flex: 1,
     paddingHorizontal: layout.screenPadding,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    paddingBottom: spacing.lg,
     zIndex: 12,
   },
   avatarContainer: {
@@ -461,12 +484,20 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
     borderRadius: 55,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
     ...shadows.xl,
+  },
+  avatarRing: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
   },
   userName: {
     ...typography.h1,
@@ -474,6 +505,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: spacing.sm,
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   contractBadge: {
     borderRadius: radius.full,
@@ -493,13 +527,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Gradient Separator
-  gradientSeparator: {
+  // Smooth Curved Separator
+  curvedSeparator: {
     position: 'absolute',
-    top: 280,
+    top: 300,
     left: 0,
     right: 0,
-    height: 60,
+    height: 80,
     zIndex: 5,
   },
   gradientFill: {
@@ -511,7 +545,7 @@ const styles = StyleSheet.create({
   // Content Section
   content: {
     flex: 1,
-    marginTop: 340,
+    marginTop: 380,
   },
   contentContainer: {
     paddingHorizontal: layout.screenPadding,

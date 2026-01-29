@@ -61,21 +61,21 @@ export default function PostDetailScreen() {
         setPost(fetchedPost);
       }
       
-      // Ensure loading animation displays for at least 1 second
+      // Ensure loading animation displays for at least 2 seconds
       const loadDuration = Date.now() - loadStartTime;
-      const remainingTime = Math.max(0, 1000 - loadDuration);
+      const remainingTime = Math.max(0, 2000 - loadDuration);
       
       if (remainingTime > 0) {
-        console.log('PostDetailScreen: Waiting', remainingTime, 'ms to ensure 1 second minimum loading display');
+        console.log('PostDetailScreen: Waiting', remainingTime, 'ms to ensure 2 second minimum loading display');
         await new Promise(resolve => setTimeout(resolve, remainingTime));
       }
     } catch (err) {
       console.error('PostDetailScreen: Failed to load post', err);
       setError('שגיאה בטעינת הפוסט');
       
-      // Still ensure 1 second minimum display even on error
+      // Still ensure 2 second minimum display even on error
       const loadDuration = Date.now() - loadStartTime;
-      const remainingTime = Math.max(0, 1000 - loadDuration);
+      const remainingTime = Math.max(0, 2000 - loadDuration);
       
       if (remainingTime > 0) {
         await new Promise(resolve => setTimeout(resolve, remainingTime));
