@@ -107,20 +107,27 @@ export default function HomeScreen() {
       console.log('HomeScreen: Categories loaded:', fetchedCategories.map(c => `${c.name} (id: ${c.id}, icon: ${c.iconName})`));
       setCategories(fetchedCategories);
       
-      // Ensure loading animation displays for at least 2 seconds
+      // Check if loading took less than 1 second
       const loadDuration = Date.now() - loadStartTime;
-      const remainingTime = Math.max(0, 2000 - loadDuration);
       
-      if (remainingTime > 0) {
-        console.log('HomeScreen: Waiting', remainingTime, 'ms to ensure 2 second minimum loading display');
-        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      if (loadDuration < 1000) {
+        // If it loaded quickly (< 1 second), don't show loader at all
+        console.log('HomeScreen: Data loaded quickly (', loadDuration, 'ms), skipping loader');
+      } else {
+        // Ensure loading animation displays for at least 2.5 seconds
+        const remainingTime = Math.max(0, 2500 - loadDuration);
+        
+        if (remainingTime > 0) {
+          console.log('HomeScreen: Waiting', remainingTime, 'ms to ensure 2.5 second minimum loading display');
+          await new Promise(resolve => setTimeout(resolve, remainingTime));
+        }
       }
     } catch (error) {
       console.error('HomeScreen: Failed to load categories', error);
       
-      // Still ensure 2 second minimum display even on error
+      // Still ensure 2.5 second minimum display even on error
       const loadDuration = Date.now() - loadStartTime;
-      const remainingTime = Math.max(0, 2000 - loadDuration);
+      const remainingTime = Math.max(0, 2500 - loadDuration);
       
       if (remainingTime > 0) {
         await new Promise(resolve => setTimeout(resolve, remainingTime));

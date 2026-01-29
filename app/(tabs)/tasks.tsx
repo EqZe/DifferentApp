@@ -23,6 +23,8 @@ import Animated, {
   withSpring,
   withSequence,
   withTiming,
+  withDelay,
+  runOnJS,
 } from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
 
@@ -205,11 +207,160 @@ function formatDate(dateString: string | null) {
   return `${day} ${month}`;
 }
 
+// Animated Task Card Component
+function AnimatedTaskCard({ 
+  task, 
+  onComplete, 
+  isAnimating 
+}: { 
+  task: Task; 
+  onComplete: (taskId: string, requiresPending: boolean, currentStatus: string) => void;
+  isAnimating: boolean;
+}) {
+  const translateY = useSharedValue(0);
+  const opacity = useSharedValue(1);
+
+  useEffect(() => {
+    if (isAnimating) {
+      // After 3 seconds, animate the card down
+      translateY.value = withDelay(
+        3000,
+        withTiming(300, { duration: 600 })
+      );
+      opacity.value = withDelay(
+        3000,
+        withTiming(0, { duration: 600 })
+      );
+    }
+  }, [isAnimating]);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: translateY.value }],
+      opacity: opacity.value,
+    };
+  });
+
+  const isDone = task.status === 'DONE';
+  const isPending = task.status === 'PENDING';
+  const isYet = task.status === 'YET';
+  const dueDateText = formatDate(task.dueDate);
+  
+  // Determine button text based on status and requirements
+  let buttonText = 'התחל';
+  if (task.requiresPending) {
+    if (task.status === 'YET') {
+      buttonText = 'התחל';
+    } else if (task.status === 'PENDING') {
+      buttonText = 'סיימתי';
+    }
+  } else {
+    buttonText = 'סיימתי';
+  }
+  
+  // Icon names
+  let iosIconName = 'circle';
+  let androidIconName = 'radio-button-unchecked';
+  let iconColor = '#9CA3AF';
+  
+  if (isDone) {
+    iosIconName = 'checkmark.circle.fill';
+    androidIconName = 'check-circle';
+    iconColor = '#4CAF50';
+  } else if (isPending) {
+    iosIconName = 'clock.fill';
+    androidIconName = 'schedule';
+    iconColor = '#F5AD27';
+  }
+
+  return (
+    <Animated.View
+      style={[
+        styles.taskCard,
+        isDone && styles.taskCardCompleted,
+        animatedStyle,
+      ]}
+    >
+      <View style={styles.taskHeader}>
+        <View
+          style={[
+            styles.statusIconContainer,
+            isYet && styles.statusIconYet,
+            isPending && styles.statusIconPending,
+            isDone && styles.statusIconDone,
+          ]}
+        >
+          <IconSymbol
+            ios_icon_name={iosIconName}
+            android_material_icon_name={androidIconName}
+            size={20}
+            color={iconColor}
+          />
+        </View>
+        
+        <View style={styles.taskTitleContainer}>
+          <Text
+            style={[
+              styles.taskTitle,
+              isDone && styles.taskTitleCompleted,
+            ]}
+          >
+            {task.title}
+          </Text>
+        </View>
+      </View>
+
+      {task.description && (
+        <Text style={styles.taskDescription}>
+          {task.description}
+        </Text>
+      )}
+
+      <View style={styles.taskFooter}>
+        {dueDateText && (
+          <View style={styles.dateContainer}>
+            <Text style={styles.taskDate}>{dueDateText}</Text>
+            <IconSymbol
+              ios_icon_name="calendar"
+              android_material_icon_name="calendar-today"
+              size={16}
+              color="#9CA3AF"
+            />
+          </View>
+        )}
+        
+        {isDone ? (
+          <View style={styles.completedBadge}>
+            <IconSymbol
+              ios_icon_name="checkmark"
+              android_material_icon_name="check"
+              size={16}
+              color="#2E7D32"
+            />
+            <Text style={styles.completedBadgeText}>הושלם</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              isPending && styles.actionButtonPending,
+            ]}
+            onPress={() => onComplete(task.id, task.requiresPending, task.status)}
+          >
+            <Text style={styles.actionButtonText}>{buttonText}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </Animated.View>
+  );
+}
+
 export default function TasksScreen() {
   const { user } = useUser();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [animatingTaskIds, setAnimatingTaskIds] = useState<Set<string>>(new Set());
   const { colors } = useTheme();
   const confettiRef = useRef<any>(null);
 
@@ -224,20 +375,27 @@ export default function TasksScreen() {
       console.log('TasksScreen: Tasks loaded', fetchedTasks.length);
       setTasks(fetchedTasks);
       
-      // Ensure loading animation displays for at least 2 seconds
+      // Check if loading took less than 1 second
       const loadDuration = Date.now() - loadStartTime;
-      const remainingTime = Math.max(0, 2000 - loadDuration);
       
-      if (remainingTime > 0) {
-        console.log('TasksScreen: Waiting', remainingTime, 'ms to ensure 2 second minimum loading display');
-        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      if (loadDuration < 1000) {
+        // If it loaded quickly (< 1 second), don't show loader at all
+        console.log('TasksScreen: Data loaded quickly (', loadDuration, 'ms), skipping loader');
+      } else {
+        // Ensure loading animation displays for at least 2.5 seconds
+        const remainingTime = Math.max(0, 2500 - loadDuration);
+        
+        if (remainingTime > 0) {
+          console.log('TasksScreen: Waiting', remainingTime, 'ms to ensure 2.5 second minimum loading display');
+          await new Promise(resolve => setTimeout(resolve, remainingTime));
+        }
       }
     } catch (error) {
       console.error('TasksScreen: Failed to load tasks', error);
       
-      // Still ensure 2 second minimum display even on error
+      // Still ensure 2.5 second minimum display even on error
       const loadDuration = Date.now() - loadStartTime;
-      const remainingTime = Math.max(0, 2000 - loadDuration);
+      const remainingTime = Math.max(0, 2500 - loadDuration);
       
       if (remainingTime > 0) {
         await new Promise(resolve => setTimeout(resolve, remainingTime));
@@ -264,6 +422,9 @@ export default function TasksScreen() {
     try {
       console.log('TasksScreen: User tapped complete button', { taskId, requiresPending, currentStatus });
       
+      // Determine if this will result in DONE status
+      const willBeDone = (!requiresPending) || (requiresPending && currentStatus === 'PENDING');
+      
       // Optimistically update UI immediately
       setTasks((prevTasks) =>
         prevTasks.map((task) => {
@@ -289,10 +450,21 @@ export default function TasksScreen() {
       );
       
       // Trigger confetti if task is being completed to DONE
-      const willBeDone = (!requiresPending) || (requiresPending && currentStatus === 'PENDING');
       if (willBeDone) {
         console.log('TasksScreen: Task completed! Triggering confetti animation 🎉');
         confettiRef.current?.start();
+        
+        // Mark this task as animating
+        setAnimatingTaskIds(prev => new Set(prev).add(taskId));
+        
+        // After 3.6 seconds (3s wait + 0.6s animation), remove from animating set
+        setTimeout(() => {
+          setAnimatingTaskIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(taskId);
+            return newSet;
+          });
+        }, 3600);
       }
       
       // Update backend
@@ -363,120 +535,14 @@ export default function TasksScreen() {
               <Text style={styles.emptyText}>אין משימות כרגע</Text>
             </View>
           ) : (
-            sortedTasks.map((task) => {
-              const isDone = task.status === 'DONE';
-              const isPending = task.status === 'PENDING';
-              const isYet = task.status === 'YET';
-              const dueDateText = formatDate(task.dueDate);
-              
-              // Determine button text based on status and requirements
-              let buttonText = 'התחל';
-              if (task.requiresPending) {
-                if (task.status === 'YET') {
-                  buttonText = 'התחל';
-                } else if (task.status === 'PENDING') {
-                  buttonText = 'סיימתי';
-                }
-              } else {
-                buttonText = 'סיימתי';
-              }
-              
-              // Icon names
-              let iosIconName = 'circle';
-              let androidIconName = 'radio-button-unchecked';
-              let iconColor = '#9CA3AF';
-              
-              if (isDone) {
-                iosIconName = 'checkmark.circle.fill';
-                androidIconName = 'check-circle';
-                iconColor = '#4CAF50';
-              } else if (isPending) {
-                iosIconName = 'clock.fill';
-                androidIconName = 'schedule';
-                iconColor = '#F5AD27';
-              }
-              
-              return (
-                <View
-                  key={task.id}
-                  style={[
-                    styles.taskCard,
-                    isDone && styles.taskCardCompleted,
-                  ]}
-                >
-                  <View style={styles.taskHeader}>
-                    <View
-                      style={[
-                        styles.statusIconContainer,
-                        isYet && styles.statusIconYet,
-                        isPending && styles.statusIconPending,
-                        isDone && styles.statusIconDone,
-                      ]}
-                    >
-                      <IconSymbol
-                        ios_icon_name={iosIconName}
-                        android_material_icon_name={androidIconName}
-                        size={20}
-                        color={iconColor}
-                      />
-                    </View>
-                    
-                    <View style={styles.taskTitleContainer}>
-                      <Text
-                        style={[
-                          styles.taskTitle,
-                          isDone && styles.taskTitleCompleted,
-                        ]}
-                      >
-                        {task.title}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {task.description && (
-                    <Text style={styles.taskDescription}>
-                      {task.description}
-                    </Text>
-                  )}
-
-                  <View style={styles.taskFooter}>
-                    {dueDateText && (
-                      <View style={styles.dateContainer}>
-                        <Text style={styles.taskDate}>{dueDateText}</Text>
-                        <IconSymbol
-                          ios_icon_name="calendar"
-                          android_material_icon_name="calendar-today"
-                          size={16}
-                          color="#9CA3AF"
-                        />
-                      </View>
-                    )}
-                    
-                    {isDone ? (
-                      <View style={styles.completedBadge}>
-                        <IconSymbol
-                          ios_icon_name="checkmark"
-                          android_material_icon_name="check"
-                          size={16}
-                          color="#2E7D32"
-                        />
-                        <Text style={styles.completedBadgeText}>הושלם</Text>
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={[
-                          styles.actionButton,
-                          isPending && styles.actionButtonPending,
-                        ]}
-                        onPress={() => handleCompleteTask(task.id, task.requiresPending, task.status)}
-                      >
-                        <Text style={styles.actionButtonText}>{buttonText}</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              );
-            })
+            sortedTasks.map((task) => (
+              <AnimatedTaskCard
+                key={task.id}
+                task={task}
+                onComplete={handleCompleteTask}
+                isAnimating={animatingTaskIds.has(task.id)}
+              />
+            ))
           )}
         </ScrollView>
 
