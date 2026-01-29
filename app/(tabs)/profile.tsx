@@ -59,20 +59,20 @@ export default function ProfileScreen() {
         try {
           await refreshUser();
           
-          // Ensure loading animation displays for at least 1 second
+          // Ensure loading animation displays for at least 2 seconds
           const loadDuration = Date.now() - loadStartTime;
-          const remainingTime = Math.max(0, 1000 - loadDuration);
+          const remainingTime = Math.max(0, 2000 - loadDuration);
           
           if (remainingTime > 0) {
-            console.log('ProfileScreen: Waiting', remainingTime, 'ms to ensure 1 second minimum loading display');
+            console.log('ProfileScreen: Waiting', remainingTime, 'ms to ensure 2 second minimum loading display');
             await new Promise(resolve => setTimeout(resolve, remainingTime));
           }
         } catch (error) {
           console.error('ProfileScreen: Failed to refresh user data', error);
           
-          // Still ensure 1 second minimum display even on error
+          // Still ensure 2 second minimum display even on error
           const loadDuration = Date.now() - loadStartTime;
-          const remainingTime = Math.max(0, 1000 - loadDuration);
+          const remainingTime = Math.max(0, 2000 - loadDuration);
           
           if (remainingTime > 0) {
             await new Promise(resolve => setTimeout(resolve, remainingTime));
@@ -146,7 +146,7 @@ export default function ProfileScreen() {
           style={StyleSheet.absoluteFill}
         />
         
-        {/* Lottie Animation Layer */}
+        {/* Lottie Animation Layer - 15% smaller */}
         <LottieView
           source={{ uri: 'https://lottie.host/200cc226-843c-464f-a346-c8faad8e7407/8Y1UmkMrvF.json' }}
           autoPlay
@@ -442,8 +442,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    width: '100%',
-    height: '100%',
+    width: '85%',
+    height: '85%',
+    alignSelf: 'center',
     zIndex: 11,
     opacity: 0.6,
   },
