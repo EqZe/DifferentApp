@@ -37,20 +37,39 @@ export default function CategoryPostsScreen() {
   const { user } = useUser();
   const router = useRouter();
   const { name } = useLocalSearchParams<{ name: string }>();
-  const categoryName = decodeURIComponent(name || '');
+  const categoryIdOrName = decodeURIComponent(name || '');
   
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = isDark ? designColors.dark : designColors.light;
   
   const [posts, setPosts] = useState<Post[]>([]);
+  const [categoryName, setCategoryName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadPosts = useCallback(async () => {
     try {
-      console.log('CategoryPostsScreen: Loading posts for category', categoryName);
-      const fetchedPosts = await api.getPostsByCategory(categoryName);
+      console.log('CategoryPostsScreen: Loading posts for category', categoryIdOrName);
+      
+      // Check if it's a UUID (category_id) or a name
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryIdOrName);
+      
+      // If it's a UUID, fetch the category details to get the name
+      if (isUUID) {
+        const category = await api.getCategoryById(categoryIdOrName);
+        if (category) {
+          setCategoryName(category.name);
+          console.log('CategoryPostsScreen: Category name resolved:', category.name);
+        } else {
+          setCategoryName('קטגוריה');
+        }
+      } else {
+        // It's a name (legacy)
+        setCategoryName(categoryIdOrName);
+      }
+      
+      const fetchedPosts = await api.getPostsByCategory(categoryIdOrName);
       console.log('CategoryPostsScreen: Posts loaded', fetchedPosts.length, 'posts');
       setPosts(fetchedPosts);
     } catch (error) {
@@ -59,13 +78,13 @@ export default function CategoryPostsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [categoryName]);
+  }, [categoryIdOrName]);
 
   useEffect(() => {
-    if (categoryName) {
+    if (categoryIdOrName) {
       loadPosts();
     }
-  }, [loadPosts, categoryName]);
+  }, [loadPosts, categoryIdOrName]);
 
   const onRefresh = async () => {
     console.log('CategoryPostsScreen: Refreshing posts');

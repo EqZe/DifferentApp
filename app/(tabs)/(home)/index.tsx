@@ -75,9 +75,9 @@ export default function HomeScreen() {
 
   const loadCategories = useCallback(async () => {
     try {
-      console.log('HomeScreen: Loading categories');
+      console.log('HomeScreen: Loading categories from new structure');
       const fetchedCategories = await api.getCategories();
-      console.log('HomeScreen: Categories loaded:', fetchedCategories.map(c => `${c.category} (icon: ${c.iconName})`));
+      console.log('HomeScreen: Categories loaded:', fetchedCategories.map(c => `${c.name} (id: ${c.id}, icon: ${c.iconName})`));
       setCategories(fetchedCategories);
     } catch (error) {
       console.error('HomeScreen: Failed to load categories', error);
@@ -108,9 +108,10 @@ export default function HomeScreen() {
     await loadCategories();
   };
 
-  const handleCategoryPress = (categoryName: string) => {
-    console.log('HomeScreen: Opening category', categoryName);
-    router.push(`/(tabs)/(home)/category/${encodeURIComponent(categoryName)}`);
+  const handleCategoryPress = (categoryId: string, categoryName: string) => {
+    console.log('HomeScreen: Opening category', categoryName, 'with ID', categoryId);
+    // Use category ID for routing (more reliable than name)
+    router.push(`/(tabs)/(home)/category/${categoryId}`);
   };
 
   // Don't render if no user
@@ -214,21 +215,21 @@ export default function HomeScreen() {
             </View>
           ) : (
             <View style={styles.categoriesGrid}>
-              {categories.map((category, index) => {
+              {categories.map((category) => {
                 const postCountText = `${category.postCount} פוסטים`;
                 const iconName = category.iconName || 'folder';
                 
-                console.log(`HomeScreen: Rendering category "${category.category}" with icon "${iconName}"`);
+                console.log(`HomeScreen: Rendering category "${category.name}" (ID: ${category.id}) with icon "${iconName}"`);
                 
                 return (
                   <TouchableOpacity
-                    key={index}
+                    key={category.id}
                     style={[
                       styles.categoryCard,
                       { backgroundColor: colors.surface },
                       isDark && styles.categoryCardDark,
                     ]}
-                    onPress={() => handleCategoryPress(category.category)}
+                    onPress={() => handleCategoryPress(category.id, category.name)}
                     activeOpacity={0.7}
                   >
                     {/* Cover Image with Blur and Centered Icon */}
@@ -291,7 +292,7 @@ export default function HomeScreen() {
                     <View style={styles.categoryCardContent}>
                       {/* Category Name */}
                       <Text style={[styles.categoryTitle, { color: colors.text }]} numberOfLines={1}>
-                        {category.category}
+                        {category.name}
                       </Text>
 
                       {/* Post Count */}

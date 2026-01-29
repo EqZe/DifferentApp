@@ -81,13 +81,26 @@ export interface User {
   created_at: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  icon_name: string;
+  description: string | null;
+  cover_image: string | null;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Post {
   id: string;
   title: string;
   cover_image: string | null;
   is_published: boolean;
   visibility: 'public' | 'contract_only';
-  category: string;
+  category: string; // Legacy field
+  category_id: string | null;
   created_at: string;
   updated_at: string;
 }

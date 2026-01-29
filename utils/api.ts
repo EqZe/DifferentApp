@@ -53,18 +53,28 @@ export interface PostFrontend {
   coverImage: string | null;
   isPublished: boolean;
   visibility: 'public' | 'contract_only';
-  category: string;
+  category: string; // Legacy field - kept for backward compatibility
+  categoryId: string | null;
   createdAt: string;
   updatedAt: string;
   blocks?: PostBlockFrontend[];
 }
 
-export interface CategoryWithPosts {
-  category: string;
-  postCount: number;
+export interface Category {
+  id: string;
+  name: string;
+  iconName: string;
+  description: string | null;
   coverImage: string | null;
+  displayOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CategoryWithPosts extends Category {
+  postCount: number;
   hasContractOnlyPosts: boolean;
-  iconName: string | null;
 }
 
 export interface TaskFrontend {
@@ -286,24 +296,42 @@ export const api = {
   },
 
   getCategories: async (): Promise<CategoryWithPosts[]> => {
-    console.log('API: Getting categories with post counts');
+    console.log('API: Getting categories with post counts from new structure');
     
-    const { data, error } = await supabase
-      .from('posts')
-      .select('category, cover_image, visibility')
-      .eq('is_published', true);
+    // Fetch all active categories
+    const { data: categoriesData, error: categoriesError } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
 
-    if (error) {
-      console.error('API: Get categories failed', error);
-      throw new Error(error.message || 'שגיאה בטעינת קטגוריות');
+    if (categoriesError) {
+      console.error('API: Get categories failed', categoriesError);
+      throw new Error(categoriesError.message || 'שגיאה בטעינת קטגוריות');
     }
 
-    // Group posts by category
-    const categoryMap = new Map<string, { count: number; coverImage: string | null; hasContractOnly: boolean }>();
+    console.log('API: Categories retrieved from database:', categoriesData?.length || 0);
+
+    // Fetch all published posts to count posts per category
+    const { data: postsData, error: postsError } = await supabase
+      .from('posts')
+      .select('category_id, cover_image, visibility')
+      .eq('is_published', true);
+
+    if (postsError) {
+      console.error('API: Get posts for category counts failed', postsError);
+      throw new Error(postsError.message || 'שגיאה בטעינת פוסטים');
+    }
+
+    console.log('API: Posts retrieved for counting:', postsData?.length || 0);
+
+    // Create a map of category_id -> post stats
+    const postStatsMap = new Map<string, { count: number; coverImage: string | null; hasContractOnly: boolean }>();
     
-    data?.forEach((post) => {
-      const category = post.category || 'כללי';
-      const existing = categoryMap.get(category);
+    postsData?.forEach((post) => {
+      if (!post.category_id) return;
+      
+      const existing = postStatsMap.get(post.category_id);
       
       if (existing) {
         existing.count += 1;
@@ -316,7 +344,7 @@ export const api = {
           existing.hasContractOnly = true;
         }
       } else {
-        categoryMap.set(category, {
+        postStatsMap.set(post.category_id, {
           count: 1,
           coverImage: post.cover_image,
           hasContractOnly: post.visibility === 'contract_only',
@@ -324,53 +352,93 @@ export const api = {
       }
     });
 
-    console.log('API: Categories found in posts:', Array.from(categoryMap.keys()));
-
-    // Fetch category icons
-    const { data: iconsData, error: iconsError } = await supabase
-      .from('category_icons')
-      .select('category_name, icon_name');
-
-    if (iconsError) {
-      console.error('API: Get category icons failed', iconsError);
-    }
-
-    console.log('API: Category icons from database:', iconsData);
-
-    // Create icon map
-    const iconMap = new Map<string, string>();
-    iconsData?.forEach((icon) => {
-      iconMap.set(icon.category_name, icon.icon_name);
-      console.log(`API: Icon mapping: "${icon.category_name}" -> "${icon.icon_name}"`);
-    });
-
-    // Convert map to array with icons
-    const categories: CategoryWithPosts[] = Array.from(categoryMap.entries()).map(([category, data]) => {
-      const iconName = iconMap.get(category) || 'folder';
-      console.log(`API: Category "${category}" assigned icon: "${iconName}"`);
+    // Combine categories with post stats
+    const categoriesWithPosts: CategoryWithPosts[] = categoriesData?.map((category) => {
+      const camelCategory = toCamelCase(category);
+      const stats = postStatsMap.get(category.id) || { count: 0, coverImage: null, hasContractOnly: false };
       
       return {
-        category,
-        postCount: data.count,
-        coverImage: data.coverImage,
-        hasContractOnlyPosts: data.hasContractOnly,
-        iconName,
+        id: camelCategory.id,
+        name: camelCategory.name,
+        iconName: camelCategory.iconName,
+        description: camelCategory.description,
+        coverImage: stats.coverImage || camelCategory.coverImage, // Use post cover image if available, otherwise category cover
+        displayOrder: camelCategory.displayOrder,
+        isActive: camelCategory.isActive,
+        createdAt: camelCategory.createdAt,
+        updatedAt: camelCategory.updatedAt,
+        postCount: stats.count,
+        hasContractOnlyPosts: stats.hasContractOnly,
       };
-    });
+    }) || [];
 
-    console.log('API: Categories retrieved', categories.length, 'categories with icons:', categories.map(c => `${c.category}: ${c.iconName}`));
-    return categories;
+    console.log('API: Categories with post counts:', categoriesWithPosts.map(c => `${c.name}: ${c.postCount} posts, icon: ${c.iconName}`));
+    return categoriesWithPosts;
   },
 
-  getPostsByCategory: async (category: string): Promise<PostFrontend[]> => {
-    console.log('API: Getting posts for category', category);
+  getCategoryById: async (categoryId: string): Promise<Category | null> => {
+    console.log('API: Getting category by ID', categoryId);
     
     const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('id', categoryId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log('API: Category not found', categoryId);
+        return null;
+      }
+      console.error('API: Get category failed', error);
+      throw new Error(error.message || 'שגיאה בטעינת קטגוריה');
+    }
+
+    console.log('API: Category retrieved', data);
+    return toCamelCase(data);
+  },
+
+  getCategoryByName: async (categoryName: string): Promise<Category | null> => {
+    console.log('API: Getting category by name', categoryName);
+    
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('name', categoryName)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log('API: Category not found', categoryName);
+        return null;
+      }
+      console.error('API: Get category failed', error);
+      throw new Error(error.message || 'שגיאה בטעינת קטגוריה');
+    }
+
+    console.log('API: Category retrieved', data);
+    return toCamelCase(data);
+  },
+
+  getPostsByCategory: async (categoryIdOrName: string): Promise<PostFrontend[]> => {
+    console.log('API: Getting posts for category', categoryIdOrName);
+    
+    // Check if it's a UUID (category_id) or a name (legacy)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryIdOrName);
+    
+    let query = supabase
       .from('posts')
       .select('*')
-      .eq('is_published', true)
-      .eq('category', category)
-      .order('created_at', { ascending: false });
+      .eq('is_published', true);
+    
+    if (isUUID) {
+      query = query.eq('category_id', categoryIdOrName);
+    } else {
+      // Legacy: search by category name
+      query = query.eq('category', categoryIdOrName);
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       console.error('API: Get posts by category failed', error);
@@ -560,5 +628,6 @@ export type {
   PostFrontend as Post, 
   PostBlockFrontend as PostBlock,
   TaskFrontend as Task,
+  Category,
   CategoryWithPosts 
 };
