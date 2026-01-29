@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -261,12 +260,12 @@ export default function HomeScreen() {
                   <View style={styles.categoryImageContainer}>
                     {category.coverImage ? (
                       <>
-                        {/* Blurred Background Image */}
+                        {/* Blurred Background Image - Minimized blur */}
                         <Image
                           source={resolveImageSource(category.coverImage)}
                           style={styles.categoryImage}
                           resizeMode="cover"
-                          blurRadius={8}
+                          blurRadius={1.5}
                         />
                         {/* Centered Icon on Blurred Image */}
                         <View style={styles.categoryIconOverlay}>
@@ -430,16 +429,29 @@ const styles = StyleSheet.create({
     gap: CARD_GAP,
   },
   
-  // Category Card - Compact Design for 2-column layout
+  // Category Card - Bolder with Enhanced Shadows
   categoryCard: {
     width: CARD_WIDTH,
     borderRadius: radius.lg,
     overflow: 'hidden',
-    ...shadows.md,
+    // Enhanced shadow for bold appearance
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 12,
+    // Add 2px border for more definition
+    borderWidth: 2,
+    borderColor: 'rgba(39, 159, 222, 0.1)',
   },
   categoryCardDark: {
-    borderWidth: 1,
-    borderColor: designColors.dark.border,
+    borderWidth: 2,
+    borderColor: 'rgba(39, 159, 222, 0.3)',
+    shadowColor: '#279FDE',
+    shadowOpacity: 0.2,
   },
   categoryImageContainer: {
     width: '100%',
@@ -506,7 +518,7 @@ const styles = StyleSheet.create({
   categoryTitle: {
     ...typography.h5,
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   
   // Empty State
