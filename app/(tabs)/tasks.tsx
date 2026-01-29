@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Platform,
   I18nManager,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,15 +18,6 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { api, type Task } from '@/utils/api';
 import ConfettiCannon from 'react-native-confetti-cannon';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withSequence,
-  withTiming,
-  withDelay,
-  runOnJS,
-} from 'react-native-reanimated';
 import LottieView from 'lottie-react-native';
 
 const styles = StyleSheet.create({
@@ -35,7 +27,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'android' ? 48 : 20,
-    paddingBottom: 32,
+    paddingBottom: 24,
   },
   title: {
     fontSize: 32,
@@ -51,6 +43,19 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     opacity: 0.9,
     fontWeight: '400',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  filterLabel: {
+    fontSize: 15,
+    color: '#FFFFFF',
+    fontWeight: '500',
   },
   content: {
     flex: 1,
@@ -69,8 +74,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   taskCardCompleted: {
-    backgroundColor: '#F8FAFB',
-    opacity: 0.7,
+    backgroundColor: '#F0F1F3',
+    opacity: 0.6,
   },
   taskHeader: {
     flexDirection: 'row',
@@ -116,6 +121,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'right',
     fontWeight: '400',
+  },
+  taskDescriptionCompleted: {
+    color: '#9CA3AF',
   },
   taskFooter: {
     flexDirection: 'row',
@@ -207,40 +215,14 @@ function formatDate(dateString: string | null) {
   return `${day} ${month}`;
 }
 
-// Animated Task Card Component
-function AnimatedTaskCard({ 
+// Task Card Component (no animation)
+function TaskCard({ 
   task, 
   onComplete, 
-  isAnimating 
 }: { 
   task: Task; 
   onComplete: (taskId: string, requiresPending: boolean, currentStatus: string) => void;
-  isAnimating: boolean;
 }) {
-  const translateY = useSharedValue(0);
-  const opacity = useSharedValue(1);
-
-  useEffect(() => {
-    if (isAnimating) {
-      // After 3 seconds, animate the card down
-      translateY.value = withDelay(
-        3000,
-        withTiming(300, { duration: 600 })
-      );
-      opacity.value = withDelay(
-        3000,
-        withTiming(0, { duration: 600 })
-      );
-    }
-  }, [isAnimating]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateY: translateY.value }],
-      opacity: opacity.value,
-    };
-  });
-
   const isDone = task.status === 'DONE';
   const isPending = task.status === 'PENDING';
   const isYet = task.status === 'YET';
@@ -274,11 +256,10 @@ function AnimatedTaskCard({
   }
 
   return (
-    <Animated.View
+    <View
       style={[
         styles.taskCard,
         isDone && styles.taskCardCompleted,
-        animatedStyle,
       ]}
     >
       <View style={styles.taskHeader}>
@@ -311,7 +292,10 @@ function AnimatedTaskCard({
       </View>
 
       {task.description && (
-        <Text style={styles.taskDescription}>
+        <Text style={[
+          styles.taskDescription,
+          isDone && styles.taskDescriptionCompleted,
+        ]}>
           {task.description}
         </Text>
       )}
@@ -351,7 +335,7 @@ function AnimatedTaskCard({
           </TouchableOpacity>
         )}
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -360,7 +344,7 @@ export default function TasksScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [animatingTaskIds, setAnimatingTaskIds] = useState<Set<string>>(new Set());
+  const [showCompleted, setShowCompleted] = useState(true);
   const { colors } = useTheme();
   const confettiRef = useRef<any>(null);
 
@@ -422,62 +406,54 @@ export default function TasksScreen() {
     try {
       console.log('TasksScreen: User tapped complete button', { taskId, requiresPending, currentStatus });
       
-      // Determine if this will result in DONE status
-      const willBeDone = (!requiresPending) || (requiresPending && currentStatus === 'PENDING');
+      // Determine new status
+      let newStatus: 'YET' | 'PENDING' | 'DONE';
       
-      // Optimistically update UI immediately
+      if (requiresPending) {
+        if (currentStatus === 'YET') {
+          newStatus = 'PENDING';
+        } else if (currentStatus === 'PENDING') {
+          newStatus = 'DONE';
+        } else {
+          newStatus = 'DONE';
+        }
+      } else {
+        newStatus = 'DONE';
+      }
+      
+      // IMMEDIATE optimistic update - no waiting
       setTasks((prevTasks) =>
         prevTasks.map((task) => {
           if (task.id === taskId) {
-            let newStatus: 'YET' | 'PENDING' | 'DONE';
-            
-            if (requiresPending) {
-              if (currentStatus === 'YET') {
-                newStatus = 'PENDING';
-              } else if (currentStatus === 'PENDING') {
-                newStatus = 'DONE';
-              } else {
-                newStatus = 'DONE';
-              }
-            } else {
-              newStatus = 'DONE';
-            }
-            
             return { ...task, status: newStatus };
           }
           return task;
         })
       );
       
-      // Trigger confetti if task is being completed to DONE
-      if (willBeDone) {
-        console.log('TasksScreen: Task completed! Triggering confetti animation 🎉');
+      // Trigger confetti IMMEDIATELY if task is being completed to DONE
+      if (newStatus === 'DONE') {
+        console.log('TasksScreen: Task completed! Triggering confetti animation immediately 🎉');
         confettiRef.current?.start();
-        
-        // Mark this task as animating
-        setAnimatingTaskIds(prev => new Set(prev).add(taskId));
-        
-        // After 3.6 seconds (3s wait + 0.6s animation), remove from animating set
-        setTimeout(() => {
-          setAnimatingTaskIds(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(taskId);
-            return newSet;
-          });
-        }, 3600);
       }
       
-      // Update backend
-      const updatedTask = await api.completeTask(taskId, requiresPending);
+      // Update backend in background (no await - fire and forget)
+      api.completeTask(taskId, requiresPending)
+        .then((updatedTask) => {
+          console.log('TasksScreen: Backend confirmed task status updated to', updatedTask.status);
+          // Update with server response (in case of any discrepancies)
+          setTasks((prevTasks) =>
+            prevTasks.map((task) =>
+              task.id === taskId ? updatedTask : task
+            )
+          );
+        })
+        .catch((error) => {
+          console.error('TasksScreen: Failed to update task status on backend', error);
+          // Revert optimistic update on error
+          loadTasks();
+        });
       
-      // Update with server response (in case of any discrepancies)
-      setTasks((prevTasks) =>
-        prevTasks.map((task) =>
-          task.id === taskId ? updatedTask : task
-        )
-      );
-      
-      console.log('TasksScreen: Task status updated successfully to', updatedTask.status);
     } catch (error) {
       console.error('TasksScreen: Failed to update task status', error);
       // Revert optimistic update on error
@@ -500,10 +476,14 @@ export default function TasksScreen() {
     );
   }
 
-  const yetTasks = tasks.filter(t => t.status === 'YET');
-  const pendingTasks = tasks.filter(t => t.status === 'PENDING');
-  const doneTasks = tasks.filter(t => t.status === 'DONE');
-  const sortedTasks = [...yetTasks, ...pendingTasks, ...doneTasks];
+  // Filter tasks based on showCompleted toggle
+  const filteredTasks = showCompleted 
+    ? tasks 
+    : tasks.filter(t => t.status !== 'DONE');
+
+  const emptyMessage = showCompleted 
+    ? 'אין משימות כרגע'
+    : 'אין משימות פעילות כרגע';
 
   return (
     <LinearGradient colors={['#2784F5', '#1a5fb8']} style={styles.container}>
@@ -511,6 +491,18 @@ export default function TasksScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>משימות</Text>
           <Text style={styles.subtitle}>המשימות שלך לקראת הנסיעה</Text>
+        </View>
+
+        {/* Filter Toggle */}
+        <View style={styles.filterContainer}>
+          <Switch
+            value={showCompleted}
+            onValueChange={setShowCompleted}
+            trackColor={{ false: '#FFFFFF40', true: '#F5AD27' }}
+            thumbColor={showCompleted ? '#FFFFFF' : '#E0E0E0'}
+            ios_backgroundColor="#FFFFFF40"
+          />
+          <Text style={styles.filterLabel}>הצג משימות שהושלמו</Text>
         </View>
 
         <ScrollView
@@ -524,7 +516,7 @@ export default function TasksScreen() {
             />
           }
         >
-          {sortedTasks.length === 0 ? (
+          {filteredTasks.length === 0 ? (
             <View style={styles.emptyState}>
               <IconSymbol
                 ios_icon_name="checkmark.circle"
@@ -532,15 +524,14 @@ export default function TasksScreen() {
                 size={64}
                 color="#FFFFFF"
               />
-              <Text style={styles.emptyText}>אין משימות כרגע</Text>
+              <Text style={styles.emptyText}>{emptyMessage}</Text>
             </View>
           ) : (
-            sortedTasks.map((task) => (
-              <AnimatedTaskCard
+            filteredTasks.map((task) => (
+              <TaskCard
                 key={task.id}
                 task={task}
                 onComplete={handleCompleteTask}
-                isAnimating={animatingTaskIds.has(task.id)}
               />
             ))
           )}
