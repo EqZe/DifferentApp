@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
@@ -33,115 +32,129 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? 48 : 20,
-    paddingBottom: 20,
+    paddingBottom: 24,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 34,
+    fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#FFFFFF',
     textAlign: 'center',
-    opacity: 0.9,
+    opacity: 0.85,
+    fontWeight: '400',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 100,
   },
   taskCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    // RTL layout - flip horizontally
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 2,
     transform: [{ scaleX: -1 }],
   },
   taskCardCompleted: {
-    opacity: 0.6,
+    opacity: 0.5,
+    backgroundColor: '#F8F9FA',
   },
-  taskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-    // Flip content back to normal inside flipped card
+  taskContent: {
     transform: [{ scaleX: -1 }],
   },
+  taskTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  statusIcon: {
+    marginLeft: 12,
+  },
   taskTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2784F5',
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#1A1A1A',
     flex: 1,
-    marginRight: 12,
+    lineHeight: 24,
   },
   taskTitleCompleted: {
     textDecorationLine: 'line-through',
-    color: '#999999',
+    color: '#9E9E9E',
   },
   taskDescription: {
     fontSize: 14,
-    color: '#666666',
+    color: '#6B7280',
     lineHeight: 20,
-    marginBottom: 12,
-    // Flip content back to normal inside flipped card
-    transform: [{ scaleX: -1 }],
+    marginBottom: 14,
+    fontWeight: '400',
   },
-  taskFooter: {
+  taskBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    // Flip content back to normal inside flipped card
-    transform: [{ scaleX: -1 }],
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   taskDate: {
-    fontSize: 14,
-    color: '#999999',
+    fontSize: 13,
+    color: '#9E9E9E',
+    fontWeight: '500',
   },
-  completeButton: {
+  actionButton: {
+    backgroundColor: '#2784F5',
+    paddingVertical: 9,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+  },
+  actionButtonPending: {
     backgroundColor: '#F5AD27',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
   },
-  completeButtonText: {
+  actionButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },
   completedBadge: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#E8F5E9',
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   completedBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    color: '#2E7D32',
+    fontSize: 13,
     fontWeight: '600',
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 17,
     color: '#FFFFFF',
     textAlign: 'center',
     opacity: 0.8,
     marginTop: 16,
+    fontWeight: '500',
   },
   loadingContainer: {
     flex: 1,
@@ -162,7 +175,10 @@ const styles = StyleSheet.create({
 function formatDate(dateString: string | null) {
   if (!dateString) return '';
   const date = new Date(dateString);
-  return date.toLocaleDateString('he-IL');
+  return date.toLocaleDateString('he-IL', { 
+    day: 'numeric', 
+    month: 'short' 
+  });
 }
 
 export default function TasksScreen() {
@@ -300,15 +316,15 @@ export default function TasksScreen() {
               const dueDateText = formatDate(task.dueDate);
               
               // Determine button text based on status and requirements
-              let buttonText = 'התחל משימה';
+              let buttonText = 'התחל';
               if (task.requiresPending) {
                 if (task.status === 'YET') {
-                  buttonText = 'התחל משימה';
+                  buttonText = 'התחל';
                 } else if (task.status === 'PENDING') {
-                  buttonText = 'סמן כהושלם';
+                  buttonText = 'הושלם';
                 }
               } else {
-                buttonText = 'סמן כהושלם';
+                buttonText = 'סיימתי';
               }
               
               return (
@@ -319,58 +335,71 @@ export default function TasksScreen() {
                     isDone && styles.taskCardCompleted,
                   ]}
                 >
-                  <View style={styles.taskHeader}>
-                    <Text
-                      style={[
-                        styles.taskTitle,
-                        isDone && styles.taskTitleCompleted,
-                      ]}
-                    >
-                      {task.title}
-                    </Text>
-                    <IconSymbol
-                      ios_icon_name={
-                        isDone ? 'checkmark.circle.fill' : isPending ? 'clock.fill' : 'circle'
-                      }
-                      android_material_icon_name={
-                        isDone ? 'check-circle' : isPending ? 'schedule' : 'radio-button-unchecked'
-                      }
-                      size={24}
-                      color={isDone ? '#4CAF50' : isPending ? '#F5AD27' : '#CCCCCC'}
-                    />
-                  </View>
-
-                  {task.description && (
-                    <Text style={styles.taskDescription}>
-                      {task.description}
-                    </Text>
-                  )}
-
-                  <View style={styles.taskFooter}>
-                    <Text style={styles.taskDate}>
-                      {dueDateText}
-                    </Text>
-                    <Text style={styles.taskDate}>תאריך יעד:</Text>
-                    
-                    {isDone ? (
-                      <View style={styles.completedBadge}>
-                        <Text style={styles.completedBadgeText}>הושלם</Text>
+                  <View style={styles.taskContent}>
+                    <View style={styles.taskTop}>
+                      <Text
+                        style={[
+                          styles.taskTitle,
+                          isDone && styles.taskTitleCompleted,
+                        ]}
+                      >
+                        {task.title}
+                      </Text>
+                      <View style={styles.statusIcon}>
+                        <IconSymbol
+                          ios_icon_name={
+                            isDone ? 'checkmark.circle.fill' : isPending ? 'clock.fill' : 'circle'
+                          }
+                          android_material_icon_name={
+                            isDone ? 'check-circle' : isPending ? 'schedule' : 'radio-button-unchecked'
+                          }
+                          size={22}
+                          color={isDone ? '#4CAF50' : isPending ? '#F5AD27' : '#E0E0E0'}
+                        />
                       </View>
-                    ) : isPending ? (
-                      <TouchableOpacity
-                        style={[styles.completeButton, { backgroundColor: '#F5AD27' }]}
-                        onPress={() => handleCompleteTask(task.id, task.requiresPending, task.status)}
-                      >
-                        <Text style={styles.completeButtonText}>{buttonText}</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.completeButton}
-                        onPress={() => handleCompleteTask(task.id, task.requiresPending, task.status)}
-                      >
-                        <Text style={styles.completeButtonText}>{buttonText}</Text>
-                      </TouchableOpacity>
+                    </View>
+
+                    {task.description && (
+                      <Text style={styles.taskDescription}>
+                        {task.description}
+                      </Text>
                     )}
+
+                    <View style={styles.taskBottom}>
+                      {isDone ? (
+                        <View style={styles.completedBadge}>
+                          <IconSymbol
+                            ios_icon_name="checkmark"
+                            android_material_icon_name="check"
+                            size={14}
+                            color="#2E7D32"
+                          />
+                          <Text style={styles.completedBadgeText}>הושלם</Text>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={[
+                            styles.actionButton,
+                            isPending && styles.actionButtonPending,
+                          ]}
+                          onPress={() => handleCompleteTask(task.id, task.requiresPending, task.status)}
+                        >
+                          <Text style={styles.actionButtonText}>{buttonText}</Text>
+                        </TouchableOpacity>
+                      )}
+                      
+                      {dueDateText && (
+                        <View style={styles.dateContainer}>
+                          <Text style={styles.taskDate}>{dueDateText}</Text>
+                          <IconSymbol
+                            ios_icon_name="calendar"
+                            android_material_icon_name="calendar-today"
+                            size={14}
+                            color="#9E9E9E"
+                          />
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </View>
               );
