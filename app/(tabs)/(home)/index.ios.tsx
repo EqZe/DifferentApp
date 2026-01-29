@@ -227,22 +227,39 @@ export default function HomeScreen() {
                   onPress={() => handleCategoryPress(category.category)}
                   activeOpacity={0.7}
                 >
-                  {/* Cover Image or Placeholder */}
+                  {/* Cover Image with Blur and Centered Icon */}
                   <View style={styles.categoryImageContainer}>
                     {category.coverImage ? (
-                      <Image
-                        source={resolveImageSource(category.coverImage)}
-                        style={styles.categoryImage}
-                        resizeMode="cover"
-                      />
+                      <>
+                        {/* Blurred Background Image */}
+                        <Image
+                          source={resolveImageSource(category.coverImage)}
+                          style={styles.categoryImage}
+                          resizeMode="cover"
+                          blurRadius={8}
+                        />
+                        {/* Centered Icon on Blurred Image */}
+                        <View style={styles.categoryIconOverlay}>
+                          <View style={styles.categoryIconCircle}>
+                            <IconSymbol
+                              ios_icon_name="folder.fill"
+                              android_material_icon_name={category.iconName || 'folder'}
+                              size={48}
+                              color="#FFFFFF"
+                            />
+                          </View>
+                        </View>
+                      </>
                     ) : (
                       <View style={[styles.categoryImagePlaceholder, { backgroundColor: colors.backgroundSecondary }]}>
-                        <IconSymbol
-                          ios_icon_name="folder.fill"
-                          android_material_icon_name="folder"
-                          size={40}
-                          color={colors.textTertiary}
-                        />
+                        <View style={styles.categoryIconCircle}>
+                          <IconSymbol
+                            ios_icon_name="folder.fill"
+                            android_material_icon_name={category.iconName || 'folder'}
+                            size={48}
+                            color={colors.textTertiary}
+                          />
+                        </View>
                       </View>
                     )}
                     
@@ -425,6 +442,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  
+  // Icon Overlay - Centered on blurred image
+  categoryIconOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(39, 159, 222, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.lg,
+  },
+  
   categoryBadgeContainer: {
     position: 'absolute',
     top: spacing.xs,

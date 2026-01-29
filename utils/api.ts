@@ -64,6 +64,7 @@ export interface CategoryWithPosts {
   postCount: number;
   coverImage: string | null;
   hasContractOnlyPosts: boolean;
+  iconName: string | null;
 }
 
 export interface TaskFrontend {
@@ -323,12 +324,28 @@ export const api = {
       }
     });
 
-    // Convert map to array
+    // Fetch category icons
+    const { data: iconsData, error: iconsError } = await supabase
+      .from('category_icons')
+      .select('category_name, icon_name');
+
+    if (iconsError) {
+      console.error('API: Get category icons failed', iconsError);
+    }
+
+    // Create icon map
+    const iconMap = new Map<string, string>();
+    iconsData?.forEach((icon) => {
+      iconMap.set(icon.category_name, icon.icon_name);
+    });
+
+    // Convert map to array with icons
     const categories: CategoryWithPosts[] = Array.from(categoryMap.entries()).map(([category, data]) => ({
       category,
       postCount: data.count,
       coverImage: data.coverImage,
       hasContractOnlyPosts: data.hasContractOnly,
+      iconName: iconMap.get(category) || 'folder', // Default to 'folder' icon
     }));
 
     console.log('API: Categories retrieved', categories.length, 'categories');
