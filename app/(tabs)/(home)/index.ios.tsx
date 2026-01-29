@@ -52,6 +52,32 @@ function getTimeBasedGreeting(): string {
   }
 }
 
+// Helper to map Material icon names to SF Symbols for iOS
+function getIOSIconName(materialIconName: string): string {
+  const iconMap: Record<string, string> = {
+    'info': 'info.circle.fill',
+    'notification-important': 'exclamationmark.circle.fill',
+    'local-shipping': 'shippingbox.fill',
+    'description': 'doc.text.fill',
+    'lightbulb': 'lightbulb.fill',
+    'help': 'questionmark.circle.fill',
+    'star': 'star.fill',
+    'store': 'storefront.fill',
+    'folder': 'folder.fill',
+    'phone': 'phone.fill',
+    'label': 'tag.fill',
+    'home': 'house.fill',
+    'person': 'person.fill',
+    'settings': 'gearshape.fill',
+    'search': 'magnifyingglass',
+    'email': 'envelope.fill',
+    'calendar-today': 'calendar',
+    'location-on': 'location.fill',
+  };
+  
+  return iconMap[materialIconName] || 'folder.fill';
+}
+
 export default function HomeScreen() {
   const { user, isLoading, refreshUser } = useUser();
   const router = useRouter();
@@ -215,10 +241,10 @@ export default function HomeScreen() {
         ) : (
           <View style={styles.categoriesGrid}>
             {categories.map((category) => {
-              const postCountText = `${category.postCount} פוסטים`;
               const iconName = category.iconName || 'folder';
+              const iosIconName = getIOSIconName(iconName);
               
-              console.log(`HomeScreen: Rendering category "${category.name}" (ID: ${category.id}) with icon "${iconName}"`);
+              console.log(`HomeScreen: Rendering category "${category.name}" (ID: ${category.id}) with icon "${iconName}" (iOS: ${iosIconName})`);
               
               return (
                 <TouchableOpacity
@@ -246,7 +272,7 @@ export default function HomeScreen() {
                         <View style={styles.categoryIconOverlay}>
                           <View style={styles.categoryIconCircle}>
                             <IconSymbol
-                              ios_icon_name="folder.fill"
+                              ios_icon_name={iosIconName}
                               android_material_icon_name={iconName}
                               size={48}
                               color="#FFFFFF"
@@ -258,7 +284,7 @@ export default function HomeScreen() {
                       <View style={[styles.categoryImagePlaceholder, { backgroundColor: colors.backgroundSecondary }]}>
                         <View style={styles.categoryIconCircle}>
                           <IconSymbol
-                            ios_icon_name="folder.fill"
+                            ios_icon_name={iosIconName}
                             android_material_icon_name={iconName}
                             size={48}
                             color={colors.textTertiary}
@@ -287,27 +313,12 @@ export default function HomeScreen() {
                     )}
                   </View>
 
-                  {/* Card Content */}
+                  {/* Card Content - Centered Title Only */}
                   <View style={styles.categoryCardContent}>
-                    {/* Category Name */}
-                    <Text style={[styles.categoryTitle, { color: colors.text }]} numberOfLines={1}>
+                    {/* Category Name - Centered */}
+                    <Text style={[styles.categoryTitle, { color: colors.text }]} numberOfLines={2}>
                       {category.name}
                     </Text>
-
-                    {/* Post Count */}
-                    <Text style={[styles.categoryPostCount, { color: colors.textSecondary }]}>
-                      {postCountText}
-                    </Text>
-
-                    {/* Arrow Icon */}
-                    <View style={styles.categoryArrow}>
-                      <IconSymbol
-                        ios_icon_name="chevron.left"
-                        android_material_icon_name="chevron-left"
-                        size={16}
-                        color={designColors.primary}
-                      />
-                    </View>
                   </View>
                 </TouchableOpacity>
               );
@@ -485,23 +496,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   
-  // Card Content
+  // Card Content - Centered Title Only
   categoryCardContent: {
-    padding: spacing.sm,
+    padding: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 60,
   },
   categoryTitle: {
     ...typography.h5,
-    marginBottom: spacing.xs / 2,
-    textAlign: 'right',
+    textAlign: 'center',
     fontWeight: '600',
-  },
-  categoryPostCount: {
-    ...typography.caption,
-    marginBottom: spacing.xs,
-    textAlign: 'right',
-  },
-  categoryArrow: {
-    alignSelf: 'flex-end',
   },
   
   // Empty State
