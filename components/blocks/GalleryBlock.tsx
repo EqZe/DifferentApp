@@ -6,10 +6,10 @@ import { spacing, radius } from '@/styles/designSystem';
 
 interface GalleryBlockProps {
   data: {
-    images: Array<{
+    images: {
       url: string;
       alt?: string;
-    }>;
+    }[];
   };
   isLocked?: boolean;
 }

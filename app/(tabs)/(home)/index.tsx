@@ -77,7 +77,7 @@ export default function HomeScreen() {
     try {
       console.log('HomeScreen: Loading categories');
       const fetchedCategories = await api.getCategories();
-      console.log('HomeScreen: Categories loaded', fetchedCategories.length, 'categories');
+      console.log('HomeScreen: Categories loaded:', fetchedCategories.map(c => `${c.category} (icon: ${c.iconName})`));
       setCategories(fetchedCategories);
     } catch (error) {
       console.error('HomeScreen: Failed to load categories', error);
@@ -216,6 +216,9 @@ export default function HomeScreen() {
             <View style={styles.categoriesGrid}>
               {categories.map((category, index) => {
                 const postCountText = `${category.postCount} פוסטים`;
+                const iconName = category.iconName || 'folder';
+                
+                console.log(`HomeScreen: Rendering category "${category.category}" with icon "${iconName}"`);
                 
                 return (
                   <TouchableOpacity
@@ -244,7 +247,7 @@ export default function HomeScreen() {
                             <View style={styles.categoryIconCircle}>
                               <IconSymbol
                                 ios_icon_name="folder.fill"
-                                android_material_icon_name={category.iconName || 'folder'}
+                                android_material_icon_name={iconName}
                                 size={48}
                                 color="#FFFFFF"
                               />
@@ -256,7 +259,7 @@ export default function HomeScreen() {
                           <View style={styles.categoryIconCircle}>
                             <IconSymbol
                               ios_icon_name="folder.fill"
-                              android_material_icon_name={category.iconName || 'folder'}
+                              android_material_icon_name={iconName}
                               size={48}
                               color={colors.textTertiary}
                             />

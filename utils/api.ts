@@ -324,6 +324,8 @@ export const api = {
       }
     });
 
+    console.log('API: Categories found in posts:', Array.from(categoryMap.keys()));
+
     // Fetch category icons
     const { data: iconsData, error: iconsError } = await supabase
       .from('category_icons')
@@ -333,22 +335,30 @@ export const api = {
       console.error('API: Get category icons failed', iconsError);
     }
 
+    console.log('API: Category icons from database:', iconsData);
+
     // Create icon map
     const iconMap = new Map<string, string>();
     iconsData?.forEach((icon) => {
       iconMap.set(icon.category_name, icon.icon_name);
+      console.log(`API: Icon mapping: "${icon.category_name}" -> "${icon.icon_name}"`);
     });
 
     // Convert map to array with icons
-    const categories: CategoryWithPosts[] = Array.from(categoryMap.entries()).map(([category, data]) => ({
-      category,
-      postCount: data.count,
-      coverImage: data.coverImage,
-      hasContractOnlyPosts: data.hasContractOnly,
-      iconName: iconMap.get(category) || 'folder', // Default to 'folder' icon
-    }));
+    const categories: CategoryWithPosts[] = Array.from(categoryMap.entries()).map(([category, data]) => {
+      const iconName = iconMap.get(category) || 'folder';
+      console.log(`API: Category "${category}" assigned icon: "${iconName}"`);
+      
+      return {
+        category,
+        postCount: data.count,
+        coverImage: data.coverImage,
+        hasContractOnlyPosts: data.hasContractOnly,
+        iconName,
+      };
+    });
 
-    console.log('API: Categories retrieved', categories.length, 'categories');
+    console.log('API: Categories retrieved', categories.length, 'categories with icons:', categories.map(c => `${c.category}: ${c.iconName}`));
     return categories;
   },
 
