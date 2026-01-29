@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -11,6 +12,7 @@ import {
   ImageSourcePropType,
   useColorScheme,
   I18nManager,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,13 +20,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
-import { api, type Post } from '@/utils/api';
+import { api, type CategoryWithPosts } from '@/utils/api';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
 import LottieView from 'lottie-react-native';
 
 // Enable RTL for Hebrew
 I18nManager.allowRTL(true);
 I18nManager.forceRTL(true);
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_PADDING = layout.screenPadding;
+const CARD_GAP = spacing.md;
+const CARD_WIDTH = (SCREEN_WIDTH - (CARD_PADDING * 2) - CARD_GAP) / 2;
 
 function resolveImageSource(source: string | number | ImageSourcePropType | undefined): ImageSourcePropType {
   if (!source) return { uri: '' };
@@ -52,7 +59,7 @@ export default function HomeScreen() {
   const isDark = colorScheme === 'dark';
   const colors = isDark ? designColors.dark : designColors.light;
   
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [categories, setCategories] = useState<CategoryWithPosts[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [greeting, setGreeting] = useState(getTimeBasedGreeting());
@@ -65,15 +72,14 @@ export default function HomeScreen() {
     }
   }, [user, isLoading, router]);
 
-  const loadPosts = useCallback(async () => {
+  const loadCategories = useCallback(async () => {
     try {
-      console.log('HomeScreen: Loading ALL posts (public + contract_only)');
-      const fetchedPosts = await api.getPosts();
-      console.log('HomeScreen: Posts loaded', fetchedPosts.length, 'posts');
-      console.log('HomeScreen: Post visibilities:', fetchedPosts.map(p => ({ title: p.title, visibility: p.visibility })));
-      setPosts(fetchedPosts);
+      console.log('HomeScreen: Loading categories');
+      const fetchedCategories = await api.getCategories();
+      console.log('HomeScreen: Categories loaded', fetchedCategories.length, 'categories');
+      setCategories(fetchedCategories);
     } catch (error) {
-      console.error('HomeScreen: Failed to load posts', error);
+      console.error('HomeScreen: Failed to load categories', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -82,14 +88,14 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (user) {
-      loadPosts();
+      loadCategories();
       // Update greeting when component mounts
       setGreeting(getTimeBasedGreeting());
     }
-  }, [loadPosts, user]);
+  }, [loadCategories, user]);
 
   const onRefresh = async () => {
-    console.log('HomeScreen: Refreshing posts and user data');
+    console.log('HomeScreen: Refreshing categories and user data');
     setRefreshing(true);
     // Update greeting on refresh
     setGreeting(getTimeBasedGreeting());
@@ -97,13 +103,13 @@ export default function HomeScreen() {
     // Refresh user data from database to get latest hasContract value
     await refreshUser();
     
-    // Then load posts
-    await loadPosts();
+    // Then load categories
+    await loadCategories();
   };
 
-  const handlePostPress = (postId: string) => {
-    console.log('HomeScreen: Opening post', postId);
-    router.push(`/post/${postId}`);
+  const handleCategoryPress = (categoryName: string) => {
+    console.log('HomeScreen: Opening category', categoryName);
+    router.push(`/(tabs)/(home)/category/${encodeURIComponent(categoryName)}`);
   };
 
   // Don't render if no user
@@ -189,134 +195,97 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Posts Grid */}
-        {posts.length === 0 ? (
+        {/* Categories Grid - 2 columns */}
+        {categories.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={[styles.emptyIconContainer, { backgroundColor: colors.backgroundSecondary }]}>
               <IconSymbol
-                ios_icon_name="doc.text"
-                android_material_icon_name="description"
+                ios_icon_name="folder"
+                android_material_icon_name="folder"
                 size={48}
                 color={colors.textTertiary}
               />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>אין תוכן זמין כרגע</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>אין קטגוריות זמינות כרגע</Text>
             <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
               התוכן יתעדכן בקרוב
             </Text>
           </View>
         ) : (
-          <View style={styles.postsGrid}>
-            {posts.map((post) => {
-              const isContractOnly = post.visibility === 'contract_only';
-              const isPublic = post.visibility === 'public';
-              const isLocked = isContractOnly && !user?.hasContract;
+          <View style={styles.categoriesGrid}>
+            {categories.map((category, index) => {
+              const postCountText = `${category.postCount} פוסטים`;
               
               return (
                 <TouchableOpacity
-                  key={post.id}
+                  key={index}
                   style={[
-                    styles.postCard,
+                    styles.categoryCard,
                     { backgroundColor: colors.surface },
-                    isDark && styles.postCardDark,
+                    isDark && styles.categoryCardDark,
                   ]}
-                  onPress={() => handlePostPress(post.id)}
+                  onPress={() => handleCategoryPress(category.category)}
                   activeOpacity={0.7}
                 >
-                  {/* Cover Image */}
-                  {post.coverImage && (
-                    <View style={styles.coverImageContainer}>
+                  {/* Cover Image or Placeholder */}
+                  <View style={styles.categoryImageContainer}>
+                    {category.coverImage ? (
                       <Image
-                        source={resolveImageSource(post.coverImage)}
-                        style={styles.coverImage}
+                        source={resolveImageSource(category.coverImage)}
+                        style={styles.categoryImage}
                         resizeMode="cover"
                       />
-                      {isLocked && (
-                        <View style={styles.lockedOverlay}>
-                          <BlurView intensity={40} style={StyleSheet.absoluteFill} />
-                          <View style={styles.lockIconContainer}>
-                            <IconSymbol
-                              ios_icon_name="lock.fill"
-                              android_material_icon_name="lock"
-                              size={24}
-                              color="#FFFFFF"
-                            />
-                          </View>
-                        </View>
-                      )}
-                      
-                      {/* Gold Badge for contract_only posts - Visible to ALL logged-in users */}
-                      {isContractOnly && (
-                        <View style={styles.imageBadgeContainer}>
-                          <LinearGradient
-                            colors={['#FFD700', '#FFA500']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.goldBadge}
-                          >
-                            <IconSymbol
-                              ios_icon_name="star.fill"
-                              android_material_icon_name="star"
-                              size={12}
-                              color="#FFFFFF"
-                            />
-                            <Text style={styles.goldBadgeText}>חוזה</Text>
-                          </LinearGradient>
-                        </View>
-                      )}
-                      
-                      {/* Blue Badge for public posts */}
-                      {isPublic && (
-                        <View style={styles.imageBadgeContainer}>
-                          <View style={styles.publicImageBadge}>
-                            <IconSymbol
-                              ios_icon_name="globe"
-                              android_material_icon_name="public"
-                              size={10}
-                              color="#FFFFFF"
-                            />
-                            <Text style={styles.imageBadgeText}>ציבורי</Text>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  )}
-
-                  {/* Card Content - RTL Optimized */}
-                  <View style={styles.postCardContent}>
-                    {/* Title */}
-                    <Text style={[styles.postTitle, { color: colors.text }]} numberOfLines={2}>
-                      {post.title}
-                    </Text>
-
-                    {/* Locked State Message */}
-                    {isLocked && (
-                      <View style={styles.lockedMessage}>
+                    ) : (
+                      <View style={[styles.categoryImagePlaceholder, { backgroundColor: colors.backgroundSecondary }]}>
                         <IconSymbol
-                          ios_icon_name="info.circle.fill"
-                          android_material_icon_name="info"
-                          size={14}
-                          color={designColors.locked}
+                          ios_icon_name="folder.fill"
+                          android_material_icon_name="folder"
+                          size={40}
+                          color={colors.textTertiary}
                         />
-                        <Text style={styles.lockedMessageText}>
-                          זמין לאחר חתימת חוזה
-                        </Text>
                       </View>
                     )}
-
-                    {/* Action Footer */}
-                    <View style={styles.postFooter}>
-                      <View style={styles.readMoreContainer}>
-                        <IconSymbol
-                          ios_icon_name="chevron.left"
-                          android_material_icon_name="chevron-left"
-                          size={16}
-                          color={designColors.primary}
-                        />
-                        <Text style={[styles.readMoreText, { color: designColors.primary }]}>
-                          קרא עוד
-                        </Text>
+                    
+                    {/* Gold Badge for categories with contract_only posts */}
+                    {category.hasContractOnlyPosts && (
+                      <View style={styles.categoryBadgeContainer}>
+                        <LinearGradient
+                          colors={['#FFD700', '#FFA500']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.goldBadge}
+                        >
+                          <IconSymbol
+                            ios_icon_name="star.fill"
+                            android_material_icon_name="star"
+                            size={10}
+                            color="#FFFFFF"
+                          />
+                        </LinearGradient>
                       </View>
+                    )}
+                  </View>
+
+                  {/* Card Content */}
+                  <View style={styles.categoryCardContent}>
+                    {/* Category Name */}
+                    <Text style={[styles.categoryTitle, { color: colors.text }]} numberOfLines={1}>
+                      {category.category}
+                    </Text>
+
+                    {/* Post Count */}
+                    <Text style={[styles.categoryPostCount, { color: colors.textSecondary }]}>
+                      {postCountText}
+                    </Text>
+
+                    {/* Arrow Icon */}
+                    <View style={styles.categoryArrow}>
+                      <IconSymbol
+                        ios_icon_name="chevron.left"
+                        android_material_icon_name="chevron-left"
+                        size={16}
+                        color={designColors.primary}
+                      />
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -421,131 +390,76 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: 120,
   },
-  postsGrid: {
-    gap: spacing.md,
+  
+  // Categories Grid - 2 columns
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: CARD_GAP,
   },
   
-  // Post Card - Clean Modern Design with Shadow
-  postCard: {
+  // Category Card - Compact Design for 2-column layout
+  categoryCard: {
+    width: CARD_WIDTH,
     borderRadius: radius.lg,
     overflow: 'hidden',
     ...shadows.md,
   },
-  postCardDark: {
+  categoryCardDark: {
     borderWidth: 1,
     borderColor: designColors.dark.border,
   },
-  coverImageContainer: {
+  categoryImageContainer: {
     width: '100%',
-    height: 180,
+    height: 120,
     backgroundColor: designColors.light.backgroundSecondary,
     position: 'relative',
   },
-  coverImage: {
+  categoryImage: {
     width: '100%',
     height: '100%',
   },
-  lockedOverlay: {
-    ...StyleSheet.absoluteFillObject,
+  categoryImagePlaceholder: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  lockIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...shadows.lg,
-  },
-  imageBadgeContainer: {
+  categoryBadgeContainer: {
     position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
+    top: spacing.xs,
+    right: spacing.xs,
   },
   
-  // GOLD BADGE for contract_only posts - Premium look
+  // GOLD BADGE for categories with contract_only posts
   goldBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs / 2,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm + 2,
+    width: 24,
+    height: 24,
     borderRadius: radius.full,
-    ...shadows.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...shadows.md,
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  goldBadgeText: {
-    ...typography.caption,
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 11,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
   
-  // Blue badge for public posts
-  publicImageBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs / 2,
-    paddingVertical: spacing.xs / 2,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(39, 132, 245, 0.95)',
-    ...shadows.sm,
+  // Card Content
+  categoryCardContent: {
+    padding: spacing.sm,
   },
-  imageBadgeText: {
-    ...typography.caption,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 10,
-  },
-  
-  // Card Content - RTL Optimized
-  postCardContent: {
-    padding: spacing.md,
-  },
-  postTitle: {
-    ...typography.h4,
-    marginBottom: spacing.sm,
-    textAlign: 'right',
-    lineHeight: 26,
-    fontWeight: '600',
-  },
-  lockedMessage: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    backgroundColor: designColors.lockedBg,
-    borderRadius: radius.sm,
-    marginBottom: spacing.sm,
-  },
-  lockedMessageText: {
-    ...typography.caption,
-    color: designColors.locked,
-    flex: 1,
+  categoryTitle: {
+    ...typography.h5,
+    marginBottom: spacing.xs / 2,
     textAlign: 'right',
     fontWeight: '600',
   },
-  postFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+  categoryPostCount: {
+    ...typography.caption,
+    marginBottom: spacing.xs,
+    textAlign: 'right',
   },
-  readMoreContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs / 2,
-  },
-  readMoreText: {
-    ...typography.labelSmall,
-    fontWeight: '700',
+  categoryArrow: {
+    alignSelf: 'flex-end',
   },
   
   // Empty State

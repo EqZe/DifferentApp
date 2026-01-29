@@ -87,6 +87,7 @@ export interface Post {
   cover_image: string | null;
   is_published: boolean;
   visibility: 'public' | 'contract_only';
+  category: string;
   created_at: string;
   updated_at: string;
 }

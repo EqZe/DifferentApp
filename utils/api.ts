@@ -53,9 +53,17 @@ export interface PostFrontend {
   coverImage: string | null;
   isPublished: boolean;
   visibility: 'public' | 'contract_only';
+  category: string;
   createdAt: string;
   updatedAt: string;
   blocks?: PostBlockFrontend[];
+}
+
+export interface CategoryWithPosts {
+  category: string;
+  postCount: number;
+  coverImage: string | null;
+  hasContractOnlyPosts: boolean;
 }
 
 export interface TaskFrontend {
@@ -276,6 +284,76 @@ export const api = {
     return data?.map(toCamelCase) || [];
   },
 
+  getCategories: async (): Promise<CategoryWithPosts[]> => {
+    console.log('API: Getting categories with post counts');
+    
+    const { data, error } = await supabase
+      .from('posts')
+      .select('category, cover_image, visibility')
+      .eq('is_published', true);
+
+    if (error) {
+      console.error('API: Get categories failed', error);
+      throw new Error(error.message || 'שגיאה בטעינת קטגוריות');
+    }
+
+    // Group posts by category
+    const categoryMap = new Map<string, { count: number; coverImage: string | null; hasContractOnly: boolean }>();
+    
+    data?.forEach((post) => {
+      const category = post.category || 'כללי';
+      const existing = categoryMap.get(category);
+      
+      if (existing) {
+        existing.count += 1;
+        // Use first cover image found
+        if (!existing.coverImage && post.cover_image) {
+          existing.coverImage = post.cover_image;
+        }
+        // Check if any post is contract_only
+        if (post.visibility === 'contract_only') {
+          existing.hasContractOnly = true;
+        }
+      } else {
+        categoryMap.set(category, {
+          count: 1,
+          coverImage: post.cover_image,
+          hasContractOnly: post.visibility === 'contract_only',
+        });
+      }
+    });
+
+    // Convert map to array
+    const categories: CategoryWithPosts[] = Array.from(categoryMap.entries()).map(([category, data]) => ({
+      category,
+      postCount: data.count,
+      coverImage: data.coverImage,
+      hasContractOnlyPosts: data.hasContractOnly,
+    }));
+
+    console.log('API: Categories retrieved', categories.length, 'categories');
+    return categories;
+  },
+
+  getPostsByCategory: async (category: string): Promise<PostFrontend[]> => {
+    console.log('API: Getting posts for category', category);
+    
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('is_published', true)
+      .eq('category', category)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('API: Get posts by category failed', error);
+      throw new Error(error.message || 'שגיאה בטעינת פוסטים');
+    }
+
+    console.log('API: Posts retrieved for category', data?.length || 0, 'posts');
+    return data?.map(toCamelCase) || [];
+  },
+
   getPostById: async (postId: string): Promise<PostFrontend | null> => {
     console.log('API: Getting post by ID', postId);
     
@@ -454,5 +532,6 @@ export type {
   UserFrontend as User, 
   PostFrontend as Post, 
   PostBlockFrontend as PostBlock,
-  TaskFrontend as Task 
+  TaskFrontend as Task,
+  CategoryWithPosts 
 };
