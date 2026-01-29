@@ -7,7 +7,6 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
   I18nManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +23,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import LottieView from 'lottie-react-native';
 
 const styles = StyleSheet.create({
   container: {
@@ -180,6 +180,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingAnimation: {
+    width: 200,
+    height: 200,
+  },
   confettiContainer: {
     position: 'absolute',
     top: 0,
@@ -292,7 +296,12 @@ export default function TasksScreen() {
     return (
       <LinearGradient colors={['#2784F5', '#1a5fb8']} style={styles.container}>
         <SafeAreaView style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
+          <LottieView
+            source={{ uri: 'https://lottie.host/6f61ecb2-edc0-4962-9779-c5cb64c8799e/LgBcgiSDs0.json' }}
+            autoPlay
+            loop
+            style={styles.loadingAnimation}
+          />
         </SafeAreaView>
       </LinearGradient>
     );

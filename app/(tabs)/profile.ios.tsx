@@ -9,7 +9,6 @@ import {
   useColorScheme,
   I18nManager,
   Modal,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -92,7 +91,12 @@ export default function ProfileScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <SafeAreaView style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={designColors.primary} />
+          <LottieView
+            source={{ uri: 'https://lottie.host/6f61ecb2-edc0-4962-9779-c5cb64c8799e/LgBcgiSDs0.json' }}
+            autoPlay
+            loop
+            style={styles.loadingAnimation}
+          />
           <Text style={[styles.loadingText, { color: colors.text }]}>
             טוען פרטי משתמש...
           </Text>
@@ -392,6 +396,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  loadingAnimation: {
+    width: 200,
+    height: 200,
   },
   loadingText: {
     ...typography.body,

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -7,7 +8,6 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
-  ActivityIndicator,
   ImageSourcePropType,
   useColorScheme,
   I18nManager,
@@ -147,7 +147,12 @@ export default function HomeScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <SafeAreaView style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={designColors.primary} />
+          <LottieView
+            source={{ uri: 'https://lottie.host/6f61ecb2-edc0-4962-9779-c5cb64c8799e/LgBcgiSDs0.json' }}
+            autoPlay
+            loop
+            style={styles.loadingAnimation}
+          />
         </SafeAreaView>
       </View>
     );
@@ -336,6 +341,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingAnimation: {
+    width: 200,
+    height: 200,
   },
   
   // Header Wrapper with Lottie Background - Fixed at top with z-index

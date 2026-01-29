@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   Image,
-  ActivityIndicator,
   RefreshControl,
   Platform,
   ImageSourcePropType,
@@ -23,6 +22,7 @@ import { api, type Post } from '@/utils/api';
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 import { useUser } from '@/contexts/UserContext';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
+import LottieView from 'lottie-react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -93,7 +93,12 @@ export default function PostDetailScreen() {
           }}
         />
         <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-          <ActivityIndicator size="large" color={designColors.primary} />
+          <LottieView
+            source={{ uri: 'https://lottie.host/6f61ecb2-edc0-4962-9779-c5cb64c8799e/LgBcgiSDs0.json' }}
+            autoPlay
+            loop
+            style={styles.loadingAnimation}
+          />
         </View>
       </>
     );
@@ -317,6 +322,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingAnimation: {
+    width: 200,
+    height: 200,
   },
   errorContainer: {
     flex: 1,
