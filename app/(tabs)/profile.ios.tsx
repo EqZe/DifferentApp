@@ -147,7 +147,7 @@ export default function ProfileScreen() {
         
         {/* Lottie Animation Layer */}
         <LottieView
-          source={{ uri: 'https://lottie.host/fcc59560-b2cd-4dad-85d1-02d5cf35c039/OcOTugphwV.json' }}
+          source={{ uri: 'https://lottie.host/200cc226-843c-464f-a346-c8faad8e7407/8Y1UmkMrvF.json' }}
           autoPlay
           loop
           style={styles.lottieAnimation}
