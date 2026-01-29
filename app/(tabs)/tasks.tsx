@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
@@ -30,79 +31,97 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingTop: Platform.OS === 'android' ? 48 : 20,
-    paddingBottom: 24,
+    paddingBottom: 32,
   },
   title: {
-    fontSize: 34,
+    fontSize: 32,
     fontWeight: '700',
     color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 6,
-    letterSpacing: -0.5,
+    textAlign: 'right',
+    marginBottom: 8,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 16,
     color: '#FFFFFF',
-    textAlign: 'center',
-    opacity: 0.85,
+    textAlign: 'right',
+    opacity: 0.9,
     fontWeight: '400',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingBottom: 100,
   },
   taskCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 12,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 2,
-    transform: [{ scaleX: -1 }],
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   taskCardCompleted: {
-    opacity: 0.5,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F8FAFB',
+    opacity: 0.7,
   },
-  taskContent: {
-    transform: [{ scaleX: -1 }],
-  },
-  taskTop: {
+  taskHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  statusIcon: {
+  taskTitleContainer: {
+    flex: 1,
     marginLeft: 12,
   },
   taskTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     color: '#1A1A1A',
-    flex: 1,
-    lineHeight: 24,
+    textAlign: 'right',
+    lineHeight: 26,
   },
   taskTitleCompleted: {
     textDecorationLine: 'line-through',
-    color: '#9E9E9E',
+    color: '#9CA3AF',
+  },
+  statusIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusIconYet: {
+    backgroundColor: '#F3F4F6',
+  },
+  statusIconPending: {
+    backgroundColor: '#FEF3E2',
+  },
+  statusIconDone: {
+    backgroundColor: '#E8F5E9',
   },
   taskDescription: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#6B7280',
-    lineHeight: 20,
-    marginBottom: 14,
+    lineHeight: 22,
+    marginBottom: 16,
+    textAlign: 'right',
     fontWeight: '400',
   },
-  taskBottom: {
+  taskFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
   dateContainer: {
     flexDirection: 'row',
@@ -110,36 +129,38 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   taskDate: {
-    fontSize: 13,
-    color: '#9E9E9E',
+    fontSize: 14,
+    color: '#9CA3AF',
     fontWeight: '500',
   },
   actionButton: {
     backgroundColor: '#2784F5',
-    paddingVertical: 9,
-    paddingHorizontal: 18,
-    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    minWidth: 90,
+    alignItems: 'center',
   },
   actionButtonPending: {
     backgroundColor: '#F5AD27',
   },
   actionButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   completedBadge: {
     backgroundColor: '#E8F5E9',
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   completedBadgeText: {
     color: '#2E7D32',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
   },
   emptyState: {
@@ -152,7 +173,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: '#FFFFFF',
     textAlign: 'center',
-    opacity: 0.8,
+    opacity: 0.85,
     marginTop: 16,
     fontWeight: '500',
   },
@@ -175,10 +196,9 @@ const styles = StyleSheet.create({
 function formatDate(dateString: string | null) {
   if (!dateString) return '';
   const date = new Date(dateString);
-  return date.toLocaleDateString('he-IL', { 
-    day: 'numeric', 
-    month: 'short' 
-  });
+  const day = date.getDate();
+  const month = date.toLocaleDateString('he-IL', { month: 'short' });
+  return `${day} ${month}`;
 }
 
 export default function TasksScreen() {
@@ -280,6 +300,11 @@ export default function TasksScreen() {
     );
   }
 
+  const yetTasks = tasks.filter(t => t.status === 'YET');
+  const pendingTasks = tasks.filter(t => t.status === 'PENDING');
+  const doneTasks = tasks.filter(t => t.status === 'DONE');
+  const sortedTasks = [...yetTasks, ...pendingTasks, ...doneTasks];
+
   return (
     <LinearGradient colors={['#2784F5', '#1a5fb8']} style={styles.container}>
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -299,7 +324,7 @@ export default function TasksScreen() {
             />
           }
         >
-          {tasks.length === 0 ? (
+          {sortedTasks.length === 0 ? (
             <View style={styles.emptyState}>
               <IconSymbol
                 ios_icon_name="checkmark.circle"
@@ -310,9 +335,10 @@ export default function TasksScreen() {
               <Text style={styles.emptyText}>אין משימות כרגע</Text>
             </View>
           ) : (
-            tasks.map((task) => {
+            sortedTasks.map((task) => {
               const isDone = task.status === 'DONE';
               const isPending = task.status === 'PENDING';
+              const isYet = task.status === 'YET';
               const dueDateText = formatDate(task.dueDate);
               
               // Determine button text based on status and requirements
@@ -321,10 +347,25 @@ export default function TasksScreen() {
                 if (task.status === 'YET') {
                   buttonText = 'התחל';
                 } else if (task.status === 'PENDING') {
-                  buttonText = 'הושלם';
+                  buttonText = 'סיימתי';
                 }
               } else {
                 buttonText = 'סיימתי';
+              }
+              
+              // Icon names
+              let iosIconName = 'circle';
+              let androidIconName = 'radio-button-unchecked';
+              let iconColor = '#9CA3AF';
+              
+              if (isDone) {
+                iosIconName = 'checkmark.circle.fill';
+                androidIconName = 'check-circle';
+                iconColor = '#4CAF50';
+              } else if (isPending) {
+                iosIconName = 'clock.fill';
+                androidIconName = 'schedule';
+                iconColor = '#F5AD27';
               }
               
               return (
@@ -335,8 +376,24 @@ export default function TasksScreen() {
                     isDone && styles.taskCardCompleted,
                   ]}
                 >
-                  <View style={styles.taskContent}>
-                    <View style={styles.taskTop}>
+                  <View style={styles.taskHeader}>
+                    <View
+                      style={[
+                        styles.statusIconContainer,
+                        isYet && styles.statusIconYet,
+                        isPending && styles.statusIconPending,
+                        isDone && styles.statusIconDone,
+                      ]}
+                    >
+                      <IconSymbol
+                        ios_icon_name={iosIconName}
+                        android_material_icon_name={androidIconName}
+                        size={20}
+                        color={iconColor}
+                      />
+                    </View>
+                    
+                    <View style={styles.taskTitleContainer}>
                       <Text
                         style={[
                           styles.taskTitle,
@@ -345,61 +402,49 @@ export default function TasksScreen() {
                       >
                         {task.title}
                       </Text>
-                      <View style={styles.statusIcon}>
+                    </View>
+                  </View>
+
+                  {task.description && (
+                    <Text style={styles.taskDescription}>
+                      {task.description}
+                    </Text>
+                  )}
+
+                  <View style={styles.taskFooter}>
+                    {dueDateText && (
+                      <View style={styles.dateContainer}>
+                        <Text style={styles.taskDate}>{dueDateText}</Text>
                         <IconSymbol
-                          ios_icon_name={
-                            isDone ? 'checkmark.circle.fill' : isPending ? 'clock.fill' : 'circle'
-                          }
-                          android_material_icon_name={
-                            isDone ? 'check-circle' : isPending ? 'schedule' : 'radio-button-unchecked'
-                          }
-                          size={22}
-                          color={isDone ? '#4CAF50' : isPending ? '#F5AD27' : '#E0E0E0'}
+                          ios_icon_name="calendar"
+                          android_material_icon_name="calendar-today"
+                          size={16}
+                          color="#9CA3AF"
                         />
                       </View>
-                    </View>
-
-                    {task.description && (
-                      <Text style={styles.taskDescription}>
-                        {task.description}
-                      </Text>
                     )}
-
-                    <View style={styles.taskBottom}>
-                      {isDone ? (
-                        <View style={styles.completedBadge}>
-                          <IconSymbol
-                            ios_icon_name="checkmark"
-                            android_material_icon_name="check"
-                            size={14}
-                            color="#2E7D32"
-                          />
-                          <Text style={styles.completedBadgeText}>הושלם</Text>
-                        </View>
-                      ) : (
-                        <TouchableOpacity
-                          style={[
-                            styles.actionButton,
-                            isPending && styles.actionButtonPending,
-                          ]}
-                          onPress={() => handleCompleteTask(task.id, task.requiresPending, task.status)}
-                        >
-                          <Text style={styles.actionButtonText}>{buttonText}</Text>
-                        </TouchableOpacity>
-                      )}
-                      
-                      {dueDateText && (
-                        <View style={styles.dateContainer}>
-                          <Text style={styles.taskDate}>{dueDateText}</Text>
-                          <IconSymbol
-                            ios_icon_name="calendar"
-                            android_material_icon_name="calendar-today"
-                            size={14}
-                            color="#9E9E9E"
-                          />
-                        </View>
-                      )}
-                    </View>
+                    
+                    {isDone ? (
+                      <View style={styles.completedBadge}>
+                        <IconSymbol
+                          ios_icon_name="checkmark"
+                          android_material_icon_name="check"
+                          size={16}
+                          color="#2E7D32"
+                        />
+                        <Text style={styles.completedBadgeText}>הושלם</Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={[
+                          styles.actionButton,
+                          isPending && styles.actionButtonPending,
+                        ]}
+                        onPress={() => handleCompleteTask(task.id, task.requiresPending, task.status)}
+                      >
+                        <Text style={styles.actionButtonText}>{buttonText}</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
               );
