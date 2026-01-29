@@ -428,26 +428,27 @@ const styles = StyleSheet.create({
     gap: CARD_GAP,
   },
   
-  // Category Card - Modern with clean shadow
+  // Category Card - Modern with visible drop shadow
   categoryCard: {
     width: CARD_WIDTH,
     borderRadius: radius.lg,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
-    // Modern shadow
+    // Visible drop shadow
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 8,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
   },
   categoryCardDark: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     shadowColor: '#000',
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
   categoryImageContainer: {
     width: '100%',
