@@ -18,7 +18,8 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { api } from '@/utils/api';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
-import LottieView from 'lottie-react-native';
+import { SafeLottieView } from '@/components/SafeLottieView';
+import { getLottieByPurpose } from '@/constants/LottieAnimations';
 
 // Enable RTL for Hebrew
 I18nManager.allowRTL(true);
@@ -118,10 +119,8 @@ export default function ProfileScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <SafeAreaView style={styles.loadingContainer}>
-          <LottieView
-            source={{ uri: 'https://lottie.host/6f61ecb2-edc0-4962-9779-c5cb64c8799e/LgBcgiSDs0.json' }}
-            autoPlay
-            loop
+          <SafeLottieView
+            config={getLottieByPurpose('loading')}
             style={styles.loadingAnimation}
           />
           <Text style={[styles.loadingText, { color: colors.text }]}>
@@ -159,12 +158,10 @@ export default function ProfileScreen() {
         {/* Subtle Overlay Pattern */}
         <View style={styles.patternOverlay} />
         
-        {/* Lottie Animation Layer - Centered and Lower */}
+        {/* Lottie Animation Layer - Centered and Lower - PROFILE SPECIFIC */}
         <View style={styles.lottieContainer}>
-          <LottieView
-            source={{ uri: 'https://lottie.host/200cc226-843c-464f-a346-c8faad8e7407/8Y1UmkMrvF.json' }}
-            autoPlay
-            loop
+          <SafeLottieView
+            config={getLottieByPurpose('profile')}
             style={styles.lottieAnimation}
             resizeMode="contain"
           />
