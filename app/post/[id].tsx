@@ -133,10 +133,14 @@ export default function PostDetailScreen() {
 
   const isPublic = post.visibility === 'public';
   const hasContract = user?.hasContract || false;
-  const isLocked = !isPublic && !hasContract;
+  const isContractOnly = post.visibility === 'contract_only';
+  const shouldRestrictContent = isContractOnly && !hasContract;
   const blocks = post.blocks || [];
 
-  console.log('PostDetailScreen: Rendering post', post.title, 'visibility:', post.visibility, 'isLocked:', isLocked, 'hasContract:', hasContract, 'blocks:', blocks.length);
+  console.log('PostDetailScreen: Rendering post', post.title, 'visibility:', post.visibility, 'hasContract:', hasContract, 'shouldRestrictContent:', shouldRestrictContent, 'blocks:', blocks.length);
+
+  // Determine which blocks to show
+  const blocksToShow = shouldRestrictContent && blocks.length > 0 ? [blocks[0]] : blocks;
 
   return (
     <>
@@ -181,7 +185,7 @@ export default function PostDetailScreen() {
               />
               
               {/* Lock Badge on Cover */}
-              {isLocked && (
+              {shouldRestrictContent && (
                 <View style={styles.heroLockBadge}>
                   <BlurView intensity={80} style={styles.lockBadgeBlur}>
                     <IconSymbol
@@ -232,27 +236,23 @@ export default function PostDetailScreen() {
 
             {/* Article Body - Blocks */}
             <View style={styles.articleBody}>
-              {blocks.map((block, index) => {
-                const isFirstBlock = index === 0;
-                const shouldShowAsPreview = isLocked && isFirstBlock;
-                const shouldBlur = isLocked && !isFirstBlock;
-                
-                console.log('PostDetailScreen: Block', index, block.type, 'isLocked:', isLocked, 'isFirstBlock:', isFirstBlock, 'shouldShowAsPreview:', shouldShowAsPreview, 'shouldBlur:', shouldBlur);
+              {blocksToShow.map((block, index) => {
+                console.log('PostDetailScreen: Rendering block', index, block.type);
                 
                 return (
                   <View key={block.id} style={styles.blockWrapper}>
                     <BlockRenderer 
                       block={block} 
-                      isLocked={shouldBlur}
-                      isPreview={shouldShowAsPreview}
+                      isLocked={false}
+                      isPreview={false}
                     />
                   </View>
                 );
               })}
             </View>
 
-            {/* Locked Content Message & CTA */}
-            {isLocked && blocks.length > 0 && (
+            {/* Locked Content Message & CTA - Show after first block if content is restricted */}
+            {shouldRestrictContent && blocks.length > 0 && (
               <View style={styles.lockedContentContainer}>
                 {/* Gradient Fade */}
                 <LinearGradient
