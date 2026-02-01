@@ -247,6 +247,86 @@ export async function showImmediateNotification(
 }
 
 /**
+ * Send all 3 types of task reminder notifications for testing
+ * Simulates 7-day, 3-day, and 1-day reminders for a random task
+ */
+export async function sendTestTaskReminders(taskTitle: string): Promise<void> {
+  try {
+    console.log('Notifications: Sending all 3 test task reminders for:', taskTitle);
+
+    // Check permissions first
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      console.log('Notifications: ⚠️ Permission not granted, requesting...');
+      const { status: newStatus } = await Notifications.requestPermissionsAsync();
+      if (newStatus !== 'granted') {
+        console.log('Notifications: ⚠️ Permission denied, cannot send notifications');
+        return;
+      }
+    }
+
+    // 7-day reminder (first notification - immediate)
+    const sevenDayTitle = '📅 תזכורת: 7 ימים למשימה';
+    const sevenDayBody = `נותרו 7 ימים למשימה: ${taskTitle}`;
+    
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: sevenDayTitle,
+        body: sevenDayBody,
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        data: { type: '7_day_reminder', taskTitle },
+      },
+      trigger: null, // Immediate
+    });
+    console.log('Notifications: ✅ 7-day reminder sent');
+
+    // Wait 2 seconds before sending next notification
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // 3-day reminder (second notification - after 2 seconds)
+    const threeDayTitle = '⚠️ תזכורת: 3 ימים למשימה';
+    const threeDayBody = `נותרו רק 3 ימים למשימה: ${taskTitle}`;
+    
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: threeDayTitle,
+        body: threeDayBody,
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        data: { type: '3_day_reminder', taskTitle },
+      },
+      trigger: { seconds: 2 },
+    });
+    console.log('Notifications: ✅ 3-day reminder scheduled');
+
+    // Wait 2 more seconds before sending final notification
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // 1-day reminder (third notification - after 4 seconds total, critical)
+    const oneDayTitle = '🚨 דחוף: יום אחד למשימה!';
+    const oneDayBody = `נותר יום אחד בלבד למשימה: ${taskTitle} - דורש טיפול מיידי!`;
+    
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: oneDayTitle,
+        body: oneDayBody,
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.MAX,
+        data: { type: '1_day_reminder', taskTitle, critical: true },
+      },
+      trigger: { seconds: 4 },
+    });
+    console.log('Notifications: ✅ 1-day critical reminder scheduled');
+
+    console.log('Notifications: ✅ All 3 test reminders sent/scheduled successfully');
+  } catch (error: any) {
+    console.log('Notifications: ⚠️ Error sending test task reminders:', error?.message || error);
+    throw error;
+  }
+}
+
+/**
  * Cancel all scheduled notifications
  */
 export async function cancelAllNotifications(): Promise<void> {

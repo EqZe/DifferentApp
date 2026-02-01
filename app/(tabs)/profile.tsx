@@ -20,7 +20,7 @@ import { useUser } from '@/contexts/UserContext';
 import { api } from '@/utils/api';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
 import LottieView from 'lottie-react-native';
-import { scheduleLocalNotification, showImmediateNotification } from '@/utils/notifications';
+import { sendTestTaskReminders } from '@/utils/notifications';
 
 // Enable RTL for Hebrew
 I18nManager.allowRTL(true);
@@ -89,24 +89,39 @@ export default function ProfileScreen() {
   };
 
   const handleTestNotification = async () => {
-    console.log('User tapped Test Notification button');
+    console.log('User tapped Test Notification button - sending all 3 reminder types');
     setIsSendingNotification(true);
 
     try {
-      // Show immediate notification
-      console.log('Sending immediate test notification...');
-      const notificationId = await showImmediateNotification(
-        'התראת בדיקה',
-        'זוהי התראת בדיקה מהמערכת. המערכת פועלת כראוי!'
-      );
-
-      if (notificationId) {
-        console.log('✅ Test notification sent successfully with ID:', notificationId);
-      } else {
-        console.log('⚠️ Failed to send test notification - check permissions');
+      // Fetch user's tasks to get a random one
+      if (!user?.id) {
+        console.log('⚠️ No user ID available');
+        setIsSendingNotification(false);
+        return;
       }
+
+      console.log('Fetching user tasks for test notifications...');
+      const tasks = await api.getTasks(user.id);
+      
+      let taskTitle = 'משימה לדוגמה';
+      
+      if (tasks && tasks.length > 0) {
+        // Pick a random task
+        const randomIndex = Math.floor(Math.random() * tasks.length);
+        const randomTask = tasks[randomIndex];
+        taskTitle = randomTask.title;
+        console.log('Selected random task for test:', taskTitle);
+      } else {
+        console.log('No tasks found, using default task title');
+      }
+
+      // Send all 3 types of reminders
+      console.log('Sending all 3 test reminders for task:', taskTitle);
+      await sendTestTaskReminders(taskTitle);
+      
+      console.log('✅ All 3 test notifications sent successfully');
     } catch (error: any) {
-      console.error('❌ Error sending test notification:', error?.message || error);
+      console.error('❌ Error sending test notifications:', error?.message || error);
     } finally {
       setIsSendingNotification(false);
     }
@@ -352,7 +367,7 @@ export default function ProfileScreen() {
             {isSendingNotification ? (
               <>
                 <ActivityIndicator size="small" color="#FFFFFF" />
-                <Text style={styles.testNotificationText}>שולח התראה...</Text>
+                <Text style={styles.testNotificationText}>שולח 3 התראות...</Text>
               </>
             ) : (
               <>
@@ -362,7 +377,7 @@ export default function ProfileScreen() {
                   size={22}
                   color="#FFFFFF"
                 />
-                <Text style={styles.testNotificationText}>שלח התראת בדיקה</Text>
+                <Text style={styles.testNotificationText}>שלח 3 התראות בדיקה</Text>
               </>
             )}
           </LinearGradient>

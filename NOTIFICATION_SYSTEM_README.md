@@ -1,197 +1,334 @@
 
-# Push Notification Reminder System
+# 🔔 Notification System Documentation
 
 ## Overview
-This document describes the push notification reminder system for task reminders. The system sends notifications **10 days (1 week + 3 days) before a task's due date at 19:00** if the task is not yet completed.
+This document describes the push notification system for task reminders in the Different app. The system sends automated reminders to users about upcoming tasks at 7 days, 3 days, and 1 day before the due date.
 
 ## Architecture
 
 ### Frontend Components
 
-#### 1. Notification Utility (`utils/notifications.ts`)
-- **Purpose**: Handles push notification registration and permissions
+#### 1. Notification Registration (`utils/notifications.ts`)
+- **Purpose**: Handle push notification permissions and token registration
 - **Key Functions**:
-  - `registerForPushNotificationsAsync()`: Requests permissions and obtains Expo push token
-  - `scheduleLocalNotification()`: For testing local notifications
-  - `cancelAllNotifications()`: Cleanup utility
+  - `registerForPushNotificationsAsync()`: Registers device for push notifications and returns Expo push token
+  - `showImmediateNotification()`: Shows a local notification immediately (for testing)
+  - `sendTestTaskReminders()`: Sends all 3 types of reminder notifications for testing purposes
+  - `cancelAllNotifications()`: Cancels all scheduled notifications
 
 #### 2. User Context Integration (`contexts/UserContext.tsx`)
-- **When**: Automatically registers push token after successful login
-- **Flow**:
-  1. User logs in successfully
-  2. `loadUserProfile()` is called
-  3. `registerPushToken()` is triggered
-  4. Push token is obtained and ready to be sent to backend
+- Automatically registers push token when user logs in
+- Saves token to backend via `api.savePushToken()`
+- Non-blocking registration (uses setTimeout to avoid blocking UI)
 
-#### 3. App Configuration (`app.json`)
-- **Added**:
-  - `expo-notifications` plugin with icon and color configuration
-  - Android notification permissions
-  - EAS project ID placeholder (needs to be filled with actual project ID)
+#### 3. Profile Screen Test Button (`app/(tabs)/profile.tsx` & `profile.ios.tsx`)
+- **Test Notification Button**: Sends all 3 types of reminders (7-day, 3-day, 1-day) for a random task
+- Fetches user's tasks and picks a random one
+- Demonstrates the notification flow with actual task data
+- Shows loading state while sending notifications
 
-### Backend Components (TODO: Backend Integration Required)
+### Backend Components
 
-#### 1. Database Schema Changes
-**Table**: `users`
-- Add column: `push_token` (text, nullable)
-- Stores the Expo push notification token for each user
+#### 1. Database Schema
+```sql
+-- Users table includes push_token column
+CREATE TABLE users (
+  auth_user_id TEXT PRIMARY KEY,
+  full_name TEXT NOT NULL,
+  city TEXT NOT NULL,
+  phone_number TEXT,
+  email TEXT,
+  has_contract BOOLEAN DEFAULT FALSE,
+  travel_date DATE,
+  push_token TEXT,  -- Expo push token for notifications
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Tasks are stored in user_tasks with metadata
+CREATE TABLE user_tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  auth_user_id TEXT REFERENCES users(auth_user_id),
+  task_metadata_id UUID REFERENCES tasks_metadata(id),
+  status TEXT CHECK (status IN ('YET', 'PENDING', 'DONE')),
+  due_date DATE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Task metadata defines task templates
+CREATE TABLE tasks_metadata (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  due_date_offset_days INTEGER NOT NULL,
+  requires_pending BOOLEAN DEFAULT FALSE,
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
 
 #### 2. API Endpoints
+- `POST /api/users/:id/push-token`: Save push token for a user
+  - Body: `{ pushToken: string }`
+  - Response: `{ success: boolean, message: string }`
 
-**POST /api/users/:userId/push-token**
-- **Purpose**: Save/update user's push notification token
-- **Request Body**:
-  ```json
-  {
-    "pushToken": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]"
+#### 3. Scheduled Job (Proposed)
+**⏰ Schedule: Daily at 9:00 AM (Israel Time)**
+
+The backend should implement a daily cron job that:
+
+1. **Runs at 9:00 AM Israel Time** (changed from 19:00)
+2. Queries all users with active tasks
+3. For each user, checks tasks due in 7, 3, or 1 day
+4. Sends appropriate notifications via Expo Push Notification API
+
+**Pseudo-code:**
+```javascript
+// Run daily at 9:00 AM Israel Time
+cron.schedule('0 9 * * *', async () => {
+  console.log('Running daily task reminder job at 9:00 AM');
+  
+  // Get all users with push tokens
+  const users = await db.query(`
+    SELECT auth_user_id, push_token, full_name
+    FROM users
+    WHERE push_token IS NOT NULL
+  `);
+
+  for (const user of users) {
+    // Get tasks due in 7, 3, or 1 day
+    const today = new Date();
+    const sevenDaysFromNow = addDays(today, 7);
+    const threeDaysFromNow = addDays(today, 3);
+    const oneDayFromNow = addDays(today, 1);
+
+    const tasks = await db.query(`
+      SELECT ut.id, ut.due_date, tm.title, tm.description
+      FROM user_tasks ut
+      JOIN tasks_metadata tm ON ut.task_metadata_id = tm.id
+      WHERE ut.auth_user_id = $1
+        AND ut.status != 'DONE'
+        AND (
+          DATE(ut.due_date) = DATE($2) OR
+          DATE(ut.due_date) = DATE($3) OR
+          DATE(ut.due_date) = DATE($4)
+        )
+    `, [user.auth_user_id, sevenDaysFromNow, threeDaysFromNow, oneDayFromNow]);
+
+    // Group tasks by reminder type
+    const sevenDayTasks = tasks.filter(t => isSameDay(t.due_date, sevenDaysFromNow));
+    const threeDayTasks = tasks.filter(t => isSameDay(t.due_date, threeDaysFromNow));
+    const oneDayTasks = tasks.filter(t => isSameDay(t.due_date, oneDayFromNow));
+
+    // Send notifications
+    if (sevenDayTasks.length > 0) {
+      await sendSevenDayReminder(user, sevenDayTasks);
+    }
+    if (threeDayTasks.length > 0) {
+      await sendThreeDayReminder(user, threeDayTasks);
+    }
+    if (oneDayTasks.length > 0) {
+      await sendOneDayReminder(user, oneDayTasks);
+    }
   }
-  ```
-- **Response**: `{ success: true }`
-- **Security**: Verify userId matches authenticated user
-
-#### 3. Scheduled Job / Cron
-**Frequency**: Runs daily at 19:00 (Israel timezone)
-
-**Logic**:
-```
-1. Calculate target date: TODAY + 10 days
-2. Query all tasks where:
-   - due_date = target date
-   - status != 'DONE'
-   - user has push_token
-3. Group tasks by user_id
-4. For each user:
-   - If 1 task: Send "לקראת נסיעתך לסין יש לבצע: [Task Title]"
-   - If 2+ tasks: Send "נשארו מספר משימות לביצוע לקראת נסיעתך לסין"
-5. Send push notifications via Expo Push API
-```
-
-**Expo Push Notification Format**:
-```json
-{
-  "to": "ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]",
-  "sound": "default",
-  "title": "תזכורת משימה",
-  "body": "לקראת נסיעתך לסין יש לבצע: [Task Title]",
-  "data": {
-    "taskId": "uuid",
-    "screen": "tasks"
-  },
-  "priority": "high",
-  "channelId": "default"
-}
+});
 ```
 
 ## Notification Messages (Hebrew)
 
-### Single Task Reminder
+### 7-Day Reminder
+**Single Task:**
 ```
-Title: תזכורת משימה
-Body: לקראת נסיעתך לסין יש לבצע: [Task Title]
-```
-
-### Multiple Tasks Reminder
-```
-Title: תזכורת משימות
-Body: נשארו מספר משימות לביצוע לקראת נסיעתך לסין
+Title: 📅 תזכורת: 7 ימים למשימה
+Body: נותרו 7 ימים למשימה: [שם המשימה]
 ```
 
-## Implementation Status
+**Multiple Tasks:**
+```
+Title: 📅 תזכורת: 7 ימים למשימות
+Body: נותרו 7 ימים ל-[מספר] משימות. לחץ לצפייה בפרטים.
+```
 
-### ✅ Completed (Frontend)
-- [x] Installed `expo-notifications` and `expo-device` packages
-- [x] Created notification utility with permission handling
-- [x] Integrated push token registration in UserContext
-- [x] Configured app.json with notification settings
-- [x] Added Android notification permissions
+### 3-Day Reminder
+**Single Task:**
+```
+Title: ⚠️ תזכורת: 3 ימים למשימה
+Body: נותרו רק 3 ימים למשימה: [שם המשימה]
+```
 
-### ⏳ Pending (Backend Integration)
-- [ ] Add `push_token` column to `users` table
-- [ ] Create POST /api/users/:userId/push-token endpoint
-- [ ] Implement daily cron job (19:00 Israel time)
-- [ ] Integrate Expo Push Notification API
-- [ ] Add notification sending logic with Hebrew messages
-- [ ] Handle notification grouping (single vs multiple tasks)
+**Multiple Tasks:**
+```
+Title: ⚠️ תזכורת: 3 ימים למשימות
+Body: נותרו רק 3 ימים ל-[מספר] משימות. לחץ לצפייה בפרטים.
+```
+
+### 1-Day Reminder (Critical)
+**Single Task:**
+```
+Title: 🚨 דחוף: יום אחד למשימה!
+Body: נותר יום אחד בלבד למשימה: [שם המשימה] - דורש טיפול מיידי!
+Priority: MAX
+```
+
+**Multiple Tasks:**
+```
+Title: 🚨 דחוף: יום אחד למשימות!
+Body: נותר יום אחד בלבד ל-[מספר] משימות - דורש טיפול מיידי!
+Priority: MAX
+```
 
 ## Testing
 
-### Local Notification Test
-You can test notifications locally using the utility function:
+### Frontend Test Button
+The profile screen includes a "שלח 3 התראות בדיקה" (Send 3 Test Notifications) button that:
+1. Fetches the user's tasks
+2. Picks a random task (or uses "משימה לדוגמה" if no tasks exist)
+3. Sends all 3 types of reminders (7-day, 3-day, 1-day) with 2-second intervals
+4. Demonstrates the complete notification flow
 
-```typescript
-import { scheduleLocalNotification } from '@/utils/notifications';
+**Usage:**
+1. Navigate to Profile screen
+2. Tap "שלח 3 התראות בדיקה"
+3. You will receive 3 notifications:
+   - Immediate: 7-day reminder
+   - After 2 seconds: 3-day reminder
+   - After 4 seconds: 1-day critical reminder
 
-// Schedule a test notification in 5 seconds
-await scheduleLocalNotification(
-  'תזכורת משימה',
-  'לקראת נסיעתך לסין יש לבצע: בדיקת דרכון',
-  5
-);
+### Manual Testing
+```javascript
+// Test immediate notification
+import { showImmediateNotification } from '@/utils/notifications';
+await showImmediateNotification('Test Title', 'Test Body');
+
+// Test all 3 reminder types
+import { sendTestTaskReminders } from '@/utils/notifications';
+await sendTestTaskReminders('משימה לדוגמה');
 ```
-
-### Production Testing Checklist
-1. **Physical Device Required**: Push notifications don't work on simulators
-2. **Permission Grant**: User must grant notification permissions
-3. **Token Registration**: Verify push token is saved to backend
-4. **Cron Job**: Verify scheduled job runs at 19:00
-5. **Message Content**: Verify Hebrew text displays correctly
-6. **Task Filtering**: Verify only incomplete tasks trigger notifications
-7. **Date Calculation**: Verify 10-day advance calculation is correct
-
-## Security Considerations
-
-1. **Token Privacy**: Push tokens are sensitive - store securely
-2. **User Verification**: Always verify userId matches authenticated user
-3. **Rate Limiting**: Implement rate limiting on token registration endpoint
-4. **Token Expiry**: Handle expired/invalid tokens gracefully
-
-## Dependencies
-
-### Frontend
-- `expo-notifications`: ^0.32.16
-- `expo-device`: ^8.0.10
-- `expo-constants`: For accessing app configuration
-
-### Backend (Required)
-- Expo Push Notification Service
-- Cron job scheduler (node-cron, bull, or similar)
-- Date/time library with timezone support
 
 ## Configuration
 
-### Required Environment Variables (Backend)
-```env
-EXPO_ACCESS_TOKEN=your_expo_access_token_here
-TIMEZONE=Asia/Jerusalem
-NOTIFICATION_TIME=19:00
-NOTIFICATION_ADVANCE_DAYS=10
+### Android
+```json
+// app.json
+{
+  "expo": {
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/final_quest_240x240.png",
+          "color": "#ffffff",
+          "androidMode": "collapse",
+          "androidCollapsedTitle": "Different"
+        }
+      ]
+    ],
+    "android": {
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "WAKE_LOCK"
+      ]
+    }
+  }
+}
 ```
+
+**Notification Channel:**
+- Name: "תזכורות משימות" (Task Reminders)
+- Importance: MAX
+- Vibration: [0, 250, 250, 250]
+- Light Color: #2784F5 (Primary Blue)
+
+### iOS
+```json
+// app.json
+{
+  "expo": {
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.yourapp",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
+    }
+  }
+}
+```
+
+## Dependencies
+```json
+{
+  "expo-notifications": "^0.32.16",
+  "expo-device": "^8.0.10",
+  "expo-constants": "~18.0.8"
+}
+```
+
+## Error Handling
+
+### Frontend
+- Graceful degradation if notifications are not supported
+- Logs warnings instead of throwing errors
+- Non-blocking registration (doesn't prevent app usage)
+- Multiple fallback strategies for token retrieval
+
+### Backend (Proposed)
+- Retry logic for failed push notifications
+- Logging of all notification attempts
+- Graceful handling of invalid/expired push tokens
+- Rate limiting to prevent spam
+
+## Security Considerations
+
+1. **Push Token Storage**: Tokens are stored securely in the database
+2. **User Privacy**: Only send notifications to users who have granted permission
+3. **Data Validation**: Validate all user data before sending notifications
+4. **Rate Limiting**: Prevent abuse by limiting notification frequency
 
 ## Future Enhancements
 
-1. **Notification Preferences**: Allow users to enable/disable reminders
-2. **Custom Timing**: Let users choose notification time
-3. **Multiple Reminders**: Send reminders at 10 days, 3 days, and 1 day before
-4. **Rich Notifications**: Add action buttons (Mark as Done, Snooze)
-5. **Notification History**: Track sent notifications in database
-6. **Analytics**: Monitor notification delivery and open rates
+1. **Custom Notification Preferences**: Allow users to customize reminder timing
+2. **Notification History**: Track which notifications were sent and when
+3. **Rich Notifications**: Add action buttons (e.g., "Mark as Done", "Snooze")
+4. **Notification Analytics**: Track open rates and engagement
+5. **Multi-language Support**: Support for languages other than Hebrew
+6. **Smart Scheduling**: Adjust notification times based on user activity patterns
 
 ## Troubleshooting
 
-### Push Token Not Obtained
-- **Cause**: Running on simulator or permissions denied
-- **Solution**: Test on physical device and ensure permissions are granted
+### Notifications Not Appearing
+1. Check device permissions (Settings > Notifications)
+2. Verify push token is saved in database
+3. Check notification channel settings (Android)
+4. Ensure app is not in battery optimization mode
+5. Verify Expo push notification service is operational
 
-### Notifications Not Received
-- **Cause**: Invalid token, expired token, or backend not sending
-- **Solution**: Check backend logs, verify token is valid, test with Expo Push Tool
+### Token Registration Fails
+1. Ensure device is physical (not simulator)
+2. Check EAS project ID in app.json
+3. Verify network connectivity
+4. Check Expo CLI version compatibility
 
-### Hebrew Text Not Displaying
-- **Cause**: Encoding issues
-- **Solution**: Ensure UTF-8 encoding in notification payload
+### Backend Job Not Running
+1. Verify cron schedule is correct (9:00 AM Israel Time)
+2. Check server timezone configuration
+3. Verify database connection
+4. Check Expo push notification API credentials
 
-## References
+## Support
 
-- [Expo Notifications Documentation](https://docs.expo.dev/versions/latest/sdk/notifications/)
-- [Expo Push Notifications Guide](https://docs.expo.dev/push-notifications/overview/)
-- [Expo Push Notification Tool](https://expo.dev/notifications)
+For issues or questions:
+1. Check frontend logs: `console.log` statements in `utils/notifications.ts`
+2. Check backend logs: Cron job execution logs
+3. Verify Expo push notification dashboard for delivery status
+4. Test with the profile screen test button first
+
+---
+
+**Last Updated**: January 2025
+**Version**: 2.0 (Updated with test button and 9:00 AM schedule)
