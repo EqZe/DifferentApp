@@ -20,6 +20,7 @@ import { useUser } from '@/contexts/UserContext';
 import { api } from '@/utils/api';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
 import LottieView from 'lottie-react-native';
+import { scheduleLocalNotification } from '@/utils/notifications';
 
 // Enable RTL for Hebrew
 I18nManager.allowRTL(true);
@@ -48,6 +49,7 @@ export default function ProfileScreen() {
   const { user, setUser, refreshUser, session } = useUser();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSendingNotification, setIsSendingNotification] = useState(false);
 
   // Refresh user data when screen loads if user data seems incomplete
   useEffect(() => {
@@ -83,6 +85,34 @@ export default function ProfileScreen() {
       // Even if logout fails on backend, clear local state
       setUser(null);
       router.replace('/register');
+    }
+  };
+
+  const handleTestNotification = async () => {
+    console.log('User tapped Test Notification button');
+    setIsSendingNotification(true);
+
+    try {
+      // Wait for 5 seconds
+      console.log('Waiting 5 seconds before sending notification...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      // Send test notification
+      const notificationId = await scheduleLocalNotification(
+        'התראת בדיקה',
+        'זוהי התראת בדיקה מהמערכת. המערכת פועלת כראוי!',
+        1 // Trigger after 1 second
+      );
+
+      if (notificationId) {
+        console.log('Test notification scheduled successfully');
+      } else {
+        console.log('Failed to schedule test notification');
+      }
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+    } finally {
+      setIsSendingNotification(false);
     }
   };
 
@@ -309,6 +339,38 @@ export default function ProfileScreen() {
             </View>
           </>
         )}
+
+        {/* Test Notification Button */}
+        <TouchableOpacity
+          style={styles.testNotificationButton}
+          onPress={handleTestNotification}
+          activeOpacity={0.8}
+          disabled={isSendingNotification}
+        >
+          <LinearGradient
+            colors={isSendingNotification ? ['#9CA3AF', '#6B7280'] : ['#10B981', '#059669']}
+            style={styles.testNotificationGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            {isSendingNotification ? (
+              <>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+                <Text style={styles.testNotificationText}>שולח התראה...</Text>
+              </>
+            ) : (
+              <>
+                <IconSymbol
+                  ios_icon_name="bell.fill"
+                  android_material_icon_name="notifications"
+                  size={22}
+                  color="#FFFFFF"
+                />
+                <Text style={styles.testNotificationText}>שלח התראת בדיקה</Text>
+              </>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
 
         {/* Logout Button */}
         <TouchableOpacity
@@ -597,9 +659,29 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   
+  // Test Notification Button
+  testNotificationButton: {
+    marginTop: spacing.lg,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  testNotificationGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md + 2,
+    gap: spacing.sm,
+  },
+  testNotificationText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  
   // Logout Button
   logoutButton: {
-    marginTop: spacing.xl,
+    marginTop: spacing.md,
     borderRadius: radius.lg,
     overflow: 'hidden',
     ...shadows.md,
