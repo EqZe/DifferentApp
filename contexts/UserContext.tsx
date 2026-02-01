@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { api, type User } from '@/utils/api';
+import { registerForPushNotificationsAsync } from '@/utils/notifications';
 
 interface UserContextType {
   user: User | null;
@@ -74,11 +75,33 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const userData = await api.getUserByAuthId(authUserId);
       console.log('UserContext: User profile loaded successfully -', userData.fullName, 'hasContract:', userData.hasContract);
       setUserState(userData);
+
+      // Register for push notifications after successful login
+      registerPushToken(authUserId);
     } catch (error) {
       console.error('UserContext: Error loading user profile:', error);
       setUserState(null);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const registerPushToken = async (authUserId: string) => {
+    try {
+      console.log('UserContext: Registering push notification token');
+      const pushToken = await registerForPushNotificationsAsync();
+      
+      if (pushToken) {
+        console.log('UserContext: Push token obtained, saving to backend');
+        // TODO: Backend Integration - POST /api/users/:userId/push-token
+        // Body: { pushToken: string }
+        // This endpoint should save the push token to the users table
+        console.log('UserContext: Push token ready for backend:', pushToken);
+      } else {
+        console.log('UserContext: Could not obtain push token (simulator or permission denied)');
+      }
+    } catch (error) {
+      console.error('UserContext: Error registering push token:', error);
     }
   };
 
