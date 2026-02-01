@@ -210,7 +210,7 @@ function formatDate(dateString: string | null) {
   return `${dayText} ${month}`;
 }
 
-// Task Card Component (no animation)
+// Task Card Component
 function TaskCard({ 
   task, 
   onComplete, 
@@ -371,62 +371,38 @@ export default function TasksScreen() {
     loadTasks();
   };
 
-  const handleCompleteTask = (taskId: string, requiresPending: boolean, currentStatus: string) => {
-    console.log('TasksScreen (iOS): 🎯 INSTANT BUTTON CLICK - User tapped סיימתי', { taskId, requiresPending, currentStatus });
+  const handleCompleteTask = useCallback((taskId: string, requiresPending: boolean, currentStatus: string) => {
+    console.log('🎯 INSTANT CLICK (iOS) - Task button pressed', taskId);
     
-    // Determine new status
-    let newStatus: 'YET' | 'PENDING' | 'DONE';
+    // Calculate new status ONCE upfront
+    const newStatus: 'YET' | 'PENDING' | 'DONE' = 
+      requiresPending 
+        ? (currentStatus === 'YET' ? 'PENDING' : 'DONE')
+        : 'DONE';
     
-    if (requiresPending) {
-      if (currentStatus === 'YET') {
-        newStatus = 'PENDING';
-      } else if (currentStatus === 'PENDING') {
-        newStatus = 'DONE';
-      } else {
-        newStatus = 'DONE';
-      }
-    } else {
-      newStatus = 'DONE';
+    // 🎉 INSTANT CONFETTI - Fire IMMEDIATELY if completing to DONE
+    if (newStatus === 'DONE' && confettiRef.current) {
+      confettiRef.current.start();
+      console.log('🎉 CONFETTI FIRED INSTANTLY (iOS)');
     }
     
-    // 🎯🎯🎯 INSTANT CONFETTI - FIRST THING, NO DELAYS, NO AWAITS
-    if (newStatus === 'DONE') {
-      console.log('TasksScreen (iOS): 🎉🎉🎉 INSTANT CONFETTI FIRING NOW!');
-      // Fire confetti IMMEDIATELY - this is synchronous
-      if (confettiRef.current) {
-        confettiRef.current.start();
-      }
-    }
+    // 🚀 INSTANT UI UPDATE - Optimistic update happens NOW
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    console.log('🚀 UI UPDATED INSTANTLY (iOS) to status:', newStatus);
     
-    // 🎯🎯🎯 INSTANT UI UPDATE - Update state IMMEDIATELY (React batches this but it's instant)
-    console.log('TasksScreen (iOS): 🚀 INSTANT STATE UPDATE - Updating UI now');
-    setTasks((prevTasks) =>
-      prevTasks.map((task) => {
-        if (task.id === taskId) {
-          return { ...task, status: newStatus };
-        }
-        return task;
-      })
-    );
-    
-    // 🔥 FIRE AND FORGET - Backend update happens in background (completely non-blocking)
-    console.log('TasksScreen (iOS): 📡 Background API call starting (non-blocking)');
+    // 📡 BACKGROUND API CALL - Fire and forget (non-blocking)
     api.completeTask(taskId, requiresPending)
-      .then((updatedTask) => {
-        console.log('TasksScreen (iOS): ✅ Backend confirmed task status:', updatedTask.status);
-        // Silently sync with server response (in case of discrepancies)
-        setTasks((prevTasks) =>
-          prevTasks.map((task) =>
-            task.id === taskId ? updatedTask : task
-          )
-        );
+      .then(updatedTask => {
+        console.log('✅ Backend confirmed (iOS):', updatedTask.status);
+        // Sync with server response silently
+        setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
       })
-      .catch((error) => {
-        console.error('TasksScreen (iOS): ⚠️ Backend update failed, reverting optimistic update', error);
-        // Revert optimistic update on error
-        loadTasks();
+      .catch(error => {
+        console.error('❌ Backend failed (iOS), reverting:', error);
+        // Revert on error
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: currentStatus } : t));
       });
-  };
+  }, [confettiRef]);
 
   if (loading) {
     return (
