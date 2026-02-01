@@ -296,7 +296,11 @@ export async function sendTestTaskReminders(taskTitle: string): Promise<void> {
         priority: Notifications.AndroidNotificationPriority.HIGH,
         data: { type: '3_day_reminder', taskTitle },
       },
-      trigger: { seconds: 2 },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TimeInterval,
+        seconds: 2,
+        repeats: false,
+      },
     });
     console.log('Notifications: ✅ 3-day reminder scheduled');
 
@@ -315,7 +319,11 @@ export async function sendTestTaskReminders(taskTitle: string): Promise<void> {
         priority: Notifications.AndroidNotificationPriority.MAX,
         data: { type: '1_day_reminder', taskTitle, critical: true },
       },
-      trigger: { seconds: 4 },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TimeInterval,
+        seconds: 4,
+        repeats: false,
+      },
     });
     console.log('Notifications: ✅ 1-day critical reminder scheduled');
 
