@@ -68,12 +68,14 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
     console.log('Notifications: Project ID from config:', projectId);
     
-    // For development without EAS, we can use the experienceId as fallback
-    const experienceId = Constants.expoConfig?.slug 
-      ? `@${Constants.expoConfig?.owner || 'anonymous'}/${Constants.expoConfig.slug}`
-      : undefined;
+    // Build experienceId for development/Expo Go
+    const slug = Constants.expoConfig?.slug || 'Different';
+    const owner = Constants.expoConfig?.owner || Constants.manifest?.owner || 'anonymous';
+    const experienceId = `@${owner}/${slug}`;
     
-    console.log('Notifications: Experience ID fallback:', experienceId);
+    console.log('Notifications: Experience ID:', experienceId);
+    console.log('Notifications: Slug:', slug);
+    console.log('Notifications: Owner:', owner);
 
     let tokenData;
     
@@ -85,29 +87,35 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
           projectId: projectId,
         });
       } else {
-        // Fallback for development - use experienceId
+        // Fallback for development - try multiple approaches
         console.log('Notifications: Attempting to get token with experienceId (development mode)');
-        tokenData = await Notifications.getExpoPushTokenAsync({
-          experienceId: experienceId,
-        });
+        
+        try {
+          // First attempt: Use full experienceId
+          tokenData = await Notifications.getExpoPushTokenAsync({
+            experienceId: experienceId,
+          });
+        } catch (firstError: any) {
+          console.log('Notifications: First attempt failed, trying without parameters');
+          
+          try {
+            // Second attempt: Try without any parameters (works in some dev environments)
+            tokenData = await Notifications.getExpoPushTokenAsync();
+          } catch (secondError: any) {
+            console.log('Notifications: Second attempt failed, trying with slug only');
+            
+            // Third attempt: Try with just the slug
+            tokenData = await Notifications.getExpoPushTokenAsync({
+              experienceId: slug,
+            });
+          }
+        }
       }
     } catch (tokenError: any) {
-      console.error('Notifications: Error getting push token:', tokenError);
-      
-      // If we get ERR_NOTIFICATIONS_NO_EXPERIENCE_ID, try one more time with just the slug
-      if (tokenError.code === 'ERR_NOTIFICATIONS_NO_EXPERIENCE_ID') {
-        console.log('Notifications: Retrying with slug-based experienceId');
-        try {
-          tokenData = await Notifications.getExpoPushTokenAsync({
-            experienceId: Constants.expoConfig?.slug,
-          });
-        } catch (retryError) {
-          console.error('Notifications: Retry failed:', retryError);
-          throw retryError;
-        }
-      } else {
-        throw tokenError;
-      }
+      console.error('Notifications: All token retrieval attempts failed:', tokenError);
+      console.error('Notifications: Error code:', tokenError.code);
+      console.error('Notifications: Error message:', tokenError.message);
+      throw tokenError;
     }
 
     const token = tokenData.data;
