@@ -79,6 +79,7 @@ export interface User {
   has_contract: boolean;
   travel_date: string | null;
   created_at: string;
+  push_token: string | null; // Push notification token
 }
 
 export interface Category {

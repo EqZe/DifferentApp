@@ -74,6 +74,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('UserContext: Loading user profile for auth user', authUserId);
       const userData = await api.getUserByAuthId(authUserId);
       console.log('UserContext: User profile loaded successfully -', userData.fullName, 'hasContract:', userData.hasContract);
+      console.log('UserContext: Current push token in database:', userData.pushToken || 'none');
       setUserState(userData);
 
       // Register for push notifications after successful login
@@ -88,18 +89,40 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const registerPushToken = async (authUserId: string) => {
     try {
-      console.log('UserContext: Registering push notification token');
+      console.log('UserContext: Starting push notification token registration');
       const pushToken = await registerForPushNotificationsAsync();
       
       if (pushToken) {
-        console.log('UserContext: Push token obtained, saving to backend');
-        await api.savePushToken(authUserId, pushToken);
-        console.log('UserContext: Push token saved successfully to backend');
+        console.log('UserContext: Push token obtained successfully:', pushToken);
+        console.log('UserContext: Saving push token to database for user:', authUserId);
+        
+        try {
+          await api.savePushToken(authUserId, pushToken);
+          console.log('UserContext: ✅ Push token saved successfully to database');
+          
+          // Verify it was saved by fetching the user again
+          const updatedUser = await api.getUserByAuthId(authUserId);
+          console.log('UserContext: Verification - push token in database:', updatedUser.pushToken || 'FAILED TO SAVE');
+          
+          if (updatedUser.pushToken === pushToken) {
+            console.log('UserContext: ✅ Push token verification successful');
+          } else {
+            console.error('UserContext: ❌ Push token verification failed - token mismatch');
+          }
+        } catch (saveError) {
+          console.error('UserContext: ❌ Failed to save push token to database:', saveError);
+          if (saveError instanceof Error) {
+            console.error('UserContext: Error details:', saveError.message);
+          }
+        }
       } else {
-        console.log('UserContext: Could not obtain push token (simulator or permission denied)');
+        console.log('UserContext: Could not obtain push token (simulator, permission denied, or configuration issue)');
       }
     } catch (error) {
-      console.error('UserContext: Error registering push token:', error);
+      console.error('UserContext: Error in push token registration flow:', error);
+      if (error instanceof Error) {
+        console.error('UserContext: Error details:', error.message);
+      }
     }
   };
 
@@ -118,6 +141,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('UserContext: Refreshing user data from database');
       const freshUserData = await api.getUserByAuthId(session.user.id);
       console.log('UserContext: User data refreshed successfully, hasContract:', freshUserData.hasContract);
+      console.log('UserContext: Push token after refresh:', freshUserData.pushToken || 'none');
       setUserState(freshUserData);
     } catch (error) {
       console.error('UserContext: Failed to refresh user data', error);

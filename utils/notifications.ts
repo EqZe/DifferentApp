@@ -27,6 +27,20 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
   }
 
   try {
+    // Configure notification channel for Android FIRST (before requesting permissions)
+    if (Platform.OS === 'android') {
+      console.log('Notifications: Setting up Android notification channel');
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'תזכורות משימות',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#2784F5',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+      });
+    }
+
     // Check existing permissions
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     console.log('Notifications: Existing permission status:', existingStatus);
@@ -49,32 +63,68 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
     // Get the Expo push token
     console.log('Notifications: Getting Expo push token');
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
     
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: projectId || undefined,
-    });
+    // Try to get projectId from Constants
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    console.log('Notifications: Project ID from config:', projectId);
+    
+    // For development without EAS, we can use the experienceId as fallback
+    const experienceId = Constants.expoConfig?.slug 
+      ? `@${Constants.expoConfig?.owner || 'anonymous'}/${Constants.expoConfig.slug}`
+      : undefined;
+    
+    console.log('Notifications: Experience ID fallback:', experienceId);
+
+    let tokenData;
+    
+    try {
+      // Try with projectId first (for production builds with EAS)
+      if (projectId && projectId !== 'your-project-id-here') {
+        console.log('Notifications: Attempting to get token with projectId');
+        tokenData = await Notifications.getExpoPushTokenAsync({
+          projectId: projectId,
+        });
+      } else {
+        // Fallback for development - use experienceId
+        console.log('Notifications: Attempting to get token with experienceId (development mode)');
+        tokenData = await Notifications.getExpoPushTokenAsync({
+          experienceId: experienceId,
+        });
+      }
+    } catch (tokenError: any) {
+      console.error('Notifications: Error getting push token:', tokenError);
+      
+      // If we get ERR_NOTIFICATIONS_NO_EXPERIENCE_ID, try one more time with just the slug
+      if (tokenError.code === 'ERR_NOTIFICATIONS_NO_EXPERIENCE_ID') {
+        console.log('Notifications: Retrying with slug-based experienceId');
+        try {
+          tokenData = await Notifications.getExpoPushTokenAsync({
+            experienceId: Constants.expoConfig?.slug,
+          });
+        } catch (retryError) {
+          console.error('Notifications: Retry failed:', retryError);
+          throw retryError;
+        }
+      } else {
+        throw tokenError;
+      }
+    }
 
     const token = tokenData.data;
     console.log('Notifications: Successfully obtained push token:', token);
 
-    // Configure notification channel for Android
-    if (Platform.OS === 'android') {
-      console.log('Notifications: Setting up Android notification channel');
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'תזכורות משימות',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#2784F5',
-        sound: 'default',
-        enableVibrate: true,
-        showBadge: true,
-      });
-    }
-
     return token;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Notifications: Error registering for push notifications:', error);
+    
+    // Log more details about the error
+    if (error.code) {
+      console.error('Notifications: Error code:', error.code);
+    }
+    if (error.message) {
+      console.error('Notifications: Error message:', error.message);
+    }
+    
     return null;
   }
 }

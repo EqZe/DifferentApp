@@ -36,6 +36,7 @@ export interface UserFrontend {
   hasContract: boolean;
   travelDate: string | null;
   createdAt: string;
+  pushToken: string | null; // Push notification token
 }
 
 export interface PostBlockFrontend {
@@ -135,6 +136,7 @@ export const api = {
           email: email,
           has_contract: false,
           travel_date: null,
+          push_token: null,
         }, {
           onConflict: 'auth_user_id',
           ignoreDuplicates: false, // Update existing row if it exists
@@ -278,18 +280,24 @@ export const api = {
 
   savePushToken: async (authUserId: string, pushToken: string): Promise<void> => {
     console.log('API: Saving push token for user', authUserId);
+    console.log('API: Push token to save:', pushToken);
     
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('users')
       .update({ push_token: pushToken })
-      .eq('auth_user_id', authUserId);
+      .eq('auth_user_id', authUserId)
+      .select();
 
     if (error) {
       console.error('API: Save push token failed', error);
+      console.error('API: Error code:', error.code);
+      console.error('API: Error message:', error.message);
+      console.error('API: Error details:', error.details);
       throw new Error(error.message || 'שגיאה בשמירת טוקן התראות');
     }
 
-    console.log('API: Push token saved successfully');
+    console.log('API: Push token save response:', data);
+    console.log('API: ✅ Push token saved successfully');
   },
 
   // Posts endpoints
