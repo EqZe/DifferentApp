@@ -19,7 +19,7 @@ import { useUser } from '@/contexts/UserContext';
 import { api } from '@/utils/api';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
 import LottieView from 'lottie-react-native';
-import { scheduleLocalNotification } from '@/utils/notifications';
+import { scheduleLocalNotification, showImmediateNotification } from '@/utils/notifications';
 
 // Enable RTL for Hebrew
 I18nManager.allowRTL(true);
@@ -92,24 +92,20 @@ export default function ProfileScreen() {
     setIsSendingNotification(true);
 
     try {
-      // Wait for 5 seconds
-      console.log('Waiting 5 seconds before sending notification...');
-      await new Promise(resolve => setTimeout(resolve, 5000));
-
-      // Send test notification
-      const notificationId = await scheduleLocalNotification(
+      // Show immediate notification
+      console.log('Sending immediate test notification (iOS)...');
+      const notificationId = await showImmediateNotification(
         'התראת בדיקה',
-        'זוהי התראת בדיקה מהמערכת. המערכת פועלת כראוי!',
-        1 // Trigger after 1 second
+        'זוהי התראת בדיקה מהמערכת. המערכת פועלת כראוי!'
       );
 
       if (notificationId) {
-        console.log('Test notification scheduled successfully (iOS)');
+        console.log('✅ Test notification sent successfully (iOS) with ID:', notificationId);
       } else {
-        console.log('Failed to schedule test notification (iOS)');
+        console.log('⚠️ Failed to send test notification (iOS) - check permissions');
       }
-    } catch (error) {
-      console.error('Error sending test notification (iOS):', error);
+    } catch (error: any) {
+      console.error('❌ Error sending test notification (iOS):', error?.message || error);
     } finally {
       setIsSendingNotification(false);
     }

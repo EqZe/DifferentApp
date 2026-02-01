@@ -174,22 +174,74 @@ export async function scheduleLocalNotification(
   try {
     console.log('Notifications: Scheduling local notification', { title, body, triggerSeconds });
 
+    // Check permissions first
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      console.log('Notifications: ⚠️ Permission not granted, requesting...');
+      const { status: newStatus } = await Notifications.requestPermissionsAsync();
+      if (newStatus !== 'granted') {
+        console.log('Notifications: ⚠️ Permission denied, cannot schedule notification');
+        return null;
+      }
+    }
+
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title,
         body,
         sound: true,
         priority: Notifications.AndroidNotificationPriority.HIGH,
+        data: { test: true },
       },
-      trigger: {
-        seconds: triggerSeconds,
-      },
+      trigger: triggerSeconds === 0 ? null : { seconds: triggerSeconds },
     });
 
     console.log('Notifications: ✅ Local notification scheduled with ID:', notificationId);
     return notificationId;
-  } catch (error) {
-    console.log('Notifications: ⚠️ Error scheduling local notification:', error);
+  } catch (error: any) {
+    console.log('Notifications: ⚠️ Error scheduling local notification:', error?.message || error);
+    console.log('Notifications: Full error details:', JSON.stringify(error, null, 2));
+    return null;
+  }
+}
+
+/**
+ * Show an immediate notification (no delay)
+ */
+export async function showImmediateNotification(
+  title: string,
+  body: string
+): Promise<string | null> {
+  try {
+    console.log('Notifications: Showing immediate notification', { title, body });
+
+    // Check permissions first
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      console.log('Notifications: ⚠️ Permission not granted, requesting...');
+      const { status: newStatus } = await Notifications.requestPermissionsAsync();
+      if (newStatus !== 'granted') {
+        console.log('Notifications: ⚠️ Permission denied, cannot show notification');
+        return null;
+      }
+    }
+
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        data: { test: true },
+      },
+      trigger: null, // null = immediate
+    });
+
+    console.log('Notifications: ✅ Immediate notification shown with ID:', notificationId);
+    return notificationId;
+  } catch (error: any) {
+    console.log('Notifications: ⚠️ Error showing immediate notification:', error?.message || error);
+    console.log('Notifications: Full error details:', JSON.stringify(error, null, 2));
     return null;
   }
 }
