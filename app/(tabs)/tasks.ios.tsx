@@ -206,7 +206,8 @@ function formatDate(dateString: string | null) {
   const date = new Date(dateString);
   const day = date.getDate();
   const month = date.toLocaleDateString('he-IL', { month: 'short' });
-  return `${day} ${month}`;
+  const dayText = String(day);
+  return `${dayText} ${month}`;
 }
 
 // Task Card Component (no animation)
@@ -370,63 +371,56 @@ export default function TasksScreen() {
     loadTasks();
   };
 
-  const handleCompleteTask = async (taskId: string, requiresPending: boolean, currentStatus: string) => {
-    try {
-      console.log('TasksScreen (iOS): User tapped complete button', { taskId, requiresPending, currentStatus });
-      
-      // Determine new status
-      let newStatus: 'YET' | 'PENDING' | 'DONE';
-      
-      if (requiresPending) {
-        if (currentStatus === 'YET') {
-          newStatus = 'PENDING';
-        } else if (currentStatus === 'PENDING') {
-          newStatus = 'DONE';
-        } else {
-          newStatus = 'DONE';
-        }
+  const handleCompleteTask = (taskId: string, requiresPending: boolean, currentStatus: string) => {
+    console.log('TasksScreen (iOS): User tapped סיימתי button - INSTANT UPDATE', { taskId, requiresPending, currentStatus });
+    
+    // Determine new status
+    let newStatus: 'YET' | 'PENDING' | 'DONE';
+    
+    if (requiresPending) {
+      if (currentStatus === 'YET') {
+        newStatus = 'PENDING';
+      } else if (currentStatus === 'PENDING') {
+        newStatus = 'DONE';
       } else {
         newStatus = 'DONE';
       }
-      
-      // IMMEDIATE optimistic update - no waiting
-      setTasks((prevTasks) =>
-        prevTasks.map((task) => {
-          if (task.id === taskId) {
-            return { ...task, status: newStatus };
-          }
-          return task;
-        })
-      );
-      
-      // Trigger confetti IMMEDIATELY if task is being completed to DONE
-      if (newStatus === 'DONE') {
-        console.log('TasksScreen (iOS): Task completed! Triggering confetti animation immediately 🎉');
-        confettiRef.current?.start();
-      }
-      
-      // Update backend in background (no await - fire and forget)
-      api.completeTask(taskId, requiresPending)
-        .then((updatedTask) => {
-          console.log('TasksScreen (iOS): Backend confirmed task status updated to', updatedTask.status);
-          // Update with server response (in case of any discrepancies)
-          setTasks((prevTasks) =>
-            prevTasks.map((task) =>
-              task.id === taskId ? updatedTask : task
-            )
-          );
-        })
-        .catch((error) => {
-          console.error('TasksScreen (iOS): Failed to update task status on backend', error);
-          // Revert optimistic update on error
-          loadTasks();
-        });
-      
-    } catch (error) {
-      console.error('TasksScreen (iOS): Failed to update task status', error);
-      // Revert optimistic update on error
-      loadTasks();
+    } else {
+      newStatus = 'DONE';
     }
+    
+    // 🎯 INSTANT CONFETTI - Trigger IMMEDIATELY if completing to DONE
+    if (newStatus === 'DONE') {
+      console.log('TasksScreen (iOS): 🎉 INSTANT CONFETTI - Task marked as DONE!');
+      confettiRef.current?.start();
+    }
+    
+    // 🎯 INSTANT UI UPDATE - Update state IMMEDIATELY (no await, no delay)
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => {
+        if (task.id === taskId) {
+          return { ...task, status: newStatus };
+        }
+        return task;
+      })
+    );
+    
+    // 🔥 FIRE AND FORGET - Backend update happens in background (no blocking)
+    api.completeTask(taskId, requiresPending)
+      .then((updatedTask) => {
+        console.log('TasksScreen (iOS): Backend confirmed task status:', updatedTask.status);
+        // Silently sync with server response (in case of discrepancies)
+        setTasks((prevTasks) =>
+          prevTasks.map((task) =>
+            task.id === taskId ? updatedTask : task
+          )
+        );
+      })
+      .catch((error) => {
+        console.error('TasksScreen (iOS): ⚠️ Backend update failed, reverting optimistic update', error);
+        // Revert optimistic update on error
+        loadTasks();
+      });
   };
 
   if (loading) {
