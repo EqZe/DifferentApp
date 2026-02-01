@@ -12,6 +12,7 @@ import {
   useColorScheme,
   Dimensions,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,7 +23,6 @@ import { api, type Post } from '@/utils/api';
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 import { useUser } from '@/contexts/UserContext';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
-import LottieView from 'lottie-react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -45,8 +45,6 @@ export default function PostDetailScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const loadPost = useCallback(async () => {
-    const loadStartTime = Date.now();
-    
     try {
       console.log('PostDetailScreen: Loading post', id);
       setError(null);
@@ -60,26 +58,9 @@ export default function PostDetailScreen() {
         console.log('PostDetailScreen: Post loaded with blocks', fetchedPost.blocks?.length || 0);
         setPost(fetchedPost);
       }
-      
-      // Ensure loading animation displays for at least 2 seconds
-      const loadDuration = Date.now() - loadStartTime;
-      const remainingTime = Math.max(0, 2000 - loadDuration);
-      
-      if (remainingTime > 0) {
-        console.log('PostDetailScreen: Waiting', remainingTime, 'ms to ensure 2 second minimum loading display');
-        await new Promise(resolve => setTimeout(resolve, remainingTime));
-      }
     } catch (err) {
       console.error('PostDetailScreen: Failed to load post', err);
       setError('שגיאה בטעינת הפוסט');
-      
-      // Still ensure 2 second minimum display even on error
-      const loadDuration = Date.now() - loadStartTime;
-      const remainingTime = Math.max(0, 2000 - loadDuration);
-      
-      if (remainingTime > 0) {
-        await new Promise(resolve => setTimeout(resolve, remainingTime));
-      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -112,12 +93,7 @@ export default function PostDetailScreen() {
           }}
         />
         <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-          <LottieView
-            source={{ uri: 'https://lottie.host/6f61ecb2-edc0-4962-9779-c5cb64c8799e/LgBcgiSDs0.json' }}
-            autoPlay
-            loop
-            style={styles.loadingAnimation}
-          />
+          <ActivityIndicator size="large" color={designColors.primary} />
         </View>
       </>
     );
@@ -341,10 +317,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingAnimation: {
-    width: 200,
-    height: 200,
   },
   errorContainer: {
     flex: 1,

@@ -13,6 +13,7 @@ import {
   useColorScheme,
   I18nManager,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -99,39 +100,13 @@ export default function HomeScreen() {
   }, [user, isLoading, router]);
 
   const loadCategories = useCallback(async () => {
-    const loadStartTime = Date.now();
-    
     try {
       console.log('HomeScreen: Loading categories from new structure');
       const fetchedCategories = await api.getCategories();
       console.log('HomeScreen: Categories loaded:', fetchedCategories.map(c => `${c.name} (id: ${c.id}, icon: ${c.iconName})`));
       setCategories(fetchedCategories);
-      
-      // Check if loading took less than 1 second
-      const loadDuration = Date.now() - loadStartTime;
-      
-      if (loadDuration < 1000) {
-        // If it loaded quickly (< 1 second), don't show loader at all
-        console.log('HomeScreen: Data loaded quickly (', loadDuration, 'ms), skipping loader');
-      } else {
-        // Ensure loading animation displays for at least 2.5 seconds
-        const remainingTime = Math.max(0, 2500 - loadDuration);
-        
-        if (remainingTime > 0) {
-          console.log('HomeScreen: Waiting', remainingTime, 'ms to ensure 2.5 second minimum loading display');
-          await new Promise(resolve => setTimeout(resolve, remainingTime));
-        }
-      }
     } catch (error) {
       console.error('HomeScreen: Failed to load categories', error);
-      
-      // Still ensure 2.5 second minimum display even on error
-      const loadDuration = Date.now() - loadStartTime;
-      const remainingTime = Math.max(0, 2500 - loadDuration);
-      
-      if (remainingTime > 0) {
-        await new Promise(resolve => setTimeout(resolve, remainingTime));
-      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -174,12 +149,7 @@ export default function HomeScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <SafeAreaView style={styles.loadingContainer}>
-          <LottieView
-            source={{ uri: 'https://lottie.host/6f61ecb2-edc0-4962-9779-c5cb64c8799e/LgBcgiSDs0.json' }}
-            autoPlay
-            loop
-            style={styles.loadingAnimation}
-          />
+          <ActivityIndicator size="large" color={designColors.primary} />
         </SafeAreaView>
       </View>
     );
@@ -370,10 +340,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingAnimation: {
-    width: 200,
-    height: 200,
   },
   
   // Header Wrapper with Lottie Background

@@ -10,6 +10,7 @@ import {
   Platform,
   I18nManager,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,7 +19,6 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { api, type Task } from '@/utils/api';
 import ConfettiCannon from 'react-native-confetti-cannon';
-import LottieView from 'lottie-react-native';
 
 const styles = StyleSheet.create({
   container: {
@@ -192,10 +192,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingAnimation: {
-    width: 200,
-    height: 200,
-  },
   confettiContainer: {
     position: 'absolute',
     top: 0,
@@ -351,39 +347,13 @@ export default function TasksScreen() {
   const loadTasks = useCallback(async () => {
     if (!user) return;
 
-    const loadStartTime = Date.now();
-
     try {
       console.log('TasksScreen: Loading tasks for user', user.id);
       const fetchedTasks = await api.getTasks(user.id);
       console.log('TasksScreen: Tasks loaded', fetchedTasks.length);
       setTasks(fetchedTasks);
-      
-      // Check if loading took less than 1 second
-      const loadDuration = Date.now() - loadStartTime;
-      
-      if (loadDuration < 1000) {
-        // If it loaded quickly (< 1 second), don't show loader at all
-        console.log('TasksScreen: Data loaded quickly (', loadDuration, 'ms), skipping loader');
-      } else {
-        // Ensure loading animation displays for at least 2.5 seconds
-        const remainingTime = Math.max(0, 2500 - loadDuration);
-        
-        if (remainingTime > 0) {
-          console.log('TasksScreen: Waiting', remainingTime, 'ms to ensure 2.5 second minimum loading display');
-          await new Promise(resolve => setTimeout(resolve, remainingTime));
-        }
-      }
     } catch (error) {
       console.error('TasksScreen: Failed to load tasks', error);
-      
-      // Still ensure 2.5 second minimum display even on error
-      const loadDuration = Date.now() - loadStartTime;
-      const remainingTime = Math.max(0, 2500 - loadDuration);
-      
-      if (remainingTime > 0) {
-        await new Promise(resolve => setTimeout(resolve, remainingTime));
-      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -465,12 +435,7 @@ export default function TasksScreen() {
     return (
       <LinearGradient colors={['#2784F5', '#1a5fb8']} style={styles.container}>
         <SafeAreaView style={styles.loadingContainer}>
-          <LottieView
-            source={{ uri: 'https://lottie.host/6f61ecb2-edc0-4962-9779-c5cb64c8799e/LgBcgiSDs0.json' }}
-            autoPlay
-            loop
-            style={styles.loadingAnimation}
-          />
+          <ActivityIndicator size="large" color="#FFFFFF" />
         </SafeAreaView>
       </LinearGradient>
     );

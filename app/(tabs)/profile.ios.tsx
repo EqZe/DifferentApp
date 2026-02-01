@@ -9,6 +9,7 @@ import {
   useColorScheme,
   I18nManager,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -53,29 +54,11 @@ export default function ProfileScreen() {
       if (session && (!user || !user.fullName)) {
         console.log('ProfileScreen (iOS): User data incomplete, refreshing...');
         setIsRefreshing(true);
-        const loadStartTime = Date.now();
         
         try {
           await refreshUser();
-          
-          // Ensure loading animation displays for at least 2 seconds
-          const loadDuration = Date.now() - loadStartTime;
-          const remainingTime = Math.max(0, 2000 - loadDuration);
-          
-          if (remainingTime > 0) {
-            console.log('ProfileScreen (iOS): Waiting', remainingTime, 'ms to ensure 2 second minimum loading display');
-            await new Promise(resolve => setTimeout(resolve, remainingTime));
-          }
         } catch (error) {
           console.error('ProfileScreen (iOS): Failed to refresh user data', error);
-          
-          // Still ensure 2 second minimum display even on error
-          const loadDuration = Date.now() - loadStartTime;
-          const remainingTime = Math.max(0, 2000 - loadDuration);
-          
-          if (remainingTime > 0) {
-            await new Promise(resolve => setTimeout(resolve, remainingTime));
-          }
         } finally {
           setIsRefreshing(false);
         }
@@ -110,12 +93,7 @@ export default function ProfileScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <SafeAreaView style={styles.loadingContainer}>
-          <LottieView
-            source={{ uri: 'https://lottie.host/6f61ecb2-edc0-4962-9779-c5cb64c8799e/LgBcgiSDs0.json' }}
-            autoPlay
-            loop
-            style={styles.loadingAnimation}
-          />
+          <ActivityIndicator size="large" color={designColors.primary} />
           <Text style={[styles.loadingText, { color: colors.text }]}>
             טוען פרטי משתמש...
           </Text>
@@ -425,10 +403,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: spacing.md,
-  },
-  loadingAnimation: {
-    width: 200,
-    height: 200,
   },
   loadingText: {
     ...typography.body,

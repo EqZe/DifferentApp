@@ -10,6 +10,7 @@ import {
   useColorScheme,
   I18nManager,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,8 +19,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { api } from '@/utils/api';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
-import { SafeLottieView } from '@/components/SafeLottieView';
-import { getLottieByPurpose } from '@/constants/LottieAnimations';
+import LottieView from 'lottie-react-native';
 
 // Enable RTL for Hebrew
 I18nManager.allowRTL(true);
@@ -55,36 +55,11 @@ export default function ProfileScreen() {
       if (session && (!user || !user.fullName)) {
         console.log('ProfileScreen: User data incomplete, refreshing...');
         setIsRefreshing(true);
-        const loadStartTime = Date.now();
         
         try {
           await refreshUser();
-          
-          // Check if loading took less than 1 second
-          const loadDuration = Date.now() - loadStartTime;
-          
-          if (loadDuration < 1000) {
-            // If it loaded quickly (< 1 second), don't show loader at all
-            console.log('ProfileScreen: Data loaded quickly (', loadDuration, 'ms), skipping loader');
-          } else {
-            // Ensure loading animation displays for at least 2.5 seconds
-            const remainingTime = Math.max(0, 2500 - loadDuration);
-            
-            if (remainingTime > 0) {
-              console.log('ProfileScreen: Waiting', remainingTime, 'ms to ensure 2.5 second minimum loading display');
-              await new Promise(resolve => setTimeout(resolve, remainingTime));
-            }
-          }
         } catch (error) {
           console.error('ProfileScreen: Failed to refresh user data', error);
-          
-          // Still ensure 2.5 second minimum display even on error
-          const loadDuration = Date.now() - loadStartTime;
-          const remainingTime = Math.max(0, 2500 - loadDuration);
-          
-          if (remainingTime > 0) {
-            await new Promise(resolve => setTimeout(resolve, remainingTime));
-          }
         } finally {
           setIsRefreshing(false);
         }
@@ -119,10 +94,7 @@ export default function ProfileScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <SafeAreaView style={styles.loadingContainer}>
-          <SafeLottieView
-            config={getLottieByPurpose('loading')}
-            style={styles.loadingAnimation}
-          />
+          <ActivityIndicator size="large" color={designColors.primary} />
           <Text style={[styles.loadingText, { color: colors.text }]}>
             טוען פרטי משתמש...
           </Text>
@@ -160,8 +132,10 @@ export default function ProfileScreen() {
         
         {/* Lottie Animation Layer - Centered and Lower - PROFILE SPECIFIC */}
         <View style={styles.lottieContainer}>
-          <SafeLottieView
-            config={getLottieByPurpose('profile')}
+          <LottieView
+            source={{ uri: 'https://lottie.host/200cc226-843c-464f-a346-c8faad8e7407/8Y1UmkMrvF.json' }}
+            autoPlay
+            loop
             style={styles.lottieAnimation}
             resizeMode="contain"
           />
@@ -430,10 +404,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: spacing.md,
-  },
-  loadingAnimation: {
-    width: 200,
-    height: 200,
   },
   loadingText: {
     ...typography.body,
