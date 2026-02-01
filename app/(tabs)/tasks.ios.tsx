@@ -372,7 +372,7 @@ export default function TasksScreen() {
   };
 
   const handleCompleteTask = (taskId: string, requiresPending: boolean, currentStatus: string) => {
-    console.log('TasksScreen (iOS): User tapped סיימתי button - INSTANT UPDATE', { taskId, requiresPending, currentStatus });
+    console.log('TasksScreen (iOS): 🎯 INSTANT BUTTON CLICK - User tapped סיימתי', { taskId, requiresPending, currentStatus });
     
     // Determine new status
     let newStatus: 'YET' | 'PENDING' | 'DONE';
@@ -389,13 +389,17 @@ export default function TasksScreen() {
       newStatus = 'DONE';
     }
     
-    // 🎯 INSTANT CONFETTI - Trigger IMMEDIATELY if completing to DONE
+    // 🎯🎯🎯 INSTANT CONFETTI - FIRST THING, NO DELAYS, NO AWAITS
     if (newStatus === 'DONE') {
-      console.log('TasksScreen (iOS): 🎉 INSTANT CONFETTI - Task marked as DONE!');
-      confettiRef.current?.start();
+      console.log('TasksScreen (iOS): 🎉🎉🎉 INSTANT CONFETTI FIRING NOW!');
+      // Fire confetti IMMEDIATELY - this is synchronous
+      if (confettiRef.current) {
+        confettiRef.current.start();
+      }
     }
     
-    // 🎯 INSTANT UI UPDATE - Update state IMMEDIATELY (no await, no delay)
+    // 🎯🎯🎯 INSTANT UI UPDATE - Update state IMMEDIATELY (React batches this but it's instant)
+    console.log('TasksScreen (iOS): 🚀 INSTANT STATE UPDATE - Updating UI now');
     setTasks((prevTasks) =>
       prevTasks.map((task) => {
         if (task.id === taskId) {
@@ -405,10 +409,11 @@ export default function TasksScreen() {
       })
     );
     
-    // 🔥 FIRE AND FORGET - Backend update happens in background (no blocking)
+    // 🔥 FIRE AND FORGET - Backend update happens in background (completely non-blocking)
+    console.log('TasksScreen (iOS): 📡 Background API call starting (non-blocking)');
     api.completeTask(taskId, requiresPending)
       .then((updatedTask) => {
-        console.log('TasksScreen (iOS): Backend confirmed task status:', updatedTask.status);
+        console.log('TasksScreen (iOS): ✅ Backend confirmed task status:', updatedTask.status);
         // Silently sync with server response (in case of discrepancies)
         setTasks((prevTasks) =>
           prevTasks.map((task) =>
