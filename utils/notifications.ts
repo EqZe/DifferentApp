@@ -18,121 +18,147 @@ Notifications.setNotificationHandler({
  * Returns null if registration fails or device is not physical
  */
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
-  console.log('Notifications: Starting push notification registration');
-
-  // Check if running on a physical device
-  if (!Device.isDevice) {
-    console.log('Notifications: Must use physical device for push notifications');
-    return null;
-  }
-
   try {
+    console.log('Notifications: Starting push notification registration');
+
+    // Check if running on a physical device
+    if (!Device.isDevice) {
+      console.log('Notifications: Skipping - must use physical device for push notifications');
+      return null;
+    }
+
     // Configure notification channel for Android FIRST (before requesting permissions)
     if (Platform.OS === 'android') {
-      console.log('Notifications: Setting up Android notification channel');
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'תזכורות משימות',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#2784F5',
-        sound: 'default',
-        enableVibrate: true,
-        showBadge: true,
-      });
+      try {
+        console.log('Notifications: Setting up Android notification channel');
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'תזכורות משימות',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#2784F5',
+          sound: 'default',
+          enableVibrate: true,
+          showBadge: true,
+        });
+        console.log('Notifications: Android channel created successfully');
+      } catch (channelError) {
+        console.log('Notifications: Android channel setup failed (non-critical):', channelError);
+        // Continue anyway - this is not critical
+      }
     }
 
     // Check existing permissions
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    console.log('Notifications: Existing permission status:', existingStatus);
+    let existingStatus = 'undetermined';
+    try {
+      const permissionResult = await Notifications.getPermissionsAsync();
+      existingStatus = permissionResult.status;
+      console.log('Notifications: Existing permission status:', existingStatus);
+    } catch (permError) {
+      console.log('Notifications: Could not check existing permissions:', permError);
+      // Continue to request permissions anyway
+    }
 
     let finalStatus = existingStatus;
 
     // Request permissions if not already granted
     if (existingStatus !== 'granted') {
-      console.log('Notifications: Requesting permissions');
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-      console.log('Notifications: Permission request result:', status);
+      try {
+        console.log('Notifications: Requesting permissions');
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+        console.log('Notifications: Permission request result:', status);
+      } catch (requestError) {
+        console.log('Notifications: Permission request failed:', requestError);
+        return null;
+      }
     }
 
     // If permission not granted, return null
     if (finalStatus !== 'granted') {
-      console.log('Notifications: Permission not granted');
+      console.log('Notifications: Permission not granted, cannot register for push notifications');
       return null;
     }
 
     // Get the Expo push token
-    console.log('Notifications: Getting Expo push token');
+    console.log('Notifications: Attempting to get Expo push token');
     
     // Try to get projectId from Constants
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-    console.log('Notifications: Project ID from config:', projectId);
+    const hasValidProjectId = projectId && projectId !== 'your-project-id-here' && projectId.length > 10;
+    
+    if (hasValidProjectId) {
+      console.log('Notifications: Found EAS project ID in config');
+    } else {
+      console.log('Notifications: No EAS project ID found - using development mode');
+    }
     
     // Build experienceId for development/Expo Go
     const slug = Constants.expoConfig?.slug || 'Different';
-    const owner = Constants.expoConfig?.owner || Constants.manifest?.owner || 'anonymous';
+    const owner = Constants.expoConfig?.owner || Constants.manifest?.owner || 'different';
     const experienceId = `@${owner}/${slug}`;
     
-    console.log('Notifications: Experience ID:', experienceId);
-    console.log('Notifications: Slug:', slug);
-    console.log('Notifications: Owner:', owner);
+    console.log('Notifications: Configuration:', {
+      slug,
+      owner,
+      experienceId,
+      hasProjectId: hasValidProjectId
+    });
 
-    let tokenData;
+    let token: string | null = null;
     
-    try {
-      // Try with projectId first (for production builds with EAS)
-      if (projectId && projectId !== 'your-project-id-here') {
-        console.log('Notifications: Attempting to get token with projectId');
-        tokenData = await Notifications.getExpoPushTokenAsync({
-          projectId: projectId,
-        });
-      } else {
-        // Fallback for development - try multiple approaches
-        console.log('Notifications: Attempting to get token with experienceId (development mode)');
-        
-        try {
-          // First attempt: Use full experienceId
-          tokenData = await Notifications.getExpoPushTokenAsync({
-            experienceId: experienceId,
-          });
-        } catch (firstError: any) {
-          console.log('Notifications: First attempt failed, trying without parameters');
-          
-          try {
-            // Second attempt: Try without any parameters (works in some dev environments)
-            tokenData = await Notifications.getExpoPushTokenAsync();
-          } catch (secondError: any) {
-            console.log('Notifications: Second attempt failed, trying with slug only');
-            
-            // Third attempt: Try with just the slug
-            tokenData = await Notifications.getExpoPushTokenAsync({
-              experienceId: slug,
-            });
-          }
-        }
+    // Try multiple approaches to get the token
+    const attempts = [
+      // Attempt 1: Use projectId if available (for EAS builds)
+      async () => {
+        if (!hasValidProjectId) throw new Error('No valid project ID');
+        console.log('Notifications: Attempt 1 - Using EAS project ID');
+        const result = await Notifications.getExpoPushTokenAsync({ projectId: projectId! });
+        return result.data;
+      },
+      // Attempt 2: Use experienceId (for Expo Go / development)
+      async () => {
+        console.log('Notifications: Attempt 2 - Using experience ID:', experienceId);
+        const result = await Notifications.getExpoPushTokenAsync({ experienceId });
+        return result.data;
+      },
+      // Attempt 3: Try without parameters (works in some environments)
+      async () => {
+        console.log('Notifications: Attempt 3 - Using default configuration');
+        const result = await Notifications.getExpoPushTokenAsync();
+        return result.data;
+      },
+      // Attempt 4: Try with just the slug
+      async () => {
+        console.log('Notifications: Attempt 4 - Using slug only:', slug);
+        const result = await Notifications.getExpoPushTokenAsync({ experienceId: slug });
+        return result.data;
       }
-    } catch (tokenError: any) {
-      console.error('Notifications: All token retrieval attempts failed:', tokenError);
-      console.error('Notifications: Error code:', tokenError.code);
-      console.error('Notifications: Error message:', tokenError.message);
-      throw tokenError;
+    ];
+
+    // Try each approach until one succeeds
+    for (let i = 0; i < attempts.length; i++) {
+      try {
+        token = await attempts[i]();
+        if (token) {
+          console.log('Notifications: ✅ Successfully obtained push token (attempt', i + 1, '):', token);
+          break;
+        }
+      } catch (attemptError: any) {
+        console.log(`Notifications: Attempt ${i + 1} failed:`, attemptError?.message || attemptError);
+        // Continue to next attempt
+      }
     }
 
-    const token = tokenData.data;
-    console.log('Notifications: Successfully obtained push token:', token);
+    if (!token) {
+      console.log('Notifications: ⚠️ All token retrieval attempts failed - push notifications will not work');
+      console.log('Notifications: This is normal in development mode without EAS configuration');
+      return null;
+    }
 
     return token;
   } catch (error: any) {
-    console.error('Notifications: Error registering for push notifications:', error);
-    
-    // Log more details about the error
-    if (error.code) {
-      console.error('Notifications: Error code:', error.code);
-    }
-    if (error.message) {
-      console.error('Notifications: Error message:', error.message);
-    }
-    
+    console.log('Notifications: ⚠️ Push notification registration failed:', error?.message || error);
+    console.log('Notifications: This is expected in development mode - push notifications require EAS build or proper configuration');
     return null;
   }
 }
@@ -160,10 +186,10 @@ export async function scheduleLocalNotification(
       },
     });
 
-    console.log('Notifications: Local notification scheduled with ID:', notificationId);
+    console.log('Notifications: ✅ Local notification scheduled with ID:', notificationId);
     return notificationId;
   } catch (error) {
-    console.error('Notifications: Error scheduling local notification:', error);
+    console.log('Notifications: ⚠️ Error scheduling local notification:', error);
     return null;
   }
 }
@@ -175,8 +201,8 @@ export async function cancelAllNotifications(): Promise<void> {
   try {
     console.log('Notifications: Cancelling all scheduled notifications');
     await Notifications.cancelAllScheduledNotificationsAsync();
-    console.log('Notifications: All notifications cancelled');
+    console.log('Notifications: ✅ All notifications cancelled');
   } catch (error) {
-    console.error('Notifications: Error cancelling notifications:', error);
+    console.log('Notifications: ⚠️ Error cancelling notifications:', error);
   }
 }

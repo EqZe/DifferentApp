@@ -279,25 +279,25 @@ export const api = {
   },
 
   savePushToken: async (authUserId: string, pushToken: string): Promise<void> => {
-    console.log('API: Saving push token for user', authUserId);
-    console.log('API: Push token to save:', pushToken);
-    
-    const { data, error } = await supabase
-      .from('users')
-      .update({ push_token: pushToken })
-      .eq('auth_user_id', authUserId)
-      .select();
+    try {
+      console.log('API: Saving push token for user', authUserId);
+      
+      const { data, error } = await supabase
+        .from('users')
+        .update({ push_token: pushToken })
+        .eq('auth_user_id', authUserId)
+        .select();
 
-    if (error) {
-      console.error('API: Save push token failed', error);
-      console.error('API: Error code:', error.code);
-      console.error('API: Error message:', error.message);
-      console.error('API: Error details:', error.details);
-      throw new Error(error.message || 'שגיאה בשמירת טוקן התראות');
+      if (error) {
+        console.log('API: ⚠️ Save push token failed:', error.message);
+        throw new Error(error.message || 'שגיאה בשמירת טוקן התראות');
+      }
+
+      console.log('API: ✅ Push token saved successfully');
+    } catch (error: any) {
+      console.log('API: ⚠️ Push token save error:', error?.message || error);
+      throw error;
     }
-
-    console.log('API: Push token save response:', data);
-    console.log('API: ✅ Push token saved successfully');
   },
 
   // Posts endpoints

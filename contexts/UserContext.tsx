@@ -73,14 +73,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       console.log('UserContext: Loading user profile for auth user', authUserId);
       const userData = await api.getUserByAuthId(authUserId);
-      console.log('UserContext: User profile loaded successfully -', userData.fullName, 'hasContract:', userData.hasContract);
-      console.log('UserContext: Current push token in database:', userData.pushToken || 'none');
+      console.log('UserContext: ✅ User profile loaded -', userData.fullName, 'hasContract:', userData.hasContract);
       setUserState(userData);
 
-      // Register for push notifications after successful login
-      registerPushToken(authUserId);
+      // Register for push notifications after successful login (non-blocking)
+      // Use setTimeout to ensure this doesn't block the UI
+      setTimeout(() => {
+        registerPushToken(authUserId).catch(err => {
+          console.log('UserContext: Push token registration failed (non-critical):', err?.message || err);
+        });
+      }, 1000);
     } catch (error) {
-      console.error('UserContext: Error loading user profile:', error);
+      console.error('UserContext: ❌ Error loading user profile:', error);
       setUserState(null);
     } finally {
       setIsLoading(false);
@@ -93,36 +97,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const pushToken = await registerForPushNotificationsAsync();
       
       if (pushToken) {
-        console.log('UserContext: Push token obtained successfully:', pushToken);
-        console.log('UserContext: Saving push token to database for user:', authUserId);
+        console.log('UserContext: ✅ Push token obtained:', pushToken);
         
         try {
           await api.savePushToken(authUserId, pushToken);
-          console.log('UserContext: ✅ Push token saved successfully to database');
-          
-          // Verify it was saved by fetching the user again
-          const updatedUser = await api.getUserByAuthId(authUserId);
-          console.log('UserContext: Verification - push token in database:', updatedUser.pushToken || 'FAILED TO SAVE');
-          
-          if (updatedUser.pushToken === pushToken) {
-            console.log('UserContext: ✅ Push token verification successful');
-          } else {
-            console.error('UserContext: ❌ Push token verification failed - token mismatch');
-          }
-        } catch (saveError) {
-          console.error('UserContext: ❌ Failed to save push token to database:', saveError);
-          if (saveError instanceof Error) {
-            console.error('UserContext: Error details:', saveError.message);
-          }
+          console.log('UserContext: ✅ Push token saved to database');
+        } catch (saveError: any) {
+          console.log('UserContext: ⚠️ Failed to save push token:', saveError?.message || saveError);
         }
       } else {
-        console.log('UserContext: Could not obtain push token (simulator, permission denied, or configuration issue)');
+        console.log('UserContext: ℹ️ No push token obtained (expected in development/simulator)');
       }
-    } catch (error) {
-      console.error('UserContext: Error in push token registration flow:', error);
-      if (error instanceof Error) {
-        console.error('UserContext: Error details:', error.message);
-      }
+    } catch (error: any) {
+      console.log('UserContext: ⚠️ Push notification setup failed:', error?.message || error);
+      // This is non-critical - app continues to work without push notifications
     }
   };
 
@@ -140,11 +128,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     try {
       console.log('UserContext: Refreshing user data from database');
       const freshUserData = await api.getUserByAuthId(session.user.id);
-      console.log('UserContext: User data refreshed successfully, hasContract:', freshUserData.hasContract);
-      console.log('UserContext: Push token after refresh:', freshUserData.pushToken || 'none');
+      console.log('UserContext: ✅ User data refreshed, hasContract:', freshUserData.hasContract);
       setUserState(freshUserData);
     } catch (error) {
-      console.error('UserContext: Failed to refresh user data', error);
+      console.error('UserContext: ❌ Failed to refresh user data', error);
     }
   };
 
