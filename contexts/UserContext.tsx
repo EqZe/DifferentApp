@@ -93,10 +93,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       
       if (pushToken) {
         console.log('UserContext: Push token obtained, saving to backend');
-        // TODO: Backend Integration - POST /api/users/:userId/push-token
-        // Body: { pushToken: string }
-        // This endpoint should save the push token to the users table
-        console.log('UserContext: Push token ready for backend:', pushToken);
+        await api.savePushToken(authUserId, pushToken);
+        console.log('UserContext: Push token saved successfully to backend');
       } else {
         console.log('UserContext: Could not obtain push token (simulator or permission denied)');
       }

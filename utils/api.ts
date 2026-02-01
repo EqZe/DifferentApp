@@ -276,6 +276,22 @@ export const api = {
     };
   },
 
+  savePushToken: async (authUserId: string, pushToken: string): Promise<void> => {
+    console.log('API: Saving push token for user', authUserId);
+    
+    const { error } = await supabase
+      .from('users')
+      .update({ push_token: pushToken })
+      .eq('auth_user_id', authUserId);
+
+    if (error) {
+      console.error('API: Save push token failed', error);
+      throw new Error(error.message || 'שגיאה בשמירת טוקן התראות');
+    }
+
+    console.log('API: Push token saved successfully');
+  },
+
   // Posts endpoints
   getPosts: async (): Promise<PostFrontend[]> => {
     console.log('API: Getting ALL published posts (public and contract_only)');
