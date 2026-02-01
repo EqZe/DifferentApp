@@ -18,7 +18,9 @@
       "bundleIdentifier": "com.anonymous.Natively",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -47,7 +49,9 @@
         {
           "icon": "./assets/images/final_quest_240x240.png",
           "color": "#2784F5",
-          "sounds": ["default"],
+          "sounds": [
+            "default"
+          ],
           "androidMode": "default",
           "androidCollapsedTitle": "Different"
         }
