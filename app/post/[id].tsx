@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -33,8 +33,9 @@ function resolveImageSource(source: string | number | ImageSourcePropType | unde
 }
 
 export default function PostDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, fromHome } = useLocalSearchParams<{ id: string; fromHome?: string }>();
   const { user } = useUser();
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = isDark ? designColors.dark : designColors.light;
@@ -75,6 +76,17 @@ export default function PostDetailScreen() {
     console.log('PostDetailScreen: Refreshing post');
     setRefreshing(true);
     loadPost();
+  };
+
+  const handleBackPress = () => {
+    console.log('PostDetailScreen: Back button pressed, fromHome:', fromHome);
+    if (fromHome === 'true') {
+      // Navigate directly to home screen
+      router.push('/(tabs)/(home)');
+    } else {
+      // Default back behavior
+      router.back();
+    }
   };
 
   if (loading) {

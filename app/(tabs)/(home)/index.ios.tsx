@@ -133,8 +133,28 @@ export default function HomeScreen() {
     await loadCategories();
   };
 
-  const handleCategoryPress = (categoryId: string, categoryName: string) => {
+  const handleCategoryPress = async (categoryId: string, categoryName: string) => {
     console.log('HomeScreen: Opening category', categoryName, 'with ID', categoryId);
+    
+    // Check if category has only 1 post
+    const category = categories.find(c => c.id === categoryId);
+    if (category && category.postCount === 1) {
+      console.log('HomeScreen: Category has only 1 post, navigating directly to post');
+      try {
+        // Fetch the single post for this category
+        const posts = await api.getPostsByCategory(categoryId);
+        if (posts.length === 1) {
+          console.log('HomeScreen: Navigating directly to post', posts[0].id);
+          // Navigate directly to the post with a flag to return to home
+          router.push(`/post/${posts[0].id}?fromHome=true`);
+          return;
+        }
+      } catch (error) {
+        console.error('HomeScreen: Failed to fetch posts for single-post category', error);
+        // Fall back to category view on error
+      }
+    }
+    
     // Use category ID for routing (more reliable than name)
     router.push(`/(tabs)/(home)/category/${categoryId}`);
   };
