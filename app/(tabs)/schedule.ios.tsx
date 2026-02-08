@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@/contexts/UserContext';
 import { designColors, typography, spacing, radius, shadows } from '@/styles/designSystem';
@@ -88,9 +88,50 @@ const styles = StyleSheet.create({
   toggleButtonTextActive: {
     color: '#FFFFFF',
   },
+  languageToggle: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    backgroundColor: designColors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xs,
+    ...shadows.sm,
+  },
+  languageButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    alignItems: 'center',
+  },
+  languageButtonActive: {
+    backgroundColor: designColors.accent,
+  },
+  languageButtonText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium as any,
+    color: designColors.textSecondary,
+  },
+  languageButtonTextActive: {
+    color: '#FFFFFF',
+  },
   scrollContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl * 2,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  gridDayCard: {
+    width: (width - spacing.lg * 2 - spacing.md) / 2,
+    backgroundColor: designColors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.md,
   },
   dayCard: {
     backgroundColor: designColors.surface,
@@ -108,6 +149,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: designColors.border,
   },
+  gridDayHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: designColors.border,
+  },
   dayHeaderLeft: {
     flex: 1,
   },
@@ -117,14 +165,29 @@ const styles = StyleSheet.create({
     color: designColors.text,
     textAlign: 'right',
   },
+  gridDayOfWeek: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold as any,
+    color: designColors.text,
+    textAlign: 'center',
+  },
   dayDate: {
     fontSize: typography.sizes.sm,
     color: designColors.textSecondary,
     textAlign: 'right',
     marginTop: spacing.xs,
   },
+  gridDayDate: {
+    fontSize: typography.sizes.xs,
+    color: designColors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
   eventsList: {
     gap: spacing.sm,
+  },
+  gridEventsList: {
+    gap: spacing.xs,
   },
   eventItem: {
     flexDirection: 'row',
@@ -136,12 +199,26 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: designColors.primary,
   },
+  gridEventItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: designColors.background,
+    borderRadius: radius.sm,
+    borderLeftWidth: 2,
+    borderLeftColor: designColors.primary,
+  },
   eventItemWithTime: {
     borderLeftColor: designColors.accent,
   },
   eventContent: {
     flex: 1,
     marginLeft: spacing.sm,
+  },
+  gridEventContent: {
+    flex: 1,
+    marginLeft: spacing.xs,
   },
   eventTime: {
     fontSize: typography.sizes.sm,
@@ -150,8 +227,20 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginBottom: spacing.xs,
   },
+  gridEventTime: {
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold as any,
+    color: designColors.accent,
+    textAlign: 'right',
+    marginBottom: 2,
+  },
   eventDescription: {
     fontSize: typography.sizes.md,
+    color: designColors.text,
+    textAlign: 'right',
+  },
+  gridEventDescription: {
+    fontSize: typography.sizes.xs,
     color: designColors.text,
     textAlign: 'right',
   },
@@ -161,6 +250,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     paddingVertical: spacing.lg,
+  },
+  gridNoEventsText: {
+    fontSize: typography.sizes.xs,
+    color: designColors.textSecondary,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    paddingVertical: spacing.sm,
   },
   emptyState: {
     flex: 1,
@@ -256,6 +352,12 @@ const styles = StyleSheet.create({
   },
 });
 
+// Helper function to detect if text is Hebrew
+const isHebrew = (text: string): boolean => {
+  const hebrewRegex = /[\u0590-\u05FF]/;
+  return hebrewRegex.test(text);
+};
+
 // Parse schedule data from database
 const parseScheduleData = (scheduleJson: any): ScheduleDay[] => {
   if (!scheduleJson || !Array.isArray(scheduleJson.schedule)) {
@@ -290,6 +392,7 @@ export default function ScheduleScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'day' | 'full'>('full');
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const [languageFilter, setLanguageFilter] = useState<'all' | 'hebrew' | 'english'>('all');
 
   const loadSchedule = useCallback(async () => {
     if (!user?.id) {
@@ -345,30 +448,56 @@ export default function ScheduleScreen() {
     setRefreshing(false);
   }, [loadSchedule]);
 
-  const renderEvent = (event: ScheduleEvent, index: number) => {
+  // Filter events based on language selection
+  const filterEventsByLanguage = useCallback((events: ScheduleEvent[]): ScheduleEvent[] => {
+    if (languageFilter === 'all') {
+      return events;
+    }
+    
+    return events.filter(event => {
+      const eventIsHebrew = isHebrew(event.description);
+      if (languageFilter === 'hebrew') {
+        return eventIsHebrew;
+      } else {
+        return !eventIsHebrew;
+      }
+    });
+  }, [languageFilter]);
+
+  const renderEvent = (event: ScheduleEvent, index: number, isGrid: boolean = false) => {
     const hasTime = Boolean(event.time);
     
     return (
       <View
         key={index}
-        style={[styles.eventItem, hasTime && styles.eventItemWithTime]}
+        style={[
+          isGrid ? styles.gridEventItem : styles.eventItem,
+          hasTime && styles.eventItemWithTime
+        ]}
       >
         <IconSymbol
           ios_icon_name={hasTime ? 'clock.fill' : 'circle.fill'}
           android_material_icon_name={hasTime ? 'access-time' : 'circle'}
-          size={20}
+          size={isGrid ? 14 : 20}
           color={hasTime ? designColors.accent : designColors.primary}
         />
-        <View style={styles.eventContent}>
-          {hasTime && <Text style={styles.eventTime}>{event.time}</Text>}
-          <Text style={styles.eventDescription}>{event.description}</Text>
+        <View style={isGrid ? styles.gridEventContent : styles.eventContent}>
+          {hasTime && (
+            <Text style={isGrid ? styles.gridEventTime : styles.eventTime}>
+              {event.time}
+            </Text>
+          )}
+          <Text style={isGrid ? styles.gridEventDescription : styles.eventDescription}>
+            {event.description}
+          </Text>
         </View>
       </View>
     );
   };
 
   const renderDayCard = (day: ScheduleDay, index: number) => {
-    const hasEvents = day.events.length > 0;
+    const filteredEvents = filterEventsByLanguage(day.events);
+    const hasEvents = filteredEvents.length > 0;
     
     return (
       <View key={index} style={styles.dayCard}>
@@ -387,10 +516,32 @@ export default function ScheduleScreen() {
         
         {hasEvents ? (
           <View style={styles.eventsList}>
-            {day.events.map((event, eventIndex) => renderEvent(event, eventIndex))}
+            {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex, false))}
           </View>
         ) : (
           <Text style={styles.noEventsText}>אין אירועים מתוכננים ליום זה</Text>
+        )}
+      </View>
+    );
+  };
+
+  const renderGridDayCard = (day: ScheduleDay, index: number) => {
+    const filteredEvents = filterEventsByLanguage(day.events);
+    const hasEvents = filteredEvents.length > 0;
+    
+    return (
+      <View key={index} style={styles.gridDayCard}>
+        <View style={styles.gridDayHeader}>
+          <Text style={styles.gridDayOfWeek}>{day.dayOfWeek}</Text>
+          <Text style={styles.gridDayDate}>{day.date}</Text>
+        </View>
+        
+        {hasEvents ? (
+          <View style={styles.gridEventsList}>
+            {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex, true))}
+          </View>
+        ) : (
+          <Text style={styles.gridNoEventsText}>אין אירועים</Text>
         )}
       </View>
     );
@@ -402,10 +553,72 @@ export default function ScheduleScreen() {
     }
 
     const selectedDay = scheduleData[selectedDayIndex];
-    const hasEvents = selectedDay.events.length > 0;
+    const filteredEvents = filterEventsByLanguage(selectedDay.events);
+    const hasEvents = filteredEvents.length > 0;
 
     return (
       <>
+        {/* Language toggle for Day View */}
+        <View style={styles.languageToggle}>
+          <TouchableOpacity
+            style={[
+              styles.languageButton,
+              languageFilter === 'all' && styles.languageButtonActive,
+            ]}
+            onPress={() => {
+              console.log('ScheduleScreen (iOS): Language filter set to all');
+              setLanguageFilter('all');
+            }}
+          >
+            <Text
+              style={[
+                styles.languageButtonText,
+                languageFilter === 'all' && styles.languageButtonTextActive,
+              ]}
+            >
+              הכל
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.languageButton,
+              languageFilter === 'hebrew' && styles.languageButtonActive,
+            ]}
+            onPress={() => {
+              console.log('ScheduleScreen (iOS): Language filter set to Hebrew');
+              setLanguageFilter('hebrew');
+            }}
+          >
+            <Text
+              style={[
+                styles.languageButtonText,
+                languageFilter === 'hebrew' && styles.languageButtonTextActive,
+              ]}
+            >
+              עברית
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.languageButton,
+              languageFilter === 'english' && styles.languageButtonActive,
+            ]}
+            onPress={() => {
+              console.log('ScheduleScreen (iOS): Language filter set to English');
+              setLanguageFilter('english');
+            }}
+          >
+            <Text
+              style={[
+                styles.languageButtonText,
+                languageFilter === 'english' && styles.languageButtonTextActive,
+              ]}
+            >
+              English
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Day selector */}
         <View style={styles.daySelector}>
           <ScrollView
@@ -458,10 +671,16 @@ export default function ScheduleScreen() {
 
           {hasEvents ? (
             <View style={styles.eventsList}>
-              {selectedDay.events.map((event, eventIndex) => renderEvent(event, eventIndex))}
+              {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex, false))}
             </View>
           ) : (
-            <Text style={styles.noEventsText}>אין אירועים מתוכננים ליום זה</Text>
+            <Text style={styles.noEventsText}>
+              {languageFilter === 'all' 
+                ? 'אין אירועים מתוכננים ליום זה'
+                : languageFilter === 'hebrew'
+                ? 'אין אירועים בעברית ליום זה'
+                : 'No events in English for this day'}
+            </Text>
           )}
         </View>
       </>
@@ -469,7 +688,11 @@ export default function ScheduleScreen() {
   };
 
   const renderFullScheduleView = () => {
-    return scheduleData.map((day, index) => renderDayCard(day, index));
+    return (
+      <View style={styles.gridContainer}>
+        {scheduleData.map((day, index) => renderGridDayCard(day, index))}
+      </View>
+    );
   };
 
   if (loading) {
