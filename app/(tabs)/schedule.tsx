@@ -173,10 +173,14 @@ const styles = StyleSheet.create({
   },
   calendarCell: {
     flex: 1,
-    aspectRatio: 1,
     backgroundColor: designColors.background,
     padding: spacing.xs,
-    minHeight: 80,
+  },
+  calendarCellWithEvents: {
+    minHeight: 120,
+  },
+  calendarCellWithoutEvents: {
+    minHeight: 40,
   },
   calendarCellToday: {
     backgroundColor: designColors.primaryLight,
@@ -204,24 +208,24 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   eventsContainer: {
-    gap: 2,
+    gap: 3,
   },
   eventLine: {
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-    borderRadius: 2,
+    paddingVertical: 3,
+    paddingHorizontal: 5,
+    borderRadius: 3,
     backgroundColor: designColors.primary,
   },
   eventLineWithTime: {
     backgroundColor: designColors.accent,
   },
   eventText: {
-    fontSize: 9,
+    fontSize: 10,
     color: '#FFFFFF',
-    numberOfLines: 1,
+    numberOfLines: 2,
   },
   moreEventsText: {
-    fontSize: 9,
+    fontSize: 10,
     color: designColors.primary,
     fontWeight: typography.weights.semibold as any,
     marginTop: 2,
@@ -390,6 +394,45 @@ const parseScheduleData = (scheduleJson: any): ScheduleDay[] => {
   }));
 };
 
+// Find the month with the most events
+const findMonthWithMostEvents = (scheduleData: ScheduleDay[]): Date => {
+  if (scheduleData.length === 0) {
+    return new Date();
+  }
+
+  const eventCountByMonth: { [key: string]: number } = {};
+
+  scheduleData.forEach(day => {
+    // Parse date format: "7.1.25" -> day.month.year
+    const parts = day.date.split('.');
+    if (parts.length === 3) {
+      const month = parseInt(parts[1], 10);
+      const year = parseInt(parts[2], 10) + 2000; // Convert 25 to 2025
+      const monthKey = `${year}-${month}`;
+      
+      eventCountByMonth[monthKey] = (eventCountByMonth[monthKey] || 0) + day.events.length;
+    }
+  });
+
+  let maxCount = 0;
+  let bestMonthKey = '';
+
+  for (const monthKey in eventCountByMonth) {
+    if (eventCountByMonth[monthKey] > maxCount) {
+      maxCount = eventCountByMonth[monthKey];
+      bestMonthKey = monthKey;
+    }
+  }
+
+  if (bestMonthKey) {
+    const [year, month] = bestMonthKey.split('-').map(Number);
+    console.log('ScheduleScreen: Month with most events:', bestMonthKey, 'with', maxCount, 'events');
+    return new Date(year, month - 1, 1);
+  }
+
+  return new Date();
+};
+
 export default function ScheduleScreen() {
   const { user } = useUser();
   const colorScheme = useColorScheme();
@@ -401,6 +444,7 @@ export default function ScheduleScreen() {
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [languageFilter, setLanguageFilter] = useState<'hebrew' | 'english'>('hebrew');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [hasInitializedMonth, setHasInitializedMonth] = useState(false);
 
   const loadSchedule = useCallback(async () => {
     if (!user?.id) {
@@ -432,6 +476,14 @@ export default function ScheduleScreen() {
         setScheduleData(parsedSchedule);
         setPersonName(data.schedule.person_name || user.fullName || '');
         console.log('ScheduleScreen: Parsed schedule days:', parsedSchedule.length);
+        
+        // Auto-open to month with most events (only once on initial load)
+        if (!hasInitializedMonth && parsedSchedule.length > 0) {
+          const bestMonth = findMonthWithMostEvents(parsedSchedule);
+          setCurrentMonth(bestMonth);
+          setHasInitializedMonth(true);
+          console.log('ScheduleScreen: Auto-opened to month with most events');
+        }
       } else {
         console.log('ScheduleScreen: No schedule data found');
         setScheduleData([]);
@@ -443,7 +495,7 @@ export default function ScheduleScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, hasInitializedMonth]);
 
   useEffect(() => {
     loadSchedule();
@@ -467,6 +519,15 @@ export default function ScheduleScreen() {
       }
     });
   }, [languageFilter]);
+
+  // Check if a week has any events
+  const weekHasEvents = useCallback((week: CalendarDay[]): boolean => {
+    return week.some(day => {
+      if (!day.scheduleDay) return false;
+      const filteredEvents = filterEventsByLanguage(day.scheduleDay.events);
+      return filteredEvents.length > 0;
+    });
+  }, [filterEventsByLanguage]);
 
   // Generate calendar grid for the current month
   const calendarGrid = useMemo((): CalendarDay[][] => {
@@ -562,12 +623,12 @@ export default function ScheduleScreen() {
     }
   }, [scheduleData]);
 
-  const renderCalendarCell = (calendarDay: CalendarDay, index: number) => {
+  const renderCalendarCell = (calendarDay: CalendarDay, index: number, hasEventsInRow: boolean) => {
     const filteredEvents = calendarDay.scheduleDay 
       ? filterEventsByLanguage(calendarDay.scheduleDay.events)
       : [];
     
-    const maxVisibleEvents = 3;
+    const maxVisibleEvents = 4;
     const visibleEvents = filteredEvents.slice(0, maxVisibleEvents);
     const remainingCount = filteredEvents.length - maxVisibleEvents;
     
@@ -578,6 +639,7 @@ export default function ScheduleScreen() {
         key={index}
         style={[
           styles.calendarCell,
+          hasEventsInRow ? styles.calendarCellWithEvents : styles.calendarCellWithoutEvents,
           calendarDay.isToday && styles.calendarCellToday,
           !calendarDay.isCurrentMonth && styles.calendarCellOtherMonth,
         ]}
@@ -611,7 +673,7 @@ export default function ScheduleScreen() {
                     hasTime && styles.eventLineWithTime,
                   ]}
                 >
-                  <Text style={styles.eventText} numberOfLines={1}>
+                  <Text style={styles.eventText} numberOfLines={2}>
                     {eventText}
                   </Text>
                 </View>
@@ -800,11 +862,15 @@ export default function ScheduleScreen() {
         
         {/* Calendar grid */}
         <View style={styles.calendarGrid}>
-          {calendarGrid.map((week, weekIndex) => (
-            <View key={weekIndex} style={styles.calendarRow}>
-              {week.map((day, dayIndex) => renderCalendarCell(day, dayIndex))}
-            </View>
-          ))}
+          {calendarGrid.map((week, weekIndex) => {
+            const hasEvents = weekHasEvents(week);
+            
+            return (
+              <View key={weekIndex} style={styles.calendarRow}>
+                {week.map((day, dayIndex) => renderCalendarCell(day, dayIndex, hasEvents))}
+              </View>
+            );
+          })}
         </View>
       </View>
     );
