@@ -37,6 +37,8 @@ export interface UserFrontend {
   travelDate: string | null;
   createdAt: string;
   pushToken: string | null; // Push notification token
+  schedule?: any; // Schedule data (JSONB)
+  scheduleUpdatedAt?: string | null; // Schedule last updated timestamp
 }
 
 export interface PostBlockFrontend {

@@ -80,6 +80,8 @@ export interface User {
   travel_date: string | null;
   created_at: string;
   push_token: string | null; // Push notification token
+  schedule?: any; // Schedule data (JSONB)
+  schedule_updated_at?: string | null; // Schedule last updated timestamp
 }
 
 export interface Category {

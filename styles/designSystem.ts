@@ -52,6 +52,16 @@ export const designColors = {
     border: '#334155',
     divider: '#1E293B',
   },
+  
+  // Convenience shortcuts (use light theme by default)
+  background: '#FFFFFF',
+  surface: '#FFFFFF',
+  border: '#E2E8F0',
+  text: {
+    primary: '#0F172A',
+    secondary: '#64748B',
+    tertiary: '#94A3B8',
+  },
 };
 
 // Typography System
@@ -124,6 +134,25 @@ export const typography = {
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '400' as const,
+  },
+  
+  // Size shortcuts for convenience
+  sizes: {
+    xs: 12,
+    sm: 14,
+    md: 16,
+    lg: 18,
+    xl: 20,
+    xxl: 24,
+    xxxl: 28,
+  },
+  
+  // Weight shortcuts
+  weights: {
+    regular: '400' as const,
+    medium: '500' as const,
+    semibold: '600' as const,
+    bold: '700' as const,
   },
 };
 

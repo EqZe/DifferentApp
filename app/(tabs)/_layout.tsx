@@ -57,6 +57,17 @@ export default function TabLayout() {
     });
   }
 
+  // Add schedule tab for second-stage users (signed agreement)
+  if (user && user.hasContract) {
+    console.log('Adding schedule tab for second-stage user');
+    tabs.push({
+      name: 'schedule',
+      route: '/(tabs)/schedule' as Href,
+      icon: 'calendar-today',
+      label: 'לוח זמנים',
+    });
+  }
+
   // Profile tab is always last
   tabs.push({
     name: 'profile',
