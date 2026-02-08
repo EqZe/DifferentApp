@@ -392,7 +392,7 @@ export default function ScheduleScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'day' | 'full'>('full');
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
-  const [languageFilter, setLanguageFilter] = useState<'all' | 'hebrew' | 'english'>('all');
+  const [languageFilter, setLanguageFilter] = useState<'hebrew' | 'english'>('hebrew');
 
   const loadSchedule = useCallback(async () => {
     if (!user?.id) {
@@ -450,10 +450,6 @@ export default function ScheduleScreen() {
 
   // Filter events based on language selection
   const filterEventsByLanguage = useCallback((events: ScheduleEvent[]): ScheduleEvent[] => {
-    if (languageFilter === 'all') {
-      return events;
-    }
-    
     return events.filter(event => {
       const eventIsHebrew = isHebrew(event.description);
       if (languageFilter === 'hebrew') {
@@ -519,7 +515,11 @@ export default function ScheduleScreen() {
             {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex, false))}
           </View>
         ) : (
-          <Text style={styles.noEventsText}>אין אירועים מתוכננים ליום זה</Text>
+          <Text style={styles.noEventsText}>
+            {languageFilter === 'hebrew'
+              ? 'אין אירועים בעברית ליום זה'
+              : 'No events in English for this day'}
+          </Text>
         )}
       </View>
     );
@@ -541,7 +541,9 @@ export default function ScheduleScreen() {
             {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex, true))}
           </View>
         ) : (
-          <Text style={styles.gridNoEventsText}>אין אירועים</Text>
+          <Text style={styles.gridNoEventsText}>
+            {languageFilter === 'hebrew' ? 'אין אירועים' : 'No events'}
+          </Text>
         )}
       </View>
     );
@@ -558,67 +560,6 @@ export default function ScheduleScreen() {
 
     return (
       <>
-        {/* Language toggle for Day View */}
-        <View style={styles.languageToggle}>
-          <TouchableOpacity
-            style={[
-              styles.languageButton,
-              languageFilter === 'all' && styles.languageButtonActive,
-            ]}
-            onPress={() => {
-              console.log('ScheduleScreen: Language filter set to all');
-              setLanguageFilter('all');
-            }}
-          >
-            <Text
-              style={[
-                styles.languageButtonText,
-                languageFilter === 'all' && styles.languageButtonTextActive,
-              ]}
-            >
-              הכל
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.languageButton,
-              languageFilter === 'hebrew' && styles.languageButtonActive,
-            ]}
-            onPress={() => {
-              console.log('ScheduleScreen: Language filter set to Hebrew');
-              setLanguageFilter('hebrew');
-            }}
-          >
-            <Text
-              style={[
-                styles.languageButtonText,
-                languageFilter === 'hebrew' && styles.languageButtonTextActive,
-              ]}
-            >
-              עברית
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.languageButton,
-              languageFilter === 'english' && styles.languageButtonActive,
-            ]}
-            onPress={() => {
-              console.log('ScheduleScreen: Language filter set to English');
-              setLanguageFilter('english');
-            }}
-          >
-            <Text
-              style={[
-                styles.languageButtonText,
-                languageFilter === 'english' && styles.languageButtonTextActive,
-              ]}
-            >
-              English
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Day selector */}
         <View style={styles.daySelector}>
           <ScrollView
@@ -675,9 +616,7 @@ export default function ScheduleScreen() {
             </View>
           ) : (
             <Text style={styles.noEventsText}>
-              {languageFilter === 'all' 
-                ? 'אין אירועים מתוכננים ליום זה'
-                : languageFilter === 'hebrew'
+              {languageFilter === 'hebrew'
                 ? 'אין אירועים בעברית ליום זה'
                 : 'No events in English for this day'}
             </Text>
@@ -765,6 +704,48 @@ export default function ScheduleScreen() {
                 ]}
               >
                 תצוגת יום
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Language toggle - shown in BOTH views */}
+          <View style={styles.languageToggle}>
+            <TouchableOpacity
+              style={[
+                styles.languageButton,
+                languageFilter === 'hebrew' && styles.languageButtonActive,
+              ]}
+              onPress={() => {
+                console.log('ScheduleScreen: Language filter set to Hebrew');
+                setLanguageFilter('hebrew');
+              }}
+            >
+              <Text
+                style={[
+                  styles.languageButtonText,
+                  languageFilter === 'hebrew' && styles.languageButtonTextActive,
+                ]}
+              >
+                עברית
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.languageButton,
+                languageFilter === 'english' && styles.languageButtonActive,
+              ]}
+              onPress={() => {
+                console.log('ScheduleScreen: Language filter set to English');
+                setLanguageFilter('english');
+              }}
+            >
+              <Text
+                style={[
+                  styles.languageButtonText,
+                  languageFilter === 'english' && styles.languageButtonTextActive,
+                ]}
+              >
+                English
               </Text>
             </TouchableOpacity>
           </View>
