@@ -39,6 +39,14 @@ interface ScheduleData {
   personName?: string;
 }
 
+interface CalendarDay {
+  dayNumber: number;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  scheduleDay?: ScheduleDay;
+  fullDate: Date;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -119,144 +127,104 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl * 2,
   },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  gridDayCard: {
-    width: (width - spacing.lg * 2 - spacing.md) / 2,
+  calendarContainer: {
     backgroundColor: designColors.surface,
     borderRadius: radius.xl,
     padding: spacing.md,
-    marginBottom: spacing.md,
     ...shadows.md,
   },
-  dayCard: {
-    backgroundColor: designColors.surface,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...shadows.md,
-  },
-  dayHeader: {
+  monthHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.md,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: designColors.border,
-  },
-  gridDayHeader: {
     alignItems: 'center',
-    marginBottom: spacing.sm,
-    paddingBottom: spacing.sm,
+    marginBottom: spacing.md,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: designColors.border,
   },
-  dayHeaderLeft: {
-    flex: 1,
-  },
-  dayOfWeek: {
+  monthTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold as any,
     color: designColors.text,
-    textAlign: 'right',
   },
-  gridDayOfWeek: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold as any,
-    color: designColors.text,
-    textAlign: 'center',
-  },
-  dayDate: {
-    fontSize: typography.sizes.sm,
-    color: designColors.textSecondary,
-    textAlign: 'right',
-    marginTop: spacing.xs,
-  },
-  gridDayDate: {
-    fontSize: typography.sizes.xs,
-    color: designColors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-  },
-  eventsList: {
-    gap: spacing.sm,
-  },
-  gridEventsList: {
-    gap: spacing.xs,
-  },
-  eventItem: {
+  weekDaysRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    backgroundColor: designColors.background,
-    borderRadius: radius.md,
-    borderLeftWidth: 3,
-    borderLeftColor: designColors.primary,
+    marginBottom: spacing.sm,
   },
-  gridEventItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  weekDayHeader: {
+    flex: 1,
+    alignItems: 'center',
     paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    backgroundColor: designColors.background,
-    borderRadius: radius.sm,
-    borderLeftWidth: 2,
-    borderLeftColor: designColors.primary,
   },
-  eventItemWithTime: {
-    borderLeftColor: designColors.accent,
-  },
-  eventContent: {
-    flex: 1,
-    marginLeft: spacing.sm,
-  },
-  gridEventContent: {
-    flex: 1,
-    marginLeft: spacing.xs,
-  },
-  eventTime: {
-    fontSize: typography.sizes.sm,
+  weekDayText: {
+    fontSize: typography.sizes.xs,
     fontWeight: typography.weights.semibold as any,
-    color: designColors.accent,
-    textAlign: 'right',
+    color: designColors.textSecondary,
+  },
+  calendarGrid: {
+    gap: 1,
+    backgroundColor: designColors.border,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+  },
+  calendarRow: {
+    flexDirection: 'row',
+    gap: 1,
+  },
+  calendarCell: {
+    flex: 1,
+    aspectRatio: 1,
+    backgroundColor: designColors.background,
+    padding: spacing.xs,
+    minHeight: 80,
+  },
+  calendarCellToday: {
+    backgroundColor: designColors.primaryLight,
+  },
+  calendarCellOtherMonth: {
+    opacity: 0.3,
+  },
+  dayNumberContainer: {
+    alignItems: 'center',
     marginBottom: spacing.xs,
   },
-  gridEventTime: {
-    fontSize: typography.sizes.xs,
+  dayNumber: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium as any,
+    color: designColors.text,
+  },
+  dayNumberToday: {
+    backgroundColor: designColors.primary,
+    color: '#FFFFFF',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    textAlign: 'center',
+    lineHeight: 24,
+    overflow: 'hidden',
+  },
+  eventsContainer: {
+    gap: 2,
+  },
+  eventLine: {
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    borderRadius: 2,
+    backgroundColor: designColors.primary,
+  },
+  eventLineWithTime: {
+    backgroundColor: designColors.accent,
+  },
+  eventText: {
+    fontSize: 9,
+    color: '#FFFFFF',
+    numberOfLines: 1,
+  },
+  moreEventsText: {
+    fontSize: 9,
+    color: designColors.primary,
     fontWeight: typography.weights.semibold as any,
-    color: designColors.accent,
-    textAlign: 'right',
-    marginBottom: 2,
-  },
-  eventDescription: {
-    fontSize: typography.sizes.md,
-    color: designColors.text,
-    textAlign: 'right',
-  },
-  gridEventDescription: {
-    fontSize: typography.sizes.xs,
-    color: designColors.text,
-    textAlign: 'right',
-  },
-  noEventsText: {
-    fontSize: typography.sizes.md,
-    color: designColors.textSecondary,
-    textAlign: 'center',
-    fontStyle: 'italic',
-    paddingVertical: spacing.lg,
-  },
-  gridNoEventsText: {
-    fontSize: typography.sizes.xs,
-    color: designColors.textSecondary,
-    textAlign: 'center',
-    fontStyle: 'italic',
-    paddingVertical: spacing.sm,
+    marginTop: 2,
   },
   emptyState: {
     flex: 1,
@@ -350,6 +318,45 @@ const styles = StyleSheet.create({
   daySelectorDateActive: {
     color: '#FFFFFF',
   },
+  eventsList: {
+    gap: spacing.sm,
+  },
+  eventItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: designColors.background,
+    borderRadius: radius.md,
+    borderLeftWidth: 3,
+    borderLeftColor: designColors.primary,
+  },
+  eventItemWithTime: {
+    borderLeftColor: designColors.accent,
+  },
+  eventContent: {
+    flex: 1,
+    marginLeft: spacing.sm,
+  },
+  eventTime: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold as any,
+    color: designColors.accent,
+    textAlign: 'right',
+    marginBottom: spacing.xs,
+  },
+  eventDescription: {
+    fontSize: typography.sizes.md,
+    color: designColors.text,
+    textAlign: 'right',
+  },
+  noEventsText: {
+    fontSize: typography.sizes.md,
+    color: designColors.textSecondary,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    paddingVertical: spacing.lg,
+  },
 });
 
 // Helper function to detect if text is Hebrew
@@ -393,6 +400,7 @@ export default function ScheduleScreen() {
   const [viewMode, setViewMode] = useState<'day' | 'full'>('full');
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [languageFilter, setLanguageFilter] = useState<'hebrew' | 'english'>('hebrew');
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const loadSchedule = useCallback(async () => {
     if (!user?.id) {
@@ -460,91 +468,194 @@ export default function ScheduleScreen() {
     });
   }, [languageFilter]);
 
-  const renderEvent = (event: ScheduleEvent, index: number, isGrid: boolean = false) => {
+  // Generate calendar grid for the current month
+  const calendarGrid = useMemo((): CalendarDay[][] => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    
+    // First day of the month
+    const firstDay = new Date(year, month, 1);
+    const firstDayOfWeek = firstDay.getDay(); // 0 = Sunday
+    
+    // Last day of the month
+    const lastDay = new Date(year, month + 1, 0);
+    const lastDate = lastDay.getDate();
+    
+    // Today
+    const today = new Date();
+    const todayDate = today.getDate();
+    const todayMonth = today.getMonth();
+    const todayYear = today.getFullYear();
+    
+    // Create a map of schedule data by date string
+    const scheduleMap = new Map<string, ScheduleDay>();
+    scheduleData.forEach(day => {
+      scheduleMap.set(day.date, day);
+    });
+    
+    const weeks: CalendarDay[][] = [];
+    let currentWeek: CalendarDay[] = [];
+    
+    // Fill in days from previous month
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      const dayNumber = prevMonthLastDay - i;
+      const fullDate = new Date(year, month - 1, dayNumber);
+      currentWeek.push({
+        dayNumber,
+        isCurrentMonth: false,
+        isToday: false,
+        fullDate,
+      });
+    }
+    
+    // Fill in days of current month
+    for (let day = 1; day <= lastDate; day++) {
+      const fullDate = new Date(year, month, day);
+      const dateString = `${day}.${month + 1}.${String(year).slice(-2)}`;
+      const scheduleDay = scheduleMap.get(dateString);
+      
+      currentWeek.push({
+        dayNumber: day,
+        isCurrentMonth: true,
+        isToday: day === todayDate && month === todayMonth && year === todayYear,
+        scheduleDay,
+        fullDate,
+      });
+      
+      if (currentWeek.length === 7) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+    }
+    
+    // Fill in days from next month
+    if (currentWeek.length > 0) {
+      const remainingDays = 7 - currentWeek.length;
+      for (let day = 1; day <= remainingDays; day++) {
+        const fullDate = new Date(year, month + 1, day);
+        currentWeek.push({
+          dayNumber: day,
+          isCurrentMonth: false,
+          isToday: false,
+          fullDate,
+        });
+      }
+      weeks.push(currentWeek);
+    }
+    
+    return weeks;
+  }, [currentMonth, scheduleData]);
+
+  const handleDayPress = useCallback((calendarDay: CalendarDay) => {
+    if (!calendarDay.scheduleDay) {
+      console.log('ScheduleScreen (iOS): No events for this day');
+      return;
+    }
+    
+    // Find the index of this day in scheduleData
+    const dayIndex = scheduleData.findIndex(d => d.date === calendarDay.scheduleDay?.date);
+    if (dayIndex !== -1) {
+      console.log('ScheduleScreen (iOS): Navigating to day view for', calendarDay.scheduleDay.date);
+      setSelectedDayIndex(dayIndex);
+      setViewMode('day');
+    }
+  }, [scheduleData]);
+
+  const renderCalendarCell = (calendarDay: CalendarDay, index: number) => {
+    const filteredEvents = calendarDay.scheduleDay 
+      ? filterEventsByLanguage(calendarDay.scheduleDay.events)
+      : [];
+    
+    const maxVisibleEvents = 3;
+    const visibleEvents = filteredEvents.slice(0, maxVisibleEvents);
+    const remainingCount = filteredEvents.length - maxVisibleEvents;
+    
+    const dayNumberText = String(calendarDay.dayNumber);
+    
+    return (
+      <TouchableOpacity
+        key={index}
+        style={[
+          styles.calendarCell,
+          calendarDay.isToday && styles.calendarCellToday,
+          !calendarDay.isCurrentMonth && styles.calendarCellOtherMonth,
+        ]}
+        onPress={() => handleDayPress(calendarDay)}
+        disabled={!calendarDay.scheduleDay}
+      >
+        <View style={styles.dayNumberContainer}>
+          <Text
+            style={[
+              styles.dayNumber,
+              calendarDay.isToday && styles.dayNumberToday,
+            ]}
+          >
+            {dayNumberText}
+          </Text>
+        </View>
+        
+        {visibleEvents.length > 0 && (
+          <View style={styles.eventsContainer}>
+            {visibleEvents.map((event, eventIndex) => {
+              const hasTime = Boolean(event.time);
+              const eventText = event.time 
+                ? `${event.time} ${event.description}`
+                : event.description;
+              
+              return (
+                <View
+                  key={eventIndex}
+                  style={[
+                    styles.eventLine,
+                    hasTime && styles.eventLineWithTime,
+                  ]}
+                >
+                  <Text style={styles.eventText} numberOfLines={1}>
+                    {eventText}
+                  </Text>
+                </View>
+              );
+            })}
+            
+            {remainingCount > 0 && (
+              <Text style={styles.moreEventsText}>
+                +{remainingCount} more
+              </Text>
+            )}
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderEvent = (event: ScheduleEvent, index: number) => {
     const hasTime = Boolean(event.time);
     
     return (
       <View
         key={index}
         style={[
-          isGrid ? styles.gridEventItem : styles.eventItem,
+          styles.eventItem,
           hasTime && styles.eventItemWithTime
         ]}
       >
         <IconSymbol
           ios_icon_name={hasTime ? 'clock.fill' : 'circle.fill'}
           android_material_icon_name={hasTime ? 'access-time' : 'circle'}
-          size={isGrid ? 14 : 20}
+          size={20}
           color={hasTime ? designColors.accent : designColors.primary}
         />
-        <View style={isGrid ? styles.gridEventContent : styles.eventContent}>
+        <View style={styles.eventContent}>
           {hasTime && (
-            <Text style={isGrid ? styles.gridEventTime : styles.eventTime}>
+            <Text style={styles.eventTime}>
               {event.time}
             </Text>
           )}
-          <Text style={isGrid ? styles.gridEventDescription : styles.eventDescription}>
+          <Text style={styles.eventDescription}>
             {event.description}
           </Text>
         </View>
-      </View>
-    );
-  };
-
-  const renderDayCard = (day: ScheduleDay, index: number) => {
-    const filteredEvents = filterEventsByLanguage(day.events);
-    const hasEvents = filteredEvents.length > 0;
-    
-    return (
-      <View key={index} style={styles.dayCard}>
-        <View style={styles.dayHeader}>
-          <View style={styles.dayHeaderLeft}>
-            <Text style={styles.dayOfWeek}>{day.dayOfWeek}</Text>
-            <Text style={styles.dayDate}>{day.date}</Text>
-          </View>
-          <IconSymbol
-            ios_icon_name="calendar"
-            android_material_icon_name="calendar-today"
-            size={24}
-            color={designColors.primary}
-          />
-        </View>
-        
-        {hasEvents ? (
-          <View style={styles.eventsList}>
-            {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex, false))}
-          </View>
-        ) : (
-          <Text style={styles.noEventsText}>
-            {languageFilter === 'hebrew'
-              ? 'אין אירועים בעברית ליום זה'
-              : 'No events in English for this day'}
-          </Text>
-        )}
-      </View>
-    );
-  };
-
-  const renderGridDayCard = (day: ScheduleDay, index: number) => {
-    const filteredEvents = filterEventsByLanguage(day.events);
-    const hasEvents = filteredEvents.length > 0;
-    
-    return (
-      <View key={index} style={styles.gridDayCard}>
-        <View style={styles.gridDayHeader}>
-          <Text style={styles.gridDayOfWeek}>{day.dayOfWeek}</Text>
-          <Text style={styles.gridDayDate}>{day.date}</Text>
-        </View>
-        
-        {hasEvents ? (
-          <View style={styles.gridEventsList}>
-            {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex, true))}
-          </View>
-        ) : (
-          <Text style={styles.gridNoEventsText}>
-            {languageFilter === 'hebrew' ? 'אין אירועים' : 'No events'}
-          </Text>
-        )}
       </View>
     );
   };
@@ -569,6 +680,9 @@ export default function ScheduleScreen() {
           >
             {scheduleData.map((day, index) => {
               const isActive = index === selectedDayIndex;
+              const dayOfWeekShort = day.dayOfWeek.substring(0, 3);
+              const dayNumberOnly = day.date.split('.')[0];
+              
               return (
                 <TouchableOpacity
                   key={index}
@@ -587,7 +701,7 @@ export default function ScheduleScreen() {
                       isActive && styles.daySelectorDayOfWeekActive,
                     ]}
                   >
-                    {day.dayOfWeek.substring(0, 3)}
+                    {dayOfWeekShort}
                   </Text>
                   <Text
                     style={[
@@ -595,7 +709,7 @@ export default function ScheduleScreen() {
                       isActive && styles.daySelectorDateActive,
                     ]}
                   >
-                    {day.date.split('.')[0]}
+                    {dayNumberOnly}
                   </Text>
                 </TouchableOpacity>
               );
@@ -612,7 +726,7 @@ export default function ScheduleScreen() {
 
           {hasEvents ? (
             <View style={styles.eventsList}>
-              {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex, false))}
+              {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex))}
             </View>
           ) : (
             <Text style={styles.noEventsText}>
@@ -627,9 +741,71 @@ export default function ScheduleScreen() {
   };
 
   const renderFullScheduleView = () => {
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    const monthTitle = `${monthNames[currentMonth.getMonth()]} ${currentMonth.getFullYear()}`;
+    
     return (
-      <View style={styles.gridContainer}>
-        {scheduleData.map((day, index) => renderGridDayCard(day, index))}
+      <View style={styles.calendarContainer}>
+        {/* Month header */}
+        <View style={styles.monthHeader}>
+          <TouchableOpacity
+            onPress={() => {
+              const newMonth = new Date(currentMonth);
+              newMonth.setMonth(newMonth.getMonth() - 1);
+              setCurrentMonth(newMonth);
+              console.log('ScheduleScreen (iOS): Previous month');
+            }}
+          >
+            <IconSymbol
+              ios_icon_name="chevron.left"
+              android_material_icon_name="arrow-back"
+              size={24}
+              color={designColors.primary}
+            />
+          </TouchableOpacity>
+          
+          <Text style={styles.monthTitle}>{monthTitle}</Text>
+          
+          <TouchableOpacity
+            onPress={() => {
+              const newMonth = new Date(currentMonth);
+              newMonth.setMonth(newMonth.getMonth() + 1);
+              setCurrentMonth(newMonth);
+              console.log('ScheduleScreen (iOS): Next month');
+            }}
+          >
+            <IconSymbol
+              ios_icon_name="chevron.right"
+              android_material_icon_name="arrow-forward"
+              size={24}
+              color={designColors.primary}
+            />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Week days header */}
+        <View style={styles.weekDaysRow}>
+          {weekDays.map((day, index) => (
+            <View key={index} style={styles.weekDayHeader}>
+              <Text style={styles.weekDayText}>{day}</Text>
+            </View>
+          ))}
+        </View>
+        
+        {/* Calendar grid */}
+        <View style={styles.calendarGrid}>
+          {calendarGrid.map((week, weekIndex) => (
+            <View key={weekIndex} style={styles.calendarRow}>
+              {week.map((day, dayIndex) => renderCalendarCell(day, dayIndex))}
+            </View>
+          ))}
+        </View>
       </View>
     );
   };
