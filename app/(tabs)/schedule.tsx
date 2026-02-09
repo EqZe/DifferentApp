@@ -31,6 +31,7 @@ interface ScheduleEvent {
 interface ScheduleDay {
   date: string;
   dayOfWeek: string;
+  assignedPerson?: 'avishi' | 'agent' | 'roni';
   events: ScheduleEvent[];
 }
 
@@ -207,6 +208,18 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     overflow: 'hidden',
   },
+  assignedPersonBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    marginBottom: 4,
+    alignItems: 'center',
+  },
+  assignedPersonText: {
+    fontSize: 9,
+    fontWeight: typography.weights.bold as any,
+    color: '#FFFFFF',
+  },
   eventsContainer: {
     gap: 3,
   },
@@ -283,6 +296,18 @@ const styles = StyleSheet.create({
     color: designColors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xs,
+  },
+  selectedDayPersonBadge: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.lg,
+    alignSelf: 'center',
+  },
+  selectedDayPersonText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold as any,
+    color: '#FFFFFF',
   },
   daySelector: {
     marginBottom: spacing.lg,
@@ -369,6 +394,26 @@ const isHebrew = (text: string): boolean => {
   return hebrewRegex.test(text);
 };
 
+// Helper to get display name for assigned person
+const getPersonDisplayName = (person: 'avishi' | 'agent' | 'roni'): string => {
+  const names = {
+    avishi: 'אבישי',
+    agent: 'סוכנת',
+    roni: 'רוני',
+  };
+  return names[person];
+};
+
+// Helper to get color for assigned person
+const getPersonColor = (person: 'avishi' | 'agent' | 'roni'): string => {
+  const colors = {
+    avishi: '#4CAF50',
+    agent: '#FF9800',
+    roni: '#2196F3',
+  };
+  return colors[person];
+};
+
 // Parse schedule data from database
 const parseScheduleData = (scheduleJson: any): ScheduleDay[] => {
   if (!scheduleJson || !Array.isArray(scheduleJson.schedule)) {
@@ -378,16 +423,15 @@ const parseScheduleData = (scheduleJson: any): ScheduleDay[] => {
   return scheduleJson.schedule.map((day: any) => ({
     date: day.date,
     dayOfWeek: day.day_of_week,
+    assignedPerson: day.assigned_person,
     events: day.events
       .map((event: any) => ({
         description: event.description,
         time: event.time,
       }))
       .sort((a: ScheduleEvent, b: ScheduleEvent) => {
-        // Events with time appear before events without time
         if (a.time && !b.time) return -1;
         if (!a.time && b.time) return 1;
-        // If both have time, sort by time
         if (a.time && b.time) return a.time.localeCompare(b.time);
         return 0;
       }),
@@ -403,11 +447,10 @@ const findMonthWithMostEvents = (scheduleData: ScheduleDay[]): Date => {
   const eventCountByMonth: { [key: string]: number } = {};
 
   scheduleData.forEach(day => {
-    // Parse date format: "7.1.25" -> day.month.year
     const parts = day.date.split('.');
     if (parts.length === 3) {
       const month = parseInt(parts[1], 10);
-      const year = parseInt(parts[2], 10) + 2000; // Convert 25 to 2025
+      const year = parseInt(parts[2], 10) + 2000;
       const monthKey = `${year}-${month}`;
       
       eventCountByMonth[monthKey] = (eventCountByMonth[monthKey] || 0) + day.events.length;
@@ -477,7 +520,6 @@ export default function ScheduleScreen() {
         setPersonName(data.schedule.person_name || user.fullName || '');
         console.log('ScheduleScreen: Parsed schedule days:', parsedSchedule.length);
         
-        // Auto-open to month with most events (only once on initial load)
         if (!hasInitializedMonth && parsedSchedule.length > 0) {
           const bestMonth = findMonthWithMostEvents(parsedSchedule);
           setCurrentMonth(bestMonth);
@@ -508,7 +550,6 @@ export default function ScheduleScreen() {
     setRefreshing(false);
   }, [loadSchedule]);
 
-  // Filter events based on language selection
   const filterEventsByLanguage = useCallback((events: ScheduleEvent[]): ScheduleEvent[] => {
     return events.filter(event => {
       const eventIsHebrew = isHebrew(event.description);
@@ -520,35 +561,29 @@ export default function ScheduleScreen() {
     });
   }, [languageFilter]);
 
-  // Check if a week has any events
   const weekHasEvents = useCallback((week: CalendarDay[]): boolean => {
     return week.some(day => {
       if (!day.scheduleDay) return false;
       const filteredEvents = filterEventsByLanguage(day.scheduleDay.events);
-      return filteredEvents.length > 0;
+      return filteredEvents.length > 0 || Boolean(day.scheduleDay.assignedPerson);
     });
   }, [filterEventsByLanguage]);
 
-  // Generate calendar grid for the current month
   const calendarGrid = useMemo((): CalendarDay[][] => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
     
-    // First day of the month
     const firstDay = new Date(year, month, 1);
-    const firstDayOfWeek = firstDay.getDay(); // 0 = Sunday
+    const firstDayOfWeek = firstDay.getDay();
     
-    // Last day of the month
     const lastDay = new Date(year, month + 1, 0);
     const lastDate = lastDay.getDate();
     
-    // Today
     const today = new Date();
     const todayDate = today.getDate();
     const todayMonth = today.getMonth();
     const todayYear = today.getFullYear();
     
-    // Create a map of schedule data by date string
     const scheduleMap = new Map<string, ScheduleDay>();
     scheduleData.forEach(day => {
       scheduleMap.set(day.date, day);
@@ -557,7 +592,6 @@ export default function ScheduleScreen() {
     const weeks: CalendarDay[][] = [];
     let currentWeek: CalendarDay[] = [];
     
-    // Fill in days from previous month
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = firstDayOfWeek - 1; i >= 0; i--) {
       const dayNumber = prevMonthLastDay - i;
@@ -570,7 +604,6 @@ export default function ScheduleScreen() {
       });
     }
     
-    // Fill in days of current month
     for (let day = 1; day <= lastDate; day++) {
       const fullDate = new Date(year, month, day);
       const dateString = `${day}.${month + 1}.${String(year).slice(-2)}`;
@@ -590,7 +623,6 @@ export default function ScheduleScreen() {
       }
     }
     
-    // Fill in days from next month
     if (currentWeek.length > 0) {
       const remainingDays = 7 - currentWeek.length;
       for (let day = 1; day <= remainingDays; day++) {
@@ -614,7 +646,6 @@ export default function ScheduleScreen() {
       return;
     }
     
-    // Find the index of this day in scheduleData
     const dayIndex = scheduleData.findIndex(d => d.date === calendarDay.scheduleDay?.date);
     if (dayIndex !== -1) {
       console.log('ScheduleScreen: Navigating to day view for', calendarDay.scheduleDay.date);
@@ -627,6 +658,8 @@ export default function ScheduleScreen() {
     const filteredEvents = calendarDay.scheduleDay 
       ? filterEventsByLanguage(calendarDay.scheduleDay.events)
       : [];
+    
+    const assignedPerson = calendarDay.scheduleDay?.assignedPerson;
     
     const maxVisibleEvents = 4;
     const visibleEvents = filteredEvents.slice(0, maxVisibleEvents);
@@ -656,6 +689,14 @@ export default function ScheduleScreen() {
             {dayNumberText}
           </Text>
         </View>
+        
+        {assignedPerson && (
+          <View style={[styles.assignedPersonBadge, { backgroundColor: getPersonColor(assignedPerson) }]}>
+            <Text style={styles.assignedPersonText}>
+              {getPersonDisplayName(assignedPerson)}
+            </Text>
+          </View>
+        )}
         
         {visibleEvents.length > 0 && (
           <View style={styles.eventsContainer}>
@@ -730,10 +771,10 @@ export default function ScheduleScreen() {
     const selectedDay = scheduleData[selectedDayIndex];
     const filteredEvents = filterEventsByLanguage(selectedDay.events);
     const hasEvents = filteredEvents.length > 0;
+    const assignedPerson = selectedDay.assignedPerson;
 
     return (
       <>
-        {/* Day selector */}
         <View style={styles.daySelector}>
           <ScrollView
             horizontal
@@ -779,11 +820,18 @@ export default function ScheduleScreen() {
           </ScrollView>
         </View>
 
-        {/* Selected day details */}
         <View style={styles.selectedDayCard}>
           <View style={styles.selectedDayHeader}>
             <Text style={styles.selectedDayOfWeek}>{selectedDay.dayOfWeek}</Text>
             <Text style={styles.selectedDayDate}>{selectedDay.date}</Text>
+            
+            {assignedPerson && (
+              <View style={[styles.selectedDayPersonBadge, { backgroundColor: getPersonColor(assignedPerson) }]}>
+                <Text style={styles.selectedDayPersonText}>
+                  {getPersonDisplayName(assignedPerson)}
+                </Text>
+              </View>
+            )}
           </View>
 
           {hasEvents ? (
@@ -814,7 +862,6 @@ export default function ScheduleScreen() {
     
     return (
       <View style={styles.calendarContainer}>
-        {/* Month header */}
         <View style={styles.monthHeader}>
           <TouchableOpacity
             onPress={() => {
@@ -851,7 +898,6 @@ export default function ScheduleScreen() {
           </TouchableOpacity>
         </View>
         
-        {/* Week days header */}
         <View style={styles.weekDaysRow}>
           {weekDays.map((day, index) => (
             <View key={index} style={styles.weekDayHeader}>
@@ -860,10 +906,13 @@ export default function ScheduleScreen() {
           ))}
         </View>
         
-        {/* Calendar grid */}
         <View style={styles.calendarGrid}>
           {calendarGrid.map((week, weekIndex) => {
             const hasEvents = weekHasEvents(week);
+            
+            if (!hasEvents) {
+              return null;
+            }
             
             return (
               <View key={weekIndex} style={styles.calendarRow}>
@@ -900,7 +949,6 @@ export default function ScheduleScreen() {
         style={StyleSheet.absoluteFillObject}
       />
 
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>לוח זמנים</Text>
         {hasSchedule && <Text style={styles.headerSubtitle}>{greetingText}</Text>}
@@ -908,7 +956,6 @@ export default function ScheduleScreen() {
 
       {hasSchedule ? (
         <>
-          {/* View toggle */}
           <View style={styles.viewToggle}>
             <TouchableOpacity
               style={[
@@ -950,7 +997,6 @@ export default function ScheduleScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Language toggle - shown in BOTH views */}
           <View style={styles.languageToggle}>
             <TouchableOpacity
               style={[
@@ -992,7 +1038,6 @@ export default function ScheduleScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Schedule content */}
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
