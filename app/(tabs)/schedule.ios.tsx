@@ -209,16 +209,25 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   assignedPersonBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    marginBottom: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    marginBottom: 6,
     alignItems: 'center',
+    alignSelf: 'center',
+    minWidth: 50,
   },
   assignedPersonText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: typography.weights.bold as any,
     color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  personDivider: {
+    height: 1,
+    backgroundColor: designColors.border,
+    marginVertical: 4,
+    opacity: 0.5,
   },
   eventsContainer: {
     gap: 3,
@@ -666,6 +675,8 @@ export default function ScheduleScreen() {
     const remainingCount = filteredEvents.length - maxVisibleEvents;
     
     const dayNumberText = String(calendarDay.dayNumber);
+    const personDisplayName = assignedPerson ? getPersonDisplayName(assignedPerson) : '';
+    const personColor = assignedPerson ? getPersonColor(assignedPerson) : '';
     
     return (
       <TouchableOpacity
@@ -691,10 +702,13 @@ export default function ScheduleScreen() {
         </View>
         
         {assignedPerson && (
-          <View style={[styles.assignedPersonBadge, { backgroundColor: getPersonColor(assignedPerson) }]}>
-            <Text style={styles.assignedPersonText}>
-              {getPersonDisplayName(assignedPerson)}
-            </Text>
+          <View>
+            <View style={[styles.assignedPersonBadge, { backgroundColor: personColor }]}>
+              <Text style={styles.assignedPersonText}>
+                {personDisplayName}
+              </Text>
+            </View>
+            <View style={styles.personDivider} />
           </View>
         )}
         
@@ -702,9 +716,8 @@ export default function ScheduleScreen() {
           <View style={styles.eventsContainer}>
             {visibleEvents.map((event, eventIndex) => {
               const hasTime = Boolean(event.time);
-              const eventText = event.time 
-                ? `${event.time} ${event.description}`
-                : event.description;
+              const eventTimeText = event.time || '';
+              const eventDescriptionText = event.description;
               
               return (
                 <View
@@ -715,7 +728,7 @@ export default function ScheduleScreen() {
                   ]}
                 >
                   <Text style={styles.eventText} numberOfLines={2}>
-                    {eventText}
+                    {hasTime ? `${eventTimeText} ${eventDescriptionText}` : eventDescriptionText}
                   </Text>
                 </View>
               );
@@ -734,6 +747,8 @@ export default function ScheduleScreen() {
 
   const renderEvent = (event: ScheduleEvent, index: number) => {
     const hasTime = Boolean(event.time);
+    const eventTimeText = event.time || '';
+    const eventDescriptionText = event.description;
     
     return (
       <View
@@ -752,11 +767,11 @@ export default function ScheduleScreen() {
         <View style={styles.eventContent}>
           {hasTime && (
             <Text style={styles.eventTime}>
-              {event.time}
+              {eventTimeText}
             </Text>
           )}
           <Text style={styles.eventDescription}>
-            {event.description}
+            {eventDescriptionText}
           </Text>
         </View>
       </View>
@@ -772,6 +787,11 @@ export default function ScheduleScreen() {
     const filteredEvents = filterEventsByLanguage(selectedDay.events);
     const hasEvents = filteredEvents.length > 0;
     const assignedPerson = selectedDay.assignedPerson;
+    const personDisplayName = assignedPerson ? getPersonDisplayName(assignedPerson) : '';
+    const personColor = assignedPerson ? getPersonColor(assignedPerson) : '';
+    const noEventsMessage = languageFilter === 'hebrew'
+      ? 'אין אירועים בעברית ליום זה'
+      : 'No events in English for this day';
 
     return (
       <>
@@ -826,9 +846,9 @@ export default function ScheduleScreen() {
             <Text style={styles.selectedDayDate}>{selectedDay.date}</Text>
             
             {assignedPerson && (
-              <View style={[styles.selectedDayPersonBadge, { backgroundColor: getPersonColor(assignedPerson) }]}>
+              <View style={[styles.selectedDayPersonBadge, { backgroundColor: personColor }]}>
                 <Text style={styles.selectedDayPersonText}>
-                  {getPersonDisplayName(assignedPerson)}
+                  {personDisplayName}
                 </Text>
               </View>
             )}
@@ -840,9 +860,7 @@ export default function ScheduleScreen() {
             </View>
           ) : (
             <Text style={styles.noEventsText}>
-              {languageFilter === 'hebrew'
-                ? 'אין אירועים בעברית ליום זה'
-                : 'No events in English for this day'}
+              {noEventsMessage}
             </Text>
           )}
         </View>
@@ -858,7 +876,9 @@ export default function ScheduleScreen() {
     
     const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     
-    const monthTitle = `${monthNames[currentMonth.getMonth()]} ${currentMonth.getFullYear()}`;
+    const currentMonthName = monthNames[currentMonth.getMonth()];
+    const currentYear = currentMonth.getFullYear();
+    const monthTitle = `${currentMonthName} ${currentYear}`;
     
     return (
       <View style={styles.calendarContainer}>
