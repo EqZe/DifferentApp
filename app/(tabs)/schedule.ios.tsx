@@ -235,10 +235,9 @@ const styles = StyleSheet.create({
     marginTop: 42,
   },
   eventLine: {
-    position: 'relative',
-    left: -spacing.md,
-    right: -spacing.md,
-    width: '120%',
+    position: 'absolute',
+    left: 0,
+    right: 0,
     paddingVertical: 8,
     paddingHorizontal: 4,
     borderRadius: 0,
@@ -821,6 +820,7 @@ export default function ScheduleScreen() {
             {visibleEvents.map((event, eventIndex) => {
               const hasTime = Boolean(event.time);
               const eventDescriptionText = event.description;
+              const topPosition = 90 + (eventIndex * 38);
               
               return (
                 <View
@@ -828,6 +828,7 @@ export default function ScheduleScreen() {
                   style={[
                     styles.eventLine,
                     hasTime && styles.eventLineWithTime,
+                    { top: topPosition },
                   ]}
                 >
                   <Text style={styles.eventText} numberOfLines={1}>
