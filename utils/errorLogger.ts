@@ -1,3 +1,4 @@
+
 // Global error logging for runtime errors
 // Captures console.log/warn/error and sends to Natively server for AI debugging
 
@@ -25,7 +26,7 @@ const shouldMuteMessage = (message: string): boolean => {
 };
 
 // Queue for batching logs
-let logQueue: Array<{ level: string; message: string; source: string; timestamp: string; platform: string }> = [];
+let logQueue: { level: string; message: string; source: string; timestamp: string; platform: string }[] = [];
 let flushTimeout: ReturnType<typeof setTimeout> | null = null;
 const FLUSH_INTERVAL = 500; // Flush every 500ms
 
@@ -364,3 +365,15 @@ export const setupErrorLogging = () => {
 if (__DEV__) {
   setupErrorLogging();
 }
+
+// Export a simple error logger interface for manual logging
+export const errorLogger = {
+  logError: (error: Error | string, context?: string) => {
+    const message = typeof error === 'string' ? error : error.message;
+    const stack = typeof error === 'string' ? '' : error.stack || '';
+    const source = extractSourceLocation(stack) || context || '';
+    
+    console.error(`[ErrorLogger] ${message}`, { context, stack });
+    queueLog('error', message, source);
+  }
+};

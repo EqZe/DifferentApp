@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { api, type User } from '@/utils/api';
@@ -19,6 +19,51 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const loadUserProfile = useCallback(async (authUserId: string) => {
+    try {
+      console.log('UserContext: Loading user profile for auth user', authUserId);
+      const userData = await api.getUserByAuthId(authUserId);
+      console.log('UserContext: ✅ User profile loaded -', userData.fullName, 'hasContract:', userData.hasContract);
+      setUserState(userData);
+
+      // Register for push notifications after successful login (non-blocking)
+      // Use setTimeout to ensure this doesn't block the UI
+      setTimeout(() => {
+        registerPushToken(authUserId).catch(err => {
+          console.log('UserContext: Push token registration failed (non-critical):', err?.message || err);
+        });
+      }, 1000);
+    } catch (error) {
+      console.error('UserContext: ❌ Error loading user profile:', error);
+      setUserState(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const registerPushToken = async (authUserId: string) => {
+    try {
+      console.log('UserContext: Starting push notification token registration');
+      const pushToken = await registerForPushNotificationsAsync();
+      
+      if (pushToken) {
+        console.log('UserContext: ✅ Push token obtained:', pushToken);
+        
+        try {
+          await api.savePushToken(authUserId, pushToken);
+          console.log('UserContext: ✅ Push token saved to database');
+        } catch (saveError: any) {
+          console.log('UserContext: ⚠️ Failed to save push token:', saveError?.message || saveError);
+        }
+      } else {
+        console.log('UserContext: ℹ️ No push token obtained (expected in development/simulator)');
+      }
+    } catch (error: any) {
+      console.log('UserContext: ⚠️ Push notification setup failed:', error?.message || error);
+      // This is non-critical - app continues to work without push notifications
+    }
+  };
 
   useEffect(() => {
     console.log('UserContext: Initializing Supabase Auth session');
@@ -67,52 +112,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('UserContext: Cleaning up auth subscription');
       subscription.unsubscribe();
     };
-  }, []);
-
-  const loadUserProfile = async (authUserId: string) => {
-    try {
-      console.log('UserContext: Loading user profile for auth user', authUserId);
-      const userData = await api.getUserByAuthId(authUserId);
-      console.log('UserContext: ✅ User profile loaded -', userData.fullName, 'hasContract:', userData.hasContract);
-      setUserState(userData);
-
-      // Register for push notifications after successful login (non-blocking)
-      // Use setTimeout to ensure this doesn't block the UI
-      setTimeout(() => {
-        registerPushToken(authUserId).catch(err => {
-          console.log('UserContext: Push token registration failed (non-critical):', err?.message || err);
-        });
-      }, 1000);
-    } catch (error) {
-      console.error('UserContext: ❌ Error loading user profile:', error);
-      setUserState(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const registerPushToken = async (authUserId: string) => {
-    try {
-      console.log('UserContext: Starting push notification token registration');
-      const pushToken = await registerForPushNotificationsAsync();
-      
-      if (pushToken) {
-        console.log('UserContext: ✅ Push token obtained:', pushToken);
-        
-        try {
-          await api.savePushToken(authUserId, pushToken);
-          console.log('UserContext: ✅ Push token saved to database');
-        } catch (saveError: any) {
-          console.log('UserContext: ⚠️ Failed to save push token:', saveError?.message || saveError);
-        }
-      } else {
-        console.log('UserContext: ℹ️ No push token obtained (expected in development/simulator)');
-      }
-    } catch (error: any) {
-      console.log('UserContext: ⚠️ Push notification setup failed:', error?.message || error);
-      // This is non-critical - app continues to work without push notifications
-    }
-  };
+  }, [loadUserProfile]);
 
   const setUser = async (userData: User | null) => {
     console.log('UserContext: setUser called', userData ? userData.fullName : 'null');
