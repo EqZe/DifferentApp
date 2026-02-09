@@ -131,61 +131,58 @@ const styles = StyleSheet.create({
   calendarContainer: {
     backgroundColor: designColors.surface,
     borderRadius: radius.xl,
-    padding: spacing.lg,
+    padding: spacing.md,
     ...shadows.md,
   },
   monthHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 2,
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
     borderBottomColor: designColors.border,
   },
   monthTitle: {
-    fontSize: typography.sizes.xl,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold as any,
     color: designColors.text,
   },
   weekDaysRow: {
     flexDirection: 'row',
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.xs,
+    marginBottom: spacing.xs,
+    paddingHorizontal: 2,
   },
   weekDayHeader: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   weekDayText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold as any,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold as any,
     color: designColors.textSecondary,
     textTransform: 'uppercase',
   },
   calendarGrid: {
-    gap: spacing.sm,
+    gap: 4,
   },
   calendarRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: 4,
   },
   calendarCell: {
     flex: 1,
     backgroundColor: designColors.background,
-    borderRadius: radius.md,
-    padding: spacing.md,
+    borderRadius: radius.sm,
+    padding: spacing.xs,
+    minHeight: 45,
     borderWidth: 1,
-    borderColor: designColors.border,
+    borderColor: 'transparent',
   },
   calendarCellWithEvents: {
-    minHeight: 140,
-  },
-  calendarCellWithoutEvents: {
-    minHeight: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
+    minHeight: 100,
+    padding: spacing.sm,
   },
   calendarCellToday: {
     backgroundColor: designColors.primaryLight,
@@ -193,71 +190,64 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   calendarCellOtherMonth: {
-    opacity: 0.4,
-    backgroundColor: 'transparent',
+    opacity: 0.3,
   },
   dayNumberContainer: {
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   dayNumber: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold as any,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium as any,
     color: designColors.text,
   },
   dayNumberToday: {
     backgroundColor: designColors.primary,
     color: '#FFFFFF',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     textAlign: 'center',
-    lineHeight: 32,
+    lineHeight: 24,
     overflow: 'hidden',
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold as any,
   },
   assignedPersonBadge: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    marginBottom: spacing.sm,
+    paddingVertical: 4,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radius.sm,
+    marginBottom: spacing.xs,
     alignItems: 'center',
-    alignSelf: 'stretch',
   },
   assignedPersonText: {
-    fontSize: typography.sizes.sm,
+    fontSize: 10,
     fontWeight: typography.weights.bold as any,
     color: '#FFFFFF',
     textAlign: 'center',
   },
-  personDivider: {
-    height: 1,
-    backgroundColor: designColors.border,
-    marginVertical: spacing.sm,
-  },
   eventsContainer: {
-    gap: spacing.xs,
+    gap: 3,
   },
   eventLine: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
+    paddingVertical: 3,
+    paddingHorizontal: spacing.xs,
+    borderRadius: 3,
     backgroundColor: designColors.primary,
   },
   eventLineWithTime: {
     backgroundColor: designColors.accent,
   },
   eventText: {
-    fontSize: typography.sizes.xs,
+    fontSize: 9,
     color: '#FFFFFF',
-    lineHeight: typography.sizes.xs * 1.4,
+    lineHeight: 12,
   },
   moreEventsText: {
-    fontSize: typography.sizes.xs,
+    fontSize: 9,
     color: designColors.primary,
-    fontWeight: typography.weights.bold as any,
-    marginTop: spacing.xs,
+    fontWeight: typography.weights.semibold as any,
+    marginTop: 2,
     textAlign: 'center',
   },
   emptyState: {
@@ -410,8 +400,8 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   monthNavButton: {
-    padding: spacing.sm,
-    borderRadius: radius.md,
+    padding: spacing.xs,
+    borderRadius: radius.sm,
     backgroundColor: designColors.background,
   },
 });
@@ -762,7 +752,7 @@ export default function ScheduleScreen() {
     
     const assignedPerson = calendarDay.scheduleDay?.assignedPerson;
     
-    const maxVisibleEvents = 3;
+    const maxVisibleEvents = 2;
     const visibleEvents = filteredEvents.slice(0, maxVisibleEvents);
     const remainingCount = filteredEvents.length - maxVisibleEvents;
     
@@ -770,12 +760,14 @@ export default function ScheduleScreen() {
     const personDisplayName = assignedPerson ? getPersonDisplayName(assignedPerson) : '';
     const personColor = assignedPerson ? getPersonColor(assignedPerson) : '';
     
+    const hasContent = assignedPerson || filteredEvents.length > 0;
+    
     return (
       <TouchableOpacity
         key={index}
         style={[
           styles.calendarCell,
-          hasEventsInRow ? styles.calendarCellWithEvents : styles.calendarCellWithoutEvents,
+          hasContent && styles.calendarCellWithEvents,
           calendarDay.isToday && styles.calendarCellToday,
           !calendarDay.isCurrentMonth && styles.calendarCellOtherMonth,
         ]}
@@ -794,14 +786,11 @@ export default function ScheduleScreen() {
         </View>
         
         {assignedPerson && (
-          <React.Fragment>
-            <View style={[styles.assignedPersonBadge, { backgroundColor: personColor }]}>
-              <Text style={styles.assignedPersonText}>
-                {personDisplayName}
-              </Text>
-            </View>
-            {visibleEvents.length > 0 && <View style={styles.personDivider} />}
-          </React.Fragment>
+          <View style={[styles.assignedPersonBadge, { backgroundColor: personColor }]}>
+            <Text style={styles.assignedPersonText}>
+              {personDisplayName}
+            </Text>
+          </View>
         )}
         
         {visibleEvents.length > 0 && (
@@ -827,7 +816,7 @@ export default function ScheduleScreen() {
             
             {remainingCount > 0 && (
               <Text style={styles.moreEventsText}>
-                +{remainingCount} more
+                +{remainingCount}
               </Text>
             )}
           </View>
@@ -1005,7 +994,7 @@ export default function ScheduleScreen() {
             <IconSymbol
               ios_icon_name="chevron.left"
               android_material_icon_name="arrow-back"
-              size={24}
+              size={20}
               color={designColors.primary}
             />
           </TouchableOpacity>
@@ -1028,7 +1017,7 @@ export default function ScheduleScreen() {
             <IconSymbol
               ios_icon_name="chevron.right"
               android_material_icon_name="arrow-forward"
-              size={24}
+              size={20}
               color={designColors.primary}
             />
           </TouchableOpacity>
