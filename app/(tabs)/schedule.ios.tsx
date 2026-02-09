@@ -423,28 +423,68 @@ const getPersonColor = (person: 'avishi' | 'agent' | 'roni'): string => {
   return colors[person];
 };
 
+// Helper to detect if an event description is an assigned person
+const detectAssignedPerson = (description: string): 'avishi' | 'agent' | 'roni' | null => {
+  const normalized = description.toLowerCase().trim();
+  
+  // Check for exact matches (Hebrew and English)
+  if (normalized === 'אבישי' || normalized === 'avishi') {
+    return 'avishi';
+  }
+  if (normalized === 'סוכנת' || normalized === 'agent') {
+    return 'agent';
+  }
+  if (normalized === 'רוני' || normalized === 'roni') {
+    return 'roni';
+  }
+  
+  return null;
+};
+
 // Parse schedule data from database
 const parseScheduleData = (scheduleJson: any): ScheduleDay[] => {
   if (!scheduleJson || !Array.isArray(scheduleJson.schedule)) {
     return [];
   }
   
-  return scheduleJson.schedule.map((day: any) => ({
-    date: day.date,
-    dayOfWeek: day.day_of_week,
-    assignedPerson: day.assigned_person,
-    events: day.events
-      .map((event: any) => ({
-        description: event.description,
-        time: event.time,
-      }))
-      .sort((a: ScheduleEvent, b: ScheduleEvent) => {
-        if (a.time && !b.time) return -1;
-        if (!a.time && b.time) return 1;
-        if (a.time && b.time) return a.time.localeCompare(b.time);
-        return 0;
-      }),
-  }));
+  return scheduleJson.schedule.map((day: any) => {
+    let assignedPerson: 'avishi' | 'agent' | 'roni' | undefined = undefined;
+    const regularEvents: ScheduleEvent[] = [];
+    
+    // Separate assigned person from regular events
+    if (day.events && Array.isArray(day.events)) {
+      day.events.forEach((event: any) => {
+        const detectedPerson = detectAssignedPerson(event.description);
+        
+        if (detectedPerson) {
+          // This event is actually an assigned person
+          assignedPerson = detectedPerson;
+          console.log('ScheduleScreen (iOS): Detected assigned person:', detectedPerson, 'for date:', day.date);
+        } else {
+          // This is a regular event
+          regularEvents.push({
+            description: event.description,
+            time: event.time,
+          });
+        }
+      });
+    }
+    
+    // Sort events: timed events first
+    regularEvents.sort((a: ScheduleEvent, b: ScheduleEvent) => {
+      if (a.time && !b.time) return -1;
+      if (!a.time && b.time) return 1;
+      if (a.time && b.time) return a.time.localeCompare(b.time);
+      return 0;
+    });
+    
+    return {
+      date: day.date,
+      dayOfWeek: day.day_of_week,
+      assignedPerson,
+      events: regularEvents,
+    };
+  });
 };
 
 // Find the month with the most events
