@@ -212,16 +212,17 @@ const styles = StyleSheet.create({
   },
   assignedPersonBadge: {
     paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 6,
+    paddingHorizontal: 0,
+    borderRadius: 0,
     marginBottom: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 32,
     width: '100%',
+    marginHorizontal: -spacing.md,
   },
   assignedPersonText: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700' as any,
     color: '#FFFFFF',
     textAlign: 'center',
@@ -232,21 +233,22 @@ const styles = StyleSheet.create({
   },
   eventLine: {
     paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 4,
+    paddingHorizontal: 0,
+    borderRadius: 0,
     backgroundColor: designColors.primary,
     minHeight: 32,
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
+    marginHorizontal: -spacing.md,
   },
   eventLineWithTime: {
     backgroundColor: designColors.accent,
   },
   eventText: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#FFFFFF',
-    lineHeight: 16,
+    lineHeight: 14,
     fontWeight: '600' as any,
     textAlign: 'center',
   },
@@ -803,7 +805,7 @@ export default function ScheduleScreen() {
         
         {assignedPerson && (
           <View style={[styles.assignedPersonBadge, { backgroundColor: personColor }]}>
-            <Text style={styles.assignedPersonText}>
+            <Text style={styles.assignedPersonText} numberOfLines={1}>
               {personDisplayName}
             </Text>
           </View>
@@ -823,7 +825,7 @@ export default function ScheduleScreen() {
                     hasTime && styles.eventLineWithTime,
                   ]}
                 >
-                  <Text style={styles.eventText} numberOfLines={2}>
+                  <Text style={styles.eventText} numberOfLines={1}>
                     {eventDescriptionText}
                   </Text>
                 </View>
