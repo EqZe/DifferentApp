@@ -127,18 +127,13 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: spacing.xxl * 2,
   },
-  calendarContainer: {
-    backgroundColor: designColors.surface,
-    paddingVertical: spacing.lg,
-    ...shadows.md,
-  },
   monthHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.lg,
     paddingBottom: spacing.md,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: designColors.border,
   },
@@ -150,7 +145,7 @@ const styles = StyleSheet.create({
   weekDaysRow: {
     flexDirection: 'row',
     marginBottom: spacing.md,
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.lg,
   },
   weekDayHeader: {
     flex: 1,
@@ -165,7 +160,7 @@ const styles = StyleSheet.create({
   },
   calendarGrid: {
     gap: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: spacing.lg,
   },
   calendarRow: {
     flexDirection: 'row',
@@ -173,7 +168,7 @@ const styles = StyleSheet.create({
   },
   calendarCell: {
     flex: 1,
-    backgroundColor: designColors.background,
+    backgroundColor: designColors.surface,
     borderRadius: radius.md,
     padding: spacing.sm,
     minHeight: 70,
@@ -976,7 +971,7 @@ export default function ScheduleScreen() {
     const hasNextMonthEvents = monthHasEvents(nextMonthYear, nextMonthIndex);
     
     return (
-      <View style={styles.calendarContainer}>
+      <React.Fragment>
         <View style={styles.monthHeader}>
           <TouchableOpacity
             onPress={() => {
@@ -1046,7 +1041,7 @@ export default function ScheduleScreen() {
             );
           })}
         </View>
-      </View>
+      </React.Fragment>
     );
   };
 
