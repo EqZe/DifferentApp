@@ -145,7 +145,6 @@ const styles = StyleSheet.create({
   weekDaysRow: {
     flexDirection: 'row',
     marginBottom: spacing.md,
-    paddingHorizontal: spacing.lg,
   },
   weekDayHeader: {
     flex: 1,
@@ -159,24 +158,21 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   calendarGrid: {
-    gap: 8,
-    paddingHorizontal: spacing.lg,
+    gap: 0,
   },
   calendarRow: {
     flexDirection: 'row',
-    gap: 8,
   },
   calendarCell: {
     flex: 1,
     backgroundColor: designColors.surface,
-    borderRadius: radius.md,
     padding: spacing.sm,
     minHeight: 70,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: designColors.border,
   },
   calendarCellWithEvents: {
-    minHeight: 160,
+    minHeight: 180,
     padding: spacing.md,
   },
   calendarCellToday: {
