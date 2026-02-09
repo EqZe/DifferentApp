@@ -131,94 +131,102 @@ const styles = StyleSheet.create({
   calendarContainer: {
     backgroundColor: designColors.surface,
     borderRadius: radius.xl,
-    padding: spacing.md,
+    padding: spacing.lg,
     ...shadows.md,
   },
   monthHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
     paddingBottom: spacing.md,
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
     borderBottomColor: designColors.border,
   },
   monthTitle: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold as any,
     color: designColors.text,
   },
   weekDaysRow: {
     flexDirection: 'row',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.xs,
   },
   weekDayHeader: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
   },
   weekDayText: {
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.semibold as any,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold as any,
     color: designColors.textSecondary,
+    textTransform: 'uppercase',
   },
   calendarGrid: {
-    gap: 1,
-    backgroundColor: designColors.border,
-    borderRadius: radius.md,
-    overflow: 'hidden',
+    gap: spacing.sm,
   },
   calendarRow: {
     flexDirection: 'row',
-    gap: 1,
+    gap: spacing.sm,
   },
   calendarCell: {
     flex: 1,
     backgroundColor: designColors.background,
-    padding: spacing.sm,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: designColors.border,
   },
   calendarCellWithEvents: {
-    minHeight: 180,
+    minHeight: 140,
   },
   calendarCellWithoutEvents: {
-    minHeight: 40,
+    minHeight: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   calendarCellToday: {
     backgroundColor: designColors.primaryLight,
+    borderColor: designColors.primary,
+    borderWidth: 2,
   },
   calendarCellOtherMonth: {
-    opacity: 0.3,
+    opacity: 0.4,
+    backgroundColor: 'transparent',
   },
   dayNumberContainer: {
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
   dayNumber: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium as any,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold as any,
     color: designColors.text,
   },
   dayNumberToday: {
     backgroundColor: designColors.primary,
     color: '#FFFFFF',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 32,
     overflow: 'hidden',
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold as any,
   },
   assignedPersonBadge: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 8,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    marginBottom: spacing.sm,
     alignItems: 'center',
-    alignSelf: 'center',
-    minWidth: 60,
+    alignSelf: 'stretch',
   },
   assignedPersonText: {
-    fontSize: 13,
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold as any,
     color: '#FFFFFF',
     textAlign: 'center',
@@ -226,31 +234,31 @@ const styles = StyleSheet.create({
   personDivider: {
     height: 1,
     backgroundColor: designColors.border,
-    marginVertical: 6,
-    opacity: 0.5,
+    marginVertical: spacing.sm,
   },
   eventsContainer: {
-    gap: 5,
+    gap: spacing.xs,
   },
   eventLine: {
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderRadius: 5,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
     backgroundColor: designColors.primary,
   },
   eventLineWithTime: {
     backgroundColor: designColors.accent,
   },
   eventText: {
-    fontSize: 12,
+    fontSize: typography.sizes.xs,
     color: '#FFFFFF',
-    lineHeight: 16,
+    lineHeight: typography.sizes.xs * 1.4,
   },
   moreEventsText: {
-    fontSize: 11,
+    fontSize: typography.sizes.xs,
     color: designColors.primary,
-    fontWeight: typography.weights.semibold as any,
-    marginTop: 4,
+    fontWeight: typography.weights.bold as any,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
   emptyState: {
     flex: 1,
@@ -308,13 +316,13 @@ const styles = StyleSheet.create({
   },
   selectedDayPersonBadge: {
     marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
     borderRadius: radius.lg,
     alignSelf: 'center',
   },
   selectedDayPersonText: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold as any,
     color: '#FFFFFF',
   },
@@ -357,28 +365,29 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   eventsList: {
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   eventItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     backgroundColor: designColors.background,
-    borderRadius: radius.md,
-    borderLeftWidth: 3,
+    borderRadius: radius.lg,
+    borderLeftWidth: 4,
     borderLeftColor: designColors.primary,
+    ...shadows.sm,
   },
   eventItemWithTime: {
     borderLeftColor: designColors.accent,
   },
   eventContent: {
     flex: 1,
-    marginLeft: spacing.sm,
+    marginLeft: spacing.md,
   },
   eventTime: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold as any,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold as any,
     color: designColors.accent,
     textAlign: 'right',
     marginBottom: spacing.xs,
@@ -387,6 +396,7 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     color: designColors.text,
     textAlign: 'right',
+    lineHeight: typography.sizes.md * 1.5,
   },
   noEventsText: {
     fontSize: typography.sizes.md,
@@ -398,6 +408,11 @@ const styles = StyleSheet.create({
   monthNavButtonHidden: {
     opacity: 0,
     pointerEvents: 'none',
+  },
+  monthNavButton: {
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: designColors.background,
   },
 });
 
@@ -747,7 +762,7 @@ export default function ScheduleScreen() {
     
     const assignedPerson = calendarDay.scheduleDay?.assignedPerson;
     
-    const maxVisibleEvents = 6;
+    const maxVisibleEvents = 3;
     const visibleEvents = filteredEvents.slice(0, maxVisibleEvents);
     const remainingCount = filteredEvents.length - maxVisibleEvents;
     
@@ -779,23 +794,21 @@ export default function ScheduleScreen() {
         </View>
         
         {assignedPerson && (
-          <View>
+          <React.Fragment>
             <View style={[styles.assignedPersonBadge, { backgroundColor: personColor }]}>
               <Text style={styles.assignedPersonText}>
                 {personDisplayName}
               </Text>
             </View>
-            <View style={styles.personDivider} />
-          </View>
+            {visibleEvents.length > 0 && <View style={styles.personDivider} />}
+          </React.Fragment>
         )}
         
         {visibleEvents.length > 0 && (
           <View style={styles.eventsContainer}>
             {visibleEvents.map((event, eventIndex) => {
               const hasTime = Boolean(event.time);
-              const eventTimeText = event.time || '';
               const eventDescriptionText = event.description;
-              const displayText = hasTime ? `${eventTimeText} ${eventDescriptionText}` : eventDescriptionText;
               
               return (
                 <View
@@ -805,8 +818,8 @@ export default function ScheduleScreen() {
                     hasTime && styles.eventLineWithTime,
                   ]}
                 >
-                  <Text style={styles.eventText}>
-                    {displayText}
+                  <Text style={styles.eventText} numberOfLines={2}>
+                    {eventDescriptionText}
                   </Text>
                 </View>
               );
@@ -839,7 +852,7 @@ export default function ScheduleScreen() {
         <IconSymbol
           ios_icon_name={hasTime ? 'clock.fill' : 'circle.fill'}
           android_material_icon_name={hasTime ? 'access-time' : 'circle'}
-          size={20}
+          size={24}
           color={hasTime ? designColors.accent : designColors.primary}
         />
         <View style={styles.eventContent}>
@@ -872,7 +885,7 @@ export default function ScheduleScreen() {
       : 'No events in English for this day';
 
     return (
-      <>
+      <React.Fragment>
         <View style={styles.daySelector}>
           <ScrollView
             horizontal
@@ -942,7 +955,7 @@ export default function ScheduleScreen() {
             </Text>
           )}
         </View>
-      </>
+      </React.Fragment>
     );
   };
 
@@ -983,7 +996,10 @@ export default function ScheduleScreen() {
                 console.log('ScheduleScreen (iOS): Previous month');
               }
             }}
-            style={!hasPrevMonthEvents && styles.monthNavButtonHidden}
+            style={[
+              styles.monthNavButton,
+              !hasPrevMonthEvents && styles.monthNavButtonHidden
+            ]}
             disabled={!hasPrevMonthEvents}
           >
             <IconSymbol
@@ -1003,7 +1019,10 @@ export default function ScheduleScreen() {
                 console.log('ScheduleScreen (iOS): Next month');
               }
             }}
-            style={!hasNextMonthEvents && styles.monthNavButtonHidden}
+            style={[
+              styles.monthNavButton,
+              !hasNextMonthEvents && styles.monthNavButtonHidden
+            ]}
             disabled={!hasNextMonthEvents}
           >
             <IconSymbol
@@ -1072,7 +1091,7 @@ export default function ScheduleScreen() {
       </View>
 
       {hasSchedule ? (
-        <>
+        <React.Fragment>
           <View style={styles.viewToggle}>
             <TouchableOpacity
               style={[
@@ -1168,7 +1187,7 @@ export default function ScheduleScreen() {
           >
             {viewMode === 'day' ? renderDayView() : renderFullScheduleView()}
           </ScrollView>
-        </>
+        </React.Fragment>
       ) : (
         <ScrollView
           contentContainerStyle={styles.emptyState}
