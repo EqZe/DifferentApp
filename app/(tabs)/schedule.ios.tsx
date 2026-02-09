@@ -183,6 +183,12 @@ const styles = StyleSheet.create({
   calendarCellOtherMonth: {
     opacity: 0.3,
   },
+  calendarCellHidden: {
+    opacity: 0,
+    minHeight: 0,
+    padding: 0,
+    borderWidth: 0,
+  },
   dayNumberContainer: {
     alignItems: 'center',
     marginBottom: spacing.sm,
@@ -205,46 +211,44 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold as any,
   },
   assignedPersonBadge: {
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 6,
     marginBottom: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 28,
-    alignSelf: 'stretch',
+    minHeight: 32,
+    width: '100%',
   },
   assignedPersonText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700' as any,
     color: '#FFFFFF',
     textAlign: 'center',
-    letterSpacing: 0.5,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
+    letterSpacing: 0.3,
   },
   eventsContainer: {
     gap: 6,
   },
   eventLine: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderRadius: 4,
     backgroundColor: designColors.primary,
-    minHeight: 28,
+    minHeight: 32,
     justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
   },
   eventLineWithTime: {
     backgroundColor: designColors.accent,
   },
   eventText: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#FFFFFF',
-    lineHeight: 14,
+    lineHeight: 16,
     fontWeight: '600' as any,
     textAlign: 'center',
-    includeFontPadding: false,
   },
   moreEventsText: {
     fontSize: 10,
@@ -623,13 +627,15 @@ export default function ScheduleScreen() {
     });
   }, [languageFilter]);
 
-  const weekHasEvents = useCallback((week: CalendarDay[]): boolean => {
-    return week.some(day => {
-      if (!day.scheduleDay) return false;
-      const filteredEvents = filterEventsByLanguage(day.scheduleDay.events);
-      return filteredEvents.length > 0 || Boolean(day.scheduleDay.assignedPerson);
-    });
+  const dayHasContent = useCallback((day: CalendarDay): boolean => {
+    if (!day.scheduleDay) return false;
+    const filteredEvents = filterEventsByLanguage(day.scheduleDay.events);
+    return filteredEvents.length > 0 || Boolean(day.scheduleDay.assignedPerson);
   }, [filterEventsByLanguage]);
+
+  const weekHasEvents = useCallback((week: CalendarDay[]): boolean => {
+    return week.some(day => dayHasContent(day));
+  }, [dayHasContent]);
 
   // Check if a specific month has any events with the current language filter
   const monthHasEvents = useCallback((year: number, month: number): boolean => {
@@ -749,7 +755,7 @@ export default function ScheduleScreen() {
     }
   }, [scheduleData]);
 
-  const renderCalendarCell = (calendarDay: CalendarDay, index: number, hasEventsInRow: boolean) => {
+  const renderCalendarCell = (calendarDay: CalendarDay, index: number, hasEventsInRow: boolean, shouldHide: boolean) => {
     const filteredEvents = calendarDay.scheduleDay 
       ? filterEventsByLanguage(calendarDay.scheduleDay.events)
       : [];
@@ -765,6 +771,12 @@ export default function ScheduleScreen() {
     const personColor = assignedPerson ? getPersonColor(assignedPerson) : '';
     
     const hasContent = assignedPerson || filteredEvents.length > 0;
+    
+    if (shouldHide) {
+      return (
+        <View key={index} style={styles.calendarCellHidden} />
+      );
+    }
     
     return (
       <TouchableOpacity
@@ -1043,9 +1055,26 @@ export default function ScheduleScreen() {
               return null;
             }
             
+            // Find first and last day with content in this week
+            let firstContentIndex = -1;
+            let lastContentIndex = -1;
+            
+            for (let i = 0; i < week.length; i++) {
+              if (dayHasContent(week[i])) {
+                if (firstContentIndex === -1) {
+                  firstContentIndex = i;
+                }
+                lastContentIndex = i;
+              }
+            }
+            
             return (
               <View key={weekIndex} style={styles.calendarRow}>
-                {week.map((day, dayIndex) => renderCalendarCell(day, dayIndex, hasEvents))}
+                {week.map((day, dayIndex) => {
+                  // Hide days before first content or after last content
+                  const shouldHide = dayIndex < firstContentIndex || dayIndex > lastContentIndex;
+                  return renderCalendarCell(day, dayIndex, hasEvents, shouldHide);
+                })}
               </View>
             );
           })}
