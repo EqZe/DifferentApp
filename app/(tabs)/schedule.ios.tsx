@@ -205,46 +205,52 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold as any,
   },
   assignedPersonBadge: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
     marginBottom: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 32,
+    minHeight: 28,
+    alignSelf: 'stretch',
   },
   assignedPersonText: {
-    fontSize: 14,
-    fontWeight: typography.weights.bold as any,
+    fontSize: 12,
+    fontWeight: '700' as any,
     color: '#FFFFFF',
     textAlign: 'center',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   eventsContainer: {
-    gap: 8,
+    gap: 6,
   },
   eventLine: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 4,
     backgroundColor: designColors.primary,
-    minHeight: 36,
+    minHeight: 28,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   eventLineWithTime: {
     backgroundColor: designColors.accent,
   },
   eventText: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#FFFFFF',
-    lineHeight: 18,
-    fontWeight: typography.weights.medium as any,
+    lineHeight: 14,
+    fontWeight: '600' as any,
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   moreEventsText: {
-    fontSize: 12,
+    fontSize: 10,
     color: designColors.primary,
     fontWeight: typography.weights.bold as any,
-    marginTop: spacing.xs,
+    marginTop: 4,
     textAlign: 'center',
   },
   emptyState: {
@@ -805,7 +811,7 @@ export default function ScheduleScreen() {
                     hasTime && styles.eventLineWithTime,
                   ]}
                 >
-                  <Text style={styles.eventText} numberOfLines={3}>
+                  <Text style={styles.eventText} numberOfLines={2}>
                     {eventDescriptionText}
                   </Text>
                 </View>
