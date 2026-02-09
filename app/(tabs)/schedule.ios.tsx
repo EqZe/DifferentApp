@@ -175,10 +175,10 @@ const styles = StyleSheet.create({
   calendarCell: {
     flex: 1,
     backgroundColor: designColors.background,
-    padding: spacing.xs,
+    padding: spacing.sm,
   },
   calendarCellWithEvents: {
-    minHeight: 120,
+    minHeight: 180,
   },
   calendarCellWithoutEvents: {
     minHeight: 40,
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   },
   dayNumberContainer: {
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   dayNumber: {
     fontSize: typography.sizes.sm,
@@ -209,16 +209,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   assignedPersonBadge: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    marginBottom: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 8,
     alignItems: 'center',
     alignSelf: 'center',
-    minWidth: 50,
+    minWidth: 60,
   },
   assignedPersonText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: typography.weights.bold as any,
     color: '#FFFFFF',
     textAlign: 'center',
@@ -226,31 +226,31 @@ const styles = StyleSheet.create({
   personDivider: {
     height: 1,
     backgroundColor: designColors.border,
-    marginVertical: 4,
+    marginVertical: 6,
     opacity: 0.5,
   },
   eventsContainer: {
-    gap: 3,
+    gap: 5,
   },
   eventLine: {
-    paddingVertical: 3,
-    paddingHorizontal: 5,
-    borderRadius: 3,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 5,
     backgroundColor: designColors.primary,
   },
   eventLineWithTime: {
     backgroundColor: designColors.accent,
   },
   eventText: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#FFFFFF',
-    numberOfLines: 2,
+    lineHeight: 16,
   },
   moreEventsText: {
-    fontSize: 10,
+    fontSize: 11,
     color: designColors.primary,
     fontWeight: typography.weights.semibold as any,
-    marginTop: 2,
+    marginTop: 4,
   },
   emptyState: {
     flex: 1,
@@ -747,7 +747,7 @@ export default function ScheduleScreen() {
     
     const assignedPerson = calendarDay.scheduleDay?.assignedPerson;
     
-    const maxVisibleEvents = 4;
+    const maxVisibleEvents = 6;
     const visibleEvents = filteredEvents.slice(0, maxVisibleEvents);
     const remainingCount = filteredEvents.length - maxVisibleEvents;
     
@@ -795,6 +795,7 @@ export default function ScheduleScreen() {
               const hasTime = Boolean(event.time);
               const eventTimeText = event.time || '';
               const eventDescriptionText = event.description;
+              const displayText = hasTime ? `${eventTimeText} ${eventDescriptionText}` : eventDescriptionText;
               
               return (
                 <View
@@ -804,8 +805,8 @@ export default function ScheduleScreen() {
                     hasTime && styles.eventLineWithTime,
                   ]}
                 >
-                  <Text style={styles.eventText} numberOfLines={2}>
-                    {hasTime ? `${eventTimeText} ${eventDescriptionText}` : eventDescriptionText}
+                  <Text style={styles.eventText}>
+                    {displayText}
                   </Text>
                 </View>
               );
