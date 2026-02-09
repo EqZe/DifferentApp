@@ -395,6 +395,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     paddingVertical: spacing.lg,
   },
+  monthNavButtonHidden: {
+    opacity: 0,
+    pointerEvents: 'none',
+  },
 });
 
 // Helper function to detect if text is Hebrew
@@ -617,6 +621,39 @@ export default function ScheduleScreen() {
       return filteredEvents.length > 0 || Boolean(day.scheduleDay.assignedPerson);
     });
   }, [filterEventsByLanguage]);
+
+  // Check if a specific month has any events with the current language filter
+  const monthHasEvents = useCallback((year: number, month: number): boolean => {
+    console.log('ScheduleScreen: Checking if month has events:', year, month);
+    
+    const hasEvents = scheduleData.some(day => {
+      const parts = day.date.split('.');
+      if (parts.length !== 3) return false;
+      
+      const dayMonth = parseInt(parts[1], 10);
+      const dayYear = parseInt(parts[2], 10) + 2000;
+      
+      if (dayYear !== year || dayMonth !== month + 1) return false;
+      
+      // Check if this day has assigned person
+      if (day.assignedPerson) {
+        console.log('ScheduleScreen: Month has assigned person on', day.date);
+        return true;
+      }
+      
+      // Check if this day has filtered events
+      const filteredEvents = filterEventsByLanguage(day.events);
+      if (filteredEvents.length > 0) {
+        console.log('ScheduleScreen: Month has filtered events on', day.date);
+        return true;
+      }
+      
+      return false;
+    });
+    
+    console.log('ScheduleScreen: Month', year, month, 'has events:', hasEvents);
+    return hasEvents;
+  }, [scheduleData, filterEventsByLanguage]);
 
   const calendarGrid = useMemo((): CalendarDay[][] => {
     const year = currentMonth.getFullYear();
@@ -920,16 +957,33 @@ export default function ScheduleScreen() {
     const currentYear = currentMonth.getFullYear();
     const monthTitle = `${currentMonthName} ${currentYear}`;
     
+    // Calculate previous and next month
+    const prevMonth = new Date(currentMonth);
+    prevMonth.setMonth(prevMonth.getMonth() - 1);
+    const prevMonthYear = prevMonth.getFullYear();
+    const prevMonthIndex = prevMonth.getMonth();
+    
+    const nextMonth = new Date(currentMonth);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const nextMonthYear = nextMonth.getFullYear();
+    const nextMonthIndex = nextMonth.getMonth();
+    
+    // Check if previous and next months have events
+    const hasPrevMonthEvents = monthHasEvents(prevMonthYear, prevMonthIndex);
+    const hasNextMonthEvents = monthHasEvents(nextMonthYear, nextMonthIndex);
+    
     return (
       <View style={styles.calendarContainer}>
         <View style={styles.monthHeader}>
           <TouchableOpacity
             onPress={() => {
-              const newMonth = new Date(currentMonth);
-              newMonth.setMonth(newMonth.getMonth() - 1);
-              setCurrentMonth(newMonth);
-              console.log('ScheduleScreen: Previous month');
+              if (hasPrevMonthEvents) {
+                setCurrentMonth(prevMonth);
+                console.log('ScheduleScreen: Previous month');
+              }
             }}
+            style={!hasPrevMonthEvents && styles.monthNavButtonHidden}
+            disabled={!hasPrevMonthEvents}
           >
             <IconSymbol
               ios_icon_name="chevron.left"
@@ -943,11 +997,13 @@ export default function ScheduleScreen() {
           
           <TouchableOpacity
             onPress={() => {
-              const newMonth = new Date(currentMonth);
-              newMonth.setMonth(newMonth.getMonth() + 1);
-              setCurrentMonth(newMonth);
-              console.log('ScheduleScreen: Next month');
+              if (hasNextMonthEvents) {
+                setCurrentMonth(nextMonth);
+                console.log('ScheduleScreen: Next month');
+              }
             }}
+            style={!hasNextMonthEvents && styles.monthNavButtonHidden}
+            disabled={!hasNextMonthEvents}
           >
             <IconSymbol
               ios_icon_name="chevron.right"
