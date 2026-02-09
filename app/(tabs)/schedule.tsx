@@ -19,6 +19,13 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { errorLogger } from '@/utils/errorLogger';
+import { GestureHandlerRootView, GestureDetector, Gesture } from 'react-native-gesture-handler';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring,
+  runOnJS
+} from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 
@@ -32,6 +39,7 @@ interface ScheduleDay {
   date: string;
   dayOfWeek: string;
   events: ScheduleEvent[];
+  assignedPerson?: 'avishi' | 'agent' | 'roni';
 }
 
 interface ScheduleData {
@@ -258,6 +266,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  dayViewContainer: {
+    flex: 1,
+  },
   selectedDayCard: {
     backgroundColor: designColors.surface,
     borderRadius: radius.xl,
@@ -283,6 +294,28 @@ const styles = StyleSheet.create({
     color: designColors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xs,
+  },
+  assignedPersonBadge: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.full,
+    alignSelf: 'center',
+  },
+  assignedPersonBadgeAvishi: {
+    backgroundColor: '#4CAF50',
+  },
+  assignedPersonBadgeAgent: {
+    backgroundColor: '#FF9800',
+  },
+  assignedPersonBadgeRoni: {
+    backgroundColor: '#2196F3',
+  },
+  assignedPersonText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold as any,
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   daySelector: {
     marginBottom: spacing.lg,
@@ -361,6 +394,18 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     paddingVertical: spacing.lg,
   },
+  swipeHint: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    gap: spacing.xs,
+  },
+  swipeHintText: {
+    fontSize: typography.sizes.xs,
+    color: designColors.textSecondary,
+    fontStyle: 'italic',
+  },
 });
 
 // Helper function to detect if text is Hebrew
@@ -378,6 +423,7 @@ const parseScheduleData = (scheduleJson: any): ScheduleDay[] => {
   return scheduleJson.schedule.map((day: any) => ({
     date: day.date,
     dayOfWeek: day.day_of_week,
+    assignedPerson: day.assigned_person,
     events: day.events
       .map((event: any) => ({
         description: event.description,
@@ -433,6 +479,20 @@ const findMonthWithMostEvents = (scheduleData: ScheduleDay[]): Date => {
   return new Date();
 };
 
+// Get person display name
+const getPersonDisplayName = (person?: 'avishi' | 'agent' | 'roni'): string => {
+  switch (person) {
+    case 'avishi':
+      return 'אבישי';
+    case 'agent':
+      return 'סוכנת';
+    case 'roni':
+      return 'רוני';
+    default:
+      return '';
+  }
+};
+
 export default function ScheduleScreen() {
   const { user } = useUser();
   const colorScheme = useColorScheme();
@@ -445,6 +505,9 @@ export default function ScheduleScreen() {
   const [languageFilter, setLanguageFilter] = useState<'hebrew' | 'english'>('hebrew');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [hasInitializedMonth, setHasInitializedMonth] = useState(false);
+
+  // Gesture handling for swipe
+  const translateX = useSharedValue(0);
 
   const loadSchedule = useCallback(async () => {
     if (!user?.id) {
@@ -623,6 +686,45 @@ export default function ScheduleScreen() {
     }
   }, [scheduleData]);
 
+  // Handle swipe to change days
+  const handleSwipeToNextDay = useCallback(() => {
+    if (selectedDayIndex < scheduleData.length - 1) {
+      console.log('ScheduleScreen: Swiped to next day');
+      setSelectedDayIndex(prev => prev + 1);
+    }
+  }, [selectedDayIndex, scheduleData.length]);
+
+  const handleSwipeToPrevDay = useCallback(() => {
+    if (selectedDayIndex > 0) {
+      console.log('ScheduleScreen: Swiped to previous day');
+      setSelectedDayIndex(prev => prev - 1);
+    }
+  }, [selectedDayIndex]);
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      translateX.value = event.translationX;
+    })
+    .onEnd((event) => {
+      const threshold = width * 0.3;
+      
+      if (event.translationX > threshold) {
+        // Swipe right - go to previous day
+        runOnJS(handleSwipeToPrevDay)();
+      } else if (event.translationX < -threshold) {
+        // Swipe left - go to next day
+        runOnJS(handleSwipeToNextDay)();
+      }
+      
+      translateX.value = withSpring(0);
+    });
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: translateX.value }],
+    };
+  });
+
   const renderCalendarCell = (calendarDay: CalendarDay, index: number, hasEventsInRow: boolean) => {
     const filteredEvents = calendarDay.scheduleDay 
       ? filterEventsByLanguage(calendarDay.scheduleDay.events)
@@ -730,75 +832,110 @@ export default function ScheduleScreen() {
     const selectedDay = scheduleData[selectedDayIndex];
     const filteredEvents = filterEventsByLanguage(selectedDay.events);
     const hasEvents = filteredEvents.length > 0;
+    const personDisplayName = getPersonDisplayName(selectedDay.assignedPerson);
 
     return (
-      <>
-        {/* Day selector */}
-        <View style={styles.daySelector}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.daySelectorScroll}
-          >
-            {scheduleData.map((day, index) => {
-              const isActive = index === selectedDayIndex;
-              const dayOfWeekShort = day.dayOfWeek.substring(0, 3);
-              const dayNumberOnly = day.date.split('.')[0];
-              
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.daySelectorItem,
-                    isActive && styles.daySelectorItemActive,
-                  ]}
-                  onPress={() => {
-                    console.log('ScheduleScreen: Selected day', index);
-                    setSelectedDayIndex(index);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.daySelectorDayOfWeek,
-                      isActive && styles.daySelectorDayOfWeekActive,
-                    ]}
-                  >
-                    {dayOfWeekShort}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.daySelectorDate,
-                      isActive && styles.daySelectorDateActive,
-                    ]}
-                  >
-                    {dayNumberOnly}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Selected day details */}
-        <View style={styles.selectedDayCard}>
-          <View style={styles.selectedDayHeader}>
-            <Text style={styles.selectedDayOfWeek}>{selectedDay.dayOfWeek}</Text>
-            <Text style={styles.selectedDayDate}>{selectedDay.date}</Text>
-          </View>
-
-          {hasEvents ? (
-            <View style={styles.eventsList}>
-              {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex))}
+      <GestureHandlerRootView style={styles.dayViewContainer}>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={animatedStyle}>
+            {/* Day selector */}
+            <View style={styles.daySelector}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.daySelectorScroll}
+              >
+                {scheduleData.map((day, index) => {
+                  const isActive = index === selectedDayIndex;
+                  const dayOfWeekShort = day.dayOfWeek.substring(0, 3);
+                  const dayNumberOnly = day.date.split('.')[0];
+                  
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.daySelectorItem,
+                        isActive && styles.daySelectorItemActive,
+                      ]}
+                      onPress={() => {
+                        console.log('ScheduleScreen: Selected day', index);
+                        setSelectedDayIndex(index);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.daySelectorDayOfWeek,
+                          isActive && styles.daySelectorDayOfWeekActive,
+                        ]}
+                      >
+                        {dayOfWeekShort}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.daySelectorDate,
+                          isActive && styles.daySelectorDateActive,
+                        ]}
+                      >
+                        {dayNumberOnly}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
-          ) : (
-            <Text style={styles.noEventsText}>
-              {languageFilter === 'hebrew'
-                ? 'אין אירועים בעברית ליום זה'
-                : 'No events in English for this day'}
-            </Text>
-          )}
-        </View>
-      </>
+
+            {/* Swipe hint */}
+            <View style={styles.swipeHint}>
+              <IconSymbol
+                ios_icon_name="chevron.left"
+                android_material_icon_name="arrow-back"
+                size={16}
+                color={designColors.textSecondary}
+              />
+              <Text style={styles.swipeHintText}>החלק לצדדים כדי לעבור בין ימים</Text>
+              <IconSymbol
+                ios_icon_name="chevron.right"
+                android_material_icon_name="arrow-forward"
+                size={16}
+                color={designColors.textSecondary}
+              />
+            </View>
+
+            {/* Selected day details */}
+            <View style={styles.selectedDayCard}>
+              <View style={styles.selectedDayHeader}>
+                <Text style={styles.selectedDayOfWeek}>{selectedDay.dayOfWeek}</Text>
+                <Text style={styles.selectedDayDate}>{selectedDay.date}</Text>
+                
+                {personDisplayName && (
+                  <View
+                    style={[
+                      styles.assignedPersonBadge,
+                      selectedDay.assignedPerson === 'avishi' && styles.assignedPersonBadgeAvishi,
+                      selectedDay.assignedPerson === 'agent' && styles.assignedPersonBadgeAgent,
+                      selectedDay.assignedPerson === 'roni' && styles.assignedPersonBadgeRoni,
+                    ]}
+                  >
+                    <Text style={styles.assignedPersonText}>{personDisplayName}</Text>
+                  </View>
+                )}
+              </View>
+
+              {hasEvents ? (
+                <View style={styles.eventsList}>
+                  {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex))}
+                </View>
+              ) : (
+                <Text style={styles.noEventsText}>
+                  {languageFilter === 'hebrew'
+                    ? 'אין אירועים בעברית ליום זה'
+                    : 'No events in English for this day'}
+                </Text>
+              )}
+            </View>
+          </Animated.View>
+        </GestureDetector>
+      </GestureHandlerRootView>
     );
   };
 
