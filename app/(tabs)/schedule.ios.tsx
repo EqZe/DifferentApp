@@ -131,58 +131,58 @@ const styles = StyleSheet.create({
   calendarContainer: {
     backgroundColor: designColors.surface,
     borderRadius: radius.xl,
-    padding: spacing.md,
+    padding: spacing.lg,
     ...shadows.md,
   },
   monthHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
-    paddingBottom: spacing.sm,
+    marginBottom: spacing.lg,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: designColors.border,
   },
   monthTitle: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold as any,
     color: designColors.text,
   },
   weekDaysRow: {
     flexDirection: 'row',
-    marginBottom: spacing.xs,
-    paddingHorizontal: 2,
+    marginBottom: spacing.md,
+    paddingHorizontal: 4,
   },
   weekDayHeader: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
   },
   weekDayText: {
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.semibold as any,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold as any,
     color: designColors.textSecondary,
     textTransform: 'uppercase',
   },
   calendarGrid: {
-    gap: 4,
+    gap: 8,
   },
   calendarRow: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 8,
   },
   calendarCell: {
     flex: 1,
     backgroundColor: designColors.background,
-    borderRadius: radius.sm,
-    padding: spacing.xs,
-    minHeight: 45,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    minHeight: 60,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: designColors.border,
   },
   calendarCellWithEvents: {
-    minHeight: 100,
-    padding: spacing.sm,
+    minHeight: 140,
+    padding: spacing.md,
   },
   calendarCellToday: {
     backgroundColor: designColors.primaryLight,
@@ -194,60 +194,60 @@ const styles = StyleSheet.create({
   },
   dayNumberContainer: {
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   dayNumber: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium as any,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold as any,
     color: designColors.text,
   },
   dayNumberToday: {
     backgroundColor: designColors.primary,
     color: '#FFFFFF',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 28,
     overflow: 'hidden',
-    fontSize: typography.sizes.sm,
+    fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold as any,
   },
   assignedPersonBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
     borderRadius: radius.sm,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
     alignItems: 'center',
   },
   assignedPersonText: {
-    fontSize: 10,
+    fontSize: typography.sizes.xs,
     fontWeight: typography.weights.bold as any,
     color: '#FFFFFF',
     textAlign: 'center',
   },
   eventsContainer: {
-    gap: 3,
+    gap: 6,
   },
   eventLine: {
-    paddingVertical: 3,
-    paddingHorizontal: spacing.xs,
-    borderRadius: 3,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
     backgroundColor: designColors.primary,
   },
   eventLineWithTime: {
     backgroundColor: designColors.accent,
   },
   eventText: {
-    fontSize: 9,
+    fontSize: typography.sizes.xs,
     color: '#FFFFFF',
-    lineHeight: 12,
+    lineHeight: typography.sizes.xs * 1.4,
   },
   moreEventsText: {
-    fontSize: 9,
+    fontSize: typography.sizes.xs,
     color: designColors.primary,
     fontWeight: typography.weights.semibold as any,
-    marginTop: 2,
+    marginTop: spacing.xs,
     textAlign: 'center',
   },
   emptyState: {
@@ -400,8 +400,8 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
   monthNavButton: {
-    padding: spacing.xs,
-    borderRadius: radius.sm,
+    padding: spacing.sm,
+    borderRadius: radius.md,
     backgroundColor: designColors.background,
   },
 });
@@ -752,7 +752,7 @@ export default function ScheduleScreen() {
     
     const assignedPerson = calendarDay.scheduleDay?.assignedPerson;
     
-    const maxVisibleEvents = 2;
+    const maxVisibleEvents = 3;
     const visibleEvents = filteredEvents.slice(0, maxVisibleEvents);
     const remainingCount = filteredEvents.length - maxVisibleEvents;
     
@@ -807,7 +807,7 @@ export default function ScheduleScreen() {
                     hasTime && styles.eventLineWithTime,
                   ]}
                 >
-                  <Text style={styles.eventText} numberOfLines={2}>
+                  <Text style={styles.eventText} numberOfLines={3}>
                     {eventDescriptionText}
                   </Text>
                 </View>
@@ -816,7 +816,7 @@ export default function ScheduleScreen() {
             
             {remainingCount > 0 && (
               <Text style={styles.moreEventsText}>
-                +{remainingCount}
+                +{remainingCount} more
               </Text>
             )}
           </View>
@@ -994,7 +994,7 @@ export default function ScheduleScreen() {
             <IconSymbol
               ios_icon_name="chevron.left"
               android_material_icon_name="arrow-back"
-              size={20}
+              size={24}
               color={designColors.primary}
             />
           </TouchableOpacity>
@@ -1017,7 +1017,7 @@ export default function ScheduleScreen() {
             <IconSymbol
               ios_icon_name="chevron.right"
               android_material_icon_name="arrow-forward"
-              size={20}
+              size={24}
               color={designColors.primary}
             />
           </TouchableOpacity>
