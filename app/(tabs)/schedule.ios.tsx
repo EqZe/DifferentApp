@@ -125,13 +125,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   scrollContent: {
-    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxl * 2,
   },
   calendarContainer: {
     backgroundColor: designColors.surface,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
+    paddingVertical: spacing.lg,
     ...shadows.md,
   },
   monthHeader: {
@@ -140,6 +138,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.lg,
     paddingBottom: spacing.md,
+    paddingHorizontal: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: designColors.border,
   },
@@ -166,6 +165,7 @@ const styles = StyleSheet.create({
   },
   calendarGrid: {
     gap: 8,
+    paddingHorizontal: 4,
   },
   calendarRow: {
     flexDirection: 'row',
@@ -176,12 +176,12 @@ const styles = StyleSheet.create({
     backgroundColor: designColors.background,
     borderRadius: radius.md,
     padding: spacing.sm,
-    minHeight: 60,
+    minHeight: 70,
     borderWidth: 1,
     borderColor: designColors.border,
   },
   calendarCellWithEvents: {
-    minHeight: 140,
+    minHeight: 160,
     padding: spacing.md,
   },
   calendarCellToday: {
@@ -204,11 +204,11 @@ const styles = StyleSheet.create({
   dayNumberToday: {
     backgroundColor: designColors.primary,
     color: '#FFFFFF',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     textAlign: 'center',
-    lineHeight: 28,
+    lineHeight: 30,
     overflow: 'hidden',
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold as any,
