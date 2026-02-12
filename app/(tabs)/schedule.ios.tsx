@@ -142,21 +142,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold as any,
     color: designColors.text,
   },
-  weekDaysRow: {
-    flexDirection: 'row',
-    marginBottom: spacing.md,
-  },
-  weekDayHeader: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  weekDayText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold as any,
-    color: designColors.textSecondary,
-    textTransform: 'uppercase',
-  },
   calendarGrid: {
     gap: 0,
   },
@@ -210,6 +195,13 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold as any,
   },
+  dayAbbreviation: {
+    fontSize: 9,
+    color: designColors.textSecondary,
+    textAlign: 'center',
+    marginTop: 2,
+    textTransform: 'lowercase',
+  },
   assignedPersonBadge: {
     position: 'absolute',
     left: 0,
@@ -228,6 +220,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: 0.3,
+    flexWrap: 'wrap',
   },
   eventBadge: {
     position: 'absolute',
@@ -250,6 +243,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: 0.3,
+    flexWrap: 'wrap',
   },
   moreEventsText: {
     fontSize: 10,
@@ -543,6 +537,12 @@ const findMonthWithMostEvents = (scheduleData: ScheduleDay[]): Date => {
   return new Date();
 };
 
+// Helper to get day abbreviation
+const getDayAbbreviation = (dayOfWeek: number): string => {
+  const abbreviations = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  return abbreviations[dayOfWeek];
+};
+
 export default function ScheduleScreen() {
   const { user } = useUser();
   const colorScheme = useColorScheme();
@@ -773,6 +773,9 @@ export default function ScheduleScreen() {
     
     const hasContent = assignedPerson || filteredEvents.length > 0;
     
+    const dayOfWeek = calendarDay.fullDate.getDay();
+    const dayAbbrev = getDayAbbreviation(dayOfWeek);
+    
     if (shouldHide) {
       return (
         <View key={index} style={styles.calendarCellHidden} />
@@ -800,11 +803,14 @@ export default function ScheduleScreen() {
           >
             {dayNumberText}
           </Text>
+          <Text style={styles.dayAbbreviation}>
+            {dayAbbrev}
+          </Text>
         </View>
         
         {assignedPerson && (
           <View style={[styles.assignedPersonBadge, { backgroundColor: personColor }]}>
-            <Text style={styles.assignedPersonText} numberOfLines={1}>
+            <Text style={styles.assignedPersonText}>
               {personDisplayName}
             </Text>
           </View>
@@ -824,7 +830,7 @@ export default function ScheduleScreen() {
                 { top: topPosition },
               ]}
             >
-              <Text style={styles.eventBadgeText} numberOfLines={1}>
+              <Text style={styles.eventBadgeText}>
                 {eventDescriptionText}
               </Text>
             </View>
@@ -969,8 +975,6 @@ export default function ScheduleScreen() {
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     
-    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    
     const currentMonthName = monthNames[currentMonth.getMonth()];
     const currentYear = currentMonth.getFullYear();
     const monthTitle = `${currentMonthName} ${currentYear}`;
@@ -1038,14 +1042,6 @@ export default function ScheduleScreen() {
           </TouchableOpacity>
         </View>
         
-        <View style={styles.weekDaysRow}>
-          {weekDays.map((day, index) => (
-            <View key={index} style={styles.weekDayHeader}>
-              <Text style={styles.weekDayText}>{day}</Text>
-            </View>
-          ))}
-        </View>
-        
         <View style={styles.calendarGrid}>
           {calendarGrid.map((week, weekIndex) => {
             const hasEvents = weekHasEvents(week);
@@ -1067,11 +1063,15 @@ export default function ScheduleScreen() {
               }
             }
             
+            // Limit to max 5 days per row
+            const daysToShow = Math.min(lastContentIndex - firstContentIndex + 1, 5);
+            const endIndex = firstContentIndex + daysToShow;
+            
             return (
               <View key={weekIndex} style={styles.calendarRow}>
                 {week.map((day, dayIndex) => {
-                  // Hide days before first content or after last content
-                  const shouldHide = dayIndex < firstContentIndex || dayIndex > lastContentIndex;
+                  // Hide days before first content, after max 5 days, or after last content
+                  const shouldHide = dayIndex < firstContentIndex || dayIndex >= endIndex;
                   return renderCalendarCell(day, dayIndex, hasEvents, shouldHide);
                 })}
               </View>
