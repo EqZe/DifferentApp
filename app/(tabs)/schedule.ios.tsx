@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
     borderRadius: 0,
     backgroundColor: designColors.primary,
     minHeight: 32,
@@ -250,11 +250,12 @@ const styles = StyleSheet.create({
     backgroundColor: designColors.accent,
   },
   eventText: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#FFFFFF',
     lineHeight: 14,
-    fontWeight: '600' as any,
+    fontWeight: '700' as any,
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   moreEventsText: {
     fontSize: 10,
