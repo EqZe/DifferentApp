@@ -234,26 +234,25 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 42,
   },
-  eventLine: {
+  eventBadge: {
     position: 'absolute',
     left: 0,
     right: 0,
     paddingVertical: 8,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
     borderRadius: 0,
     backgroundColor: designColors.primary,
     minHeight: 32,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  eventLineWithTime: {
+  eventBadgeWithTime: {
     backgroundColor: designColors.accent,
   },
-  eventText: {
+  eventBadgeText: {
     fontSize: 11,
-    color: '#FFFFFF',
-    lineHeight: 14,
     fontWeight: '700' as any,
+    color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: 0.3,
   },
@@ -827,12 +826,12 @@ export default function ScheduleScreen() {
                 <View
                   key={eventIndex}
                   style={[
-                    styles.eventLine,
-                    hasTime && styles.eventLineWithTime,
+                    styles.eventBadge,
+                    hasTime && styles.eventBadgeWithTime,
                     { top: topPosition },
                   ]}
                 >
-                  <Text style={styles.eventText} numberOfLines={1}>
+                  <Text style={styles.eventBadgeText} numberOfLines={1}>
                     {eventDescriptionText}
                   </Text>
                 </View>
