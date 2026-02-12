@@ -218,7 +218,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 4,
     borderRadius: 0,
-    marginBottom: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 32,
@@ -229,10 +228,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: 0.3,
-  },
-  eventsContainer: {
-    gap: 6,
-    marginTop: 42,
   },
   eventBadge: {
     position: 'absolute',
@@ -815,35 +810,31 @@ export default function ScheduleScreen() {
           </View>
         )}
         
-        {visibleEvents.length > 0 && (
-          <View style={styles.eventsContainer}>
-            {visibleEvents.map((event, eventIndex) => {
-              const hasTime = Boolean(event.time);
-              const eventDescriptionText = event.description;
-              const topPosition = 90 + (eventIndex * 38);
-              
-              return (
-                <View
-                  key={eventIndex}
-                  style={[
-                    styles.eventBadge,
-                    hasTime && styles.eventBadgeWithTime,
-                    { top: topPosition },
-                  ]}
-                >
-                  <Text style={styles.eventBadgeText} numberOfLines={1}>
-                    {eventDescriptionText}
-                  </Text>
-                </View>
-              );
-            })}
-            
-            {remainingCount > 0 && (
-              <Text style={styles.moreEventsText}>
-                +{remainingCount} more
+        {visibleEvents.map((event, eventIndex) => {
+          const hasTime = Boolean(event.time);
+          const eventDescriptionText = event.description;
+          const topPosition = 90 + (eventIndex * 38);
+          
+          return (
+            <View
+              key={eventIndex}
+              style={[
+                styles.eventBadge,
+                hasTime && styles.eventBadgeWithTime,
+                { top: topPosition },
+              ]}
+            >
+              <Text style={styles.eventBadgeText} numberOfLines={1}>
+                {eventDescriptionText}
               </Text>
-            )}
-          </View>
+            </View>
+          );
+        })}
+        
+        {remainingCount > 0 && (
+          <Text style={[styles.moreEventsText, { position: 'absolute', bottom: 4, left: 0, right: 0 }]}>
+            +{remainingCount} more
+          </Text>
         )}
       </TouchableOpacity>
     );
