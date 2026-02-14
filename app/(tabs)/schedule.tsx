@@ -243,41 +243,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  selectedDayCard: {
+  dayViewContainer: {
+    paddingHorizontal: spacing.lg,
+  },
+  dayViewHeader: {
     backgroundColor: designColors.surface,
     borderRadius: radius.xl,
     padding: spacing.xl,
-    marginBottom: spacing.md,
-    marginHorizontal: spacing.lg,
-    ...shadows.lg,
-  },
-  selectedDayHeader: {
-    alignItems: 'center',
     marginBottom: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 2,
-    borderBottomColor: designColors.primary,
+    ...shadows.lg,
+    alignItems: 'center',
   },
-  selectedDayOfWeek: {
-    fontSize: typography.sizes.xxl,
+  dayViewDateContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  dayViewDayOfWeek: {
+    fontSize: typography.sizes.xxxl,
     fontWeight: typography.weights.bold as any,
-    color: designColors.text,
+    color: designColors.primary,
     textAlign: 'center',
+    marginBottom: spacing.xs,
   },
-  selectedDayDate: {
+  dayViewDate: {
     fontSize: typography.sizes.lg,
     color: designColors.textSecondary,
     textAlign: 'center',
-    marginTop: spacing.xs,
   },
-  selectedDayPersonBadge: {
+  dayViewAgentBadge: {
     marginTop: spacing.md,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: radius.lg,
-    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  selectedDayPersonText: {
+  dayViewAgentText: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold as any,
     color: '#FFFFFF',
@@ -290,73 +292,93 @@ const styles = StyleSheet.create({
   },
   daySelectorItem: {
     width: 70,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.xs,
     marginHorizontal: spacing.xs,
     backgroundColor: designColors.surface,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: designColors.border,
+    ...shadows.sm,
   },
   daySelectorItemActive: {
     backgroundColor: designColors.primary,
     borderColor: designColors.primary,
+    ...shadows.md,
   },
   daySelectorDayOfWeek: {
     fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.medium as any,
+    fontWeight: typography.weights.semibold as any,
     color: designColors.textSecondary,
     marginBottom: spacing.xs,
+    textTransform: 'uppercase',
   },
   daySelectorDayOfWeekActive: {
     color: '#FFFFFF',
   },
   daySelectorDate: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold as any,
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold as any,
     color: designColors.text,
   },
   daySelectorDateActive: {
     color: '#FFFFFF',
   },
-  eventsList: {
+  eventsSection: {
     gap: spacing.md,
   },
-  eventItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    backgroundColor: designColors.background,
-    borderRadius: radius.lg,
+  eventCard: {
+    backgroundColor: designColors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    ...shadows.md,
     borderLeftWidth: 4,
     borderLeftColor: designColors.primary,
-    ...shadows.sm,
+  },
+  eventHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+    gap: spacing.md,
+  },
+  eventIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.full,
+    backgroundColor: designColors.primaryBg,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   eventContent: {
     flex: 1,
-    marginLeft: spacing.md,
   },
   eventTime: {
-    fontSize: typography.sizes.md,
+    fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold as any,
-    color: designColors.accent,
-    textAlign: 'right',
+    color: designColors.primary,
     marginBottom: spacing.xs,
   },
   eventDescription: {
     fontSize: typography.sizes.md,
     color: designColors.text,
-    textAlign: 'right',
     lineHeight: typography.sizes.md * 1.5,
+  },
+  noEventsContainer: {
+    backgroundColor: designColors.surface,
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    alignItems: 'center',
+    ...shadows.sm,
+  },
+  noEventsIcon: {
+    marginBottom: spacing.md,
   },
   noEventsText: {
     fontSize: typography.sizes.md,
     color: designColors.textSecondary,
     textAlign: 'center',
     fontStyle: 'italic',
-    paddingVertical: spacing.lg,
   },
   monthNavButtonHidden: {
     opacity: 0,
@@ -449,6 +471,23 @@ const getDayAbbreviation = (dayOfWeek: number, language: 'hebrew' | 'english'): 
   }
 };
 
+// Helper to get full day name based on language
+const getFullDayName = (dayOfWeekString: string, language: 'hebrew' | 'english'): string => {
+  if (language === 'hebrew') {
+    const dayMap: { [key: string]: string } = {
+      'Sunday': 'ראשון',
+      'Monday': 'שני',
+      'Tuesday': 'שלישי',
+      'Wednesday': 'רביעי',
+      'Thursday': 'חמישי',
+      'Friday': 'שישי',
+      'Saturday': 'שבת',
+    };
+    return dayMap[dayOfWeekString] || dayOfWeekString;
+  }
+  return dayOfWeekString;
+};
+
 // Helper to get agent badge color based on agent name
 const getAgentBadgeColor = (agentText: string | null): string => {
   if (!agentText) return '#FF9800'; // Default orange
@@ -476,7 +515,7 @@ export default function ScheduleScreen() {
   const [personName, setPersonName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [viewMode, setViewMode] = useState<'day' | 'full'>('full');
+  const [viewMode, setViewMode] = useState<'day' | 'full'>('day');
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [languageFilter, setLanguageFilter] = useState<'hebrew' | 'english'>('hebrew');
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -783,25 +822,26 @@ export default function ScheduleScreen() {
     const eventDescriptionText = languageFilter === 'hebrew' ? event.description_he : event.description_en;
     
     return (
-      <View
-        key={index}
-        style={styles.eventItem}
-      >
-        <IconSymbol
-          ios_icon_name={hasTime ? 'clock.fill' : 'circle.fill'}
-          android_material_icon_name={hasTime ? 'access-time' : 'circle'}
-          size={24}
-          color={designColors.primary}
-        />
-        <View style={styles.eventContent}>
-          {hasTime && (
-            <Text style={styles.eventTime}>
-              {eventTimeText}
+      <View key={index} style={styles.eventCard}>
+        <View style={styles.eventHeader}>
+          <View style={styles.eventIconContainer}>
+            <IconSymbol
+              ios_icon_name={hasTime ? 'clock.fill' : 'circle.fill'}
+              android_material_icon_name={hasTime ? 'access-time' : 'circle'}
+              size={24}
+              color={designColors.primary}
+            />
+          </View>
+          <View style={styles.eventContent}>
+            {hasTime && (
+              <Text style={styles.eventTime}>
+                {eventTimeText}
+              </Text>
+            )}
+            <Text style={styles.eventDescription}>
+              {eventDescriptionText}
             </Text>
-          )}
-          <Text style={styles.eventDescription}>
-            {eventDescriptionText}
-          </Text>
+          </View>
         </View>
       </View>
     );
@@ -820,9 +860,11 @@ export default function ScheduleScreen() {
     const noEventsMessage = languageFilter === 'hebrew'
       ? 'אין אירועים בעברית ליום זה'
       : 'No events in English for this day';
+    
+    const fullDayName = getFullDayName(selectedDay.day_of_week, languageFilter);
 
     return (
-      <React.Fragment>
+      <View style={styles.dayViewContainer}>
         <View style={styles.daySelector}>
           <ScrollView
             horizontal
@@ -868,31 +910,47 @@ export default function ScheduleScreen() {
           </ScrollView>
         </View>
 
-        <View style={styles.selectedDayCard}>
-          <View style={styles.selectedDayHeader}>
-            <Text style={styles.selectedDayOfWeek}>{selectedDay.day_of_week}</Text>
-            <Text style={styles.selectedDayDate}>{selectedDay.date}</Text>
-            
-            {agentText && agentText.trim() !== '' && (
-              <View style={[styles.selectedDayPersonBadge, { backgroundColor: agentBadgeColor }]}>
-                <Text style={styles.selectedDayPersonText}>
-                  {agentText}
-                </Text>
-              </View>
-            )}
+        <View style={styles.dayViewHeader}>
+          <View style={styles.dayViewDateContainer}>
+            <Text style={styles.dayViewDayOfWeek}>{fullDayName}</Text>
+            <Text style={styles.dayViewDate}>{selectedDay.date}</Text>
           </View>
-
-          {hasEvents ? (
-            <View style={styles.eventsList}>
-              {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex))}
+          
+          {agentText && agentText.trim() !== '' && (
+            <View style={[styles.dayViewAgentBadge, { backgroundColor: agentBadgeColor }]}>
+              <IconSymbol
+                ios_icon_name="person.fill"
+                android_material_icon_name="person"
+                size={20}
+                color="#FFFFFF"
+              />
+              <Text style={styles.dayViewAgentText}>
+                {agentText}
+              </Text>
             </View>
-          ) : (
+          )}
+        </View>
+
+        {hasEvents ? (
+          <View style={styles.eventsSection}>
+            {filteredEvents.map((event, eventIndex) => renderEvent(event, eventIndex))}
+          </View>
+        ) : (
+          <View style={styles.noEventsContainer}>
+            <View style={styles.noEventsIcon}>
+              <IconSymbol
+                ios_icon_name="calendar"
+                android_material_icon_name="calendar-today"
+                size={48}
+                color={designColors.textSecondary}
+              />
+            </View>
             <Text style={styles.noEventsText}>
               {noEventsMessage}
             </Text>
-          )}
-        </View>
-      </React.Fragment>
+          </View>
+        )}
+      </View>
     );
   };
 
