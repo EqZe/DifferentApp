@@ -649,6 +649,9 @@ export default function ScheduleScreen() {
       scheduleMap.set(day.date, day);
     });
     
+    console.log('ScheduleScreen (iOS): Building calendar grid for', year, month + 1);
+    console.log('ScheduleScreen (iOS): Schedule map has', scheduleMap.size, 'days');
+    
     const weeks: CalendarDay[][] = [];
     let currentWeek: CalendarDay[] = [];
     
@@ -668,6 +671,10 @@ export default function ScheduleScreen() {
       const fullDate = new Date(year, month, day);
       const dateString = `${String(day).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${String(year).slice(-2)}`;
       const scheduleDay = scheduleMap.get(dateString);
+      
+      if (scheduleDay) {
+        console.log('ScheduleScreen (iOS): Found schedule for', dateString, '- events:', Object.keys(scheduleDay.events).length, 'agent:', scheduleDay.agent_he || scheduleDay.agent_en);
+      }
       
       currentWeek.push({
         dayNumber: day,
@@ -697,6 +704,7 @@ export default function ScheduleScreen() {
       weeks.push(currentWeek);
     }
     
+    console.log('ScheduleScreen (iOS): Calendar grid built with', weeks.length, 'weeks');
     return weeks;
   }, [currentMonth, scheduleData]);
 
@@ -760,6 +768,8 @@ export default function ScheduleScreen() {
     const hasAgent = agentText && agentText.trim() !== '';
     const hasFilteredEvents = filteredEvents.length > 0;
     const shouldExpand = hasAgent || hasFilteredEvents;
+    
+    console.log('ScheduleScreen (iOS): Rendering cell for day', calendarDay.dayNumber, '- hasAgent:', hasAgent, 'hasFilteredEvents:', hasFilteredEvents, 'shouldExpand:', shouldExpand);
     
     const maxVisibleEvents = 3;
     const visibleEvents = filteredEvents.slice(0, maxVisibleEvents);
