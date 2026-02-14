@@ -201,7 +201,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 32,
-    backgroundColor: '#FF9800',
     marginBottom: spacing.xs,
   },
   assignedPersonText: {
@@ -221,9 +220,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.xs,
-  },
-  eventBadgeWithTime: {
-    backgroundColor: designColors.accent,
   },
   eventBadgeText: {
     fontSize: 11,
@@ -352,9 +348,6 @@ const styles = StyleSheet.create({
     borderLeftColor: designColors.primary,
     ...shadows.sm,
   },
-  eventItemWithTime: {
-    borderLeftColor: designColors.accent,
-  },
   eventContent: {
     flex: 1,
     marginLeft: spacing.md,
@@ -463,6 +456,26 @@ const findFirstMonthWithEvents = (scheduleData: DaySchedule[]): Date => {
 const getDayAbbreviation = (dayOfWeek: number): string => {
   const abbreviations = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   return abbreviations[dayOfWeek];
+};
+
+// Helper to get agent badge color based on agent name
+const getAgentBadgeColor = (agentText: string | null): string => {
+  if (!agentText) return '#FF9800'; // Default orange
+  
+  const normalizedAgent = agentText.trim().toLowerCase();
+  
+  // Check for אבישי or רוני - orange
+  if (normalizedAgent.includes('אבישי') || normalizedAgent.includes('רוני')) {
+    return '#FF9800'; // Orange
+  }
+  
+  // Check for סוכנת - green
+  if (normalizedAgent.includes('סוכנת')) {
+    return '#4CAF50'; // Green
+  }
+  
+  // Default orange for any other agent
+  return '#FF9800';
 };
 
 export default function ScheduleScreen() {
@@ -648,6 +661,45 @@ export default function ScheduleScreen() {
     return daysInMonth;
   }, [currentMonth, scheduleData, filterEventsByLanguage, languageFilter]);
 
+  // Calculate cell heights for each day
+  const calculateCellHeight = useCallback((calendarDay: CalendarDay): number => {
+    if (!calendarDay.scheduleDay) {
+      return 50;
+    }
+    
+    const filteredEvents = filterEventsByLanguage(calendarDay.scheduleDay.events);
+    const agentText = languageFilter === 'hebrew'
+      ? calendarDay.scheduleDay.agent_he
+      : calendarDay.scheduleDay.agent_en;
+    const hasAgent = agentText && agentText.trim() !== '';
+    
+    const baseHeight = 50; // Day number + abbreviation
+    const agentHeight = hasAgent ? 40 : 0;
+    const eventHeight = 40; // Each event badge height
+    const totalEventsHeight = filteredEvents.length * eventHeight;
+    
+    return baseHeight + agentHeight + totalEventsHeight;
+  }, [filterEventsByLanguage, languageFilter]);
+
+  // Group days into rows of 3 and calculate max height for each row
+  const daysWithRowHeights = useMemo(() => {
+    const daysPerRow = 3;
+    const rows: { days: CalendarDay[]; maxHeight: number }[] = [];
+    
+    for (let i = 0; i < daysWithEventsInCurrentMonth.length; i += daysPerRow) {
+      const rowDays = daysWithEventsInCurrentMonth.slice(i, i + daysPerRow);
+      const heights = rowDays.map(day => calculateCellHeight(day));
+      const maxHeight = Math.max(...heights);
+      
+      rows.push({
+        days: rowDays,
+        maxHeight,
+      });
+    }
+    
+    return rows;
+  }, [daysWithEventsInCurrentMonth, calculateCellHeight]);
+
   const handleDayPress = useCallback((calendarDay: CalendarDay) => {
     if (!calendarDay.scheduleDay) {
       console.log('ScheduleScreen: No events for this day');
@@ -662,7 +714,7 @@ export default function ScheduleScreen() {
     }
   }, [daysWithEvents]);
 
-  const renderCalendarCell = (calendarDay: CalendarDay, index: number) => {
+  const renderCalendarCell = (calendarDay: CalendarDay, index: number, rowMaxHeight: number) => {
     if (!calendarDay.scheduleDay) {
       return null;
     }
@@ -674,17 +726,11 @@ export default function ScheduleScreen() {
       : calendarDay.scheduleDay.agent_en;
     
     const hasAgent = agentText && agentText.trim() !== '';
+    const agentBadgeColor = getAgentBadgeColor(agentText);
     
     const dayNumberText = String(calendarDay.dayNumber);
     const dayOfWeek = calendarDay.fullDate.getDay();
     const dayAbbrev = getDayAbbreviation(dayOfWeek);
-    
-    // Calculate dynamic height based on content
-    const baseHeight = 50; // Day number + abbreviation
-    const agentHeight = hasAgent ? 40 : 0;
-    const eventHeight = 40; // Each event badge height
-    const totalEventsHeight = filteredEvents.length * eventHeight;
-    const dynamicHeight = baseHeight + agentHeight + totalEventsHeight;
     
     return (
       <TouchableOpacity
@@ -692,7 +738,7 @@ export default function ScheduleScreen() {
         style={[
           styles.calendarCell,
           calendarDay.isToday && styles.calendarCellToday,
-          { height: dynamicHeight },
+          { height: rowMaxHeight },
         ]}
         onPress={() => handleDayPress(calendarDay)}
       >
@@ -711,7 +757,7 @@ export default function ScheduleScreen() {
         </View>
         
         {hasAgent && (
-          <View style={styles.assignedPersonBadge}>
+          <View style={[styles.assignedPersonBadge, { backgroundColor: agentBadgeColor }]}>
             <Text style={styles.assignedPersonText}>
               {agentText}
             </Text>
@@ -719,16 +765,12 @@ export default function ScheduleScreen() {
         )}
         
         {filteredEvents.map((event, eventIndex) => {
-          const hasTime = Boolean(event.time);
           const eventDescriptionText = languageFilter === 'hebrew' ? event.description_he : event.description_en;
           
           return (
             <View
               key={eventIndex}
-              style={[
-                styles.eventBadge,
-                hasTime && styles.eventBadgeWithTime,
-              ]}
+              style={styles.eventBadge}
             >
               <Text style={styles.eventBadgeText}>
                 {eventDescriptionText}
@@ -748,16 +790,13 @@ export default function ScheduleScreen() {
     return (
       <View
         key={index}
-        style={[
-          styles.eventItem,
-          hasTime && styles.eventItemWithTime
-        ]}
+        style={styles.eventItem}
       >
         <IconSymbol
           ios_icon_name={hasTime ? 'clock.fill' : 'circle.fill'}
           android_material_icon_name={hasTime ? 'access-time' : 'circle'}
           size={24}
-          color={hasTime ? designColors.accent : designColors.primary}
+          color={designColors.primary}
         />
         <View style={styles.eventContent}>
           {hasTime && (
@@ -782,6 +821,7 @@ export default function ScheduleScreen() {
     const filteredEvents = filterEventsByLanguage(selectedDay.events);
     const hasEvents = filteredEvents.length > 0;
     const agentText = languageFilter === 'hebrew' ? selectedDay.agent_he : selectedDay.agent_en;
+    const agentBadgeColor = getAgentBadgeColor(agentText);
     const noEventsMessage = languageFilter === 'hebrew'
       ? 'אין אירועים בעברית ליום זה'
       : 'No events in English for this day';
@@ -839,7 +879,7 @@ export default function ScheduleScreen() {
             <Text style={styles.selectedDayDate}>{selectedDay.date}</Text>
             
             {agentText && agentText.trim() !== '' && (
-              <View style={[styles.selectedDayPersonBadge, { backgroundColor: '#FF9800' }]}>
+              <View style={[styles.selectedDayPersonBadge, { backgroundColor: agentBadgeColor }]}>
                 <Text style={styles.selectedDayPersonText}>
                   {agentText}
                 </Text>
@@ -935,11 +975,13 @@ export default function ScheduleScreen() {
         </View>
         
         <View style={styles.calendarGrid}>
-          <View style={styles.calendarRow}>
-            {daysWithEventsInCurrentMonth.map((day, index) => {
-              return renderCalendarCell(day, index);
-            })}
-          </View>
+          {daysWithRowHeights.map((row, rowIndex) => (
+            <View key={rowIndex} style={styles.calendarRow}>
+              {row.days.map((day, dayIndex) => {
+                return renderCalendarCell(day, dayIndex, row.maxHeight);
+              })}
+            </View>
+          ))}
         </View>
       </React.Fragment>
     );
