@@ -438,11 +438,11 @@ const findFirstMonthWithEvents = (scheduleData: DaySchedule[]): Date => {
   return new Date();
 };
 
-// Helper to get day abbreviation based on language
+// Helper to get day name based on language
 const getDayAbbreviation = (dayOfWeek: number, language: 'hebrew' | 'english'): string => {
   if (language === 'hebrew') {
-    const hebrewAbbreviations = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
-    return hebrewAbbreviations[dayOfWeek];
+    const hebrewDayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+    return hebrewDayNames[dayOfWeek];
   } else {
     const englishAbbreviations = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
     return englishAbbreviations[dayOfWeek];
