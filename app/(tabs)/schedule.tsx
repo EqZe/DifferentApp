@@ -141,10 +141,12 @@ const styles = StyleSheet.create({
   calendarCell: {
     backgroundColor: designColors.surface,
     padding: spacing.md,
+    paddingBottom: spacing.md + 4,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: designColors.border,
     width: (width - spacing.lg * 2 - spacing.sm * 2) / 3,
+    overflow: 'visible',
   },
   calendarCellToday: {
     backgroundColor: designColors.primaryLight,
@@ -657,12 +659,13 @@ export default function ScheduleScreen() {
       : calendarDay.scheduleDay.agent_en;
     const hasAgent = agentText && agentText.trim() !== '';
     
-    const baseHeight = 50; // Day number + abbreviation
+    const baseHeight = 50;
     const agentHeight = hasAgent ? 40 : 0;
-    const eventHeight = 40; // Each event badge height
+    const eventHeight = 40;
     const totalEventsHeight = filteredEvents.length * eventHeight;
+    const bottomPadding = 8;
     
-    return baseHeight + agentHeight + totalEventsHeight;
+    return baseHeight + agentHeight + totalEventsHeight + bottomPadding;
   }, [filterEventsByLanguage, languageFilter]);
 
   // Group days into rows of 3 and calculate max height for each row
@@ -725,7 +728,7 @@ export default function ScheduleScreen() {
         style={[
           styles.calendarCell,
           calendarDay.isToday && styles.calendarCellToday,
-          { height: rowMaxHeight },
+          { minHeight: rowMaxHeight },
         ]}
         onPress={() => handleDayPress(calendarDay)}
       >
