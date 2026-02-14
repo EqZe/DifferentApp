@@ -434,13 +434,14 @@ const parseScheduleData = (scheduleJson: any): DaySchedule[] => {
   return daysArray;
 };
 
-// Find the month with the most events
-const findMonthWithMostEvents = (scheduleData: DaySchedule[]): Date => {
+// Find the first month with events (chronologically)
+const findFirstMonthWithEvents = (scheduleData: DaySchedule[]): Date => {
   if (scheduleData.length === 0) {
     return new Date();
   }
 
-  const eventCountByMonth: { [key: string]: number } = {};
+  // Parse all dates and find the earliest one with events
+  let earliestDate: Date | null = null;
 
   scheduleData.forEach(day => {
     const parts = day.date.split('.');
@@ -448,27 +449,24 @@ const findMonthWithMostEvents = (scheduleData: DaySchedule[]): Date => {
       const dayNum = parseInt(parts[0], 10);
       const month = parseInt(parts[1], 10);
       const year = parseInt(parts[2], 10) + 2000;
-      const monthKey = `${year}-${month}`;
       
       const eventCount = Object.keys(day.events).length;
-      eventCountByMonth[monthKey] = (eventCountByMonth[monthKey] || 0) + eventCount;
+      const hasAgent = day.agent_he || day.agent_en;
+      
+      if (eventCount > 0 || hasAgent) {
+        const date = new Date(year, month - 1, dayNum);
+        if (!earliestDate || date < earliestDate) {
+          earliestDate = date;
+        }
+      }
     }
   });
 
-  let maxCount = 0;
-  let bestMonthKey = '';
-
-  for (const monthKey in eventCountByMonth) {
-    if (eventCountByMonth[monthKey] > maxCount) {
-      maxCount = eventCountByMonth[monthKey];
-      bestMonthKey = monthKey;
-    }
-  }
-
-  if (bestMonthKey) {
-    const [year, month] = bestMonthKey.split('-').map(Number);
-    console.log('ScheduleScreen: Month with most events:', bestMonthKey, 'with', maxCount, 'events');
-    return new Date(year, month - 1, 1);
+  if (earliestDate) {
+    // Return the first day of that month
+    const firstOfMonth = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1);
+    console.log('ScheduleScreen: First month with events:', firstOfMonth.toLocaleDateString());
+    return firstOfMonth;
   }
 
   return new Date();
@@ -525,10 +523,10 @@ export default function ScheduleScreen() {
         console.log('ScheduleScreen: Parsed schedule days:', parsedSchedule.length);
         
         if (!hasInitializedMonth && parsedSchedule.length > 0) {
-          const bestMonth = findMonthWithMostEvents(parsedSchedule);
-          setCurrentMonth(bestMonth);
+          const firstMonth = findFirstMonthWithEvents(parsedSchedule);
+          setCurrentMonth(firstMonth);
           setHasInitializedMonth(true);
-          console.log('ScheduleScreen: Auto-opened to month with most events');
+          console.log('ScheduleScreen: Auto-opened to first month with events');
         }
       } else {
         console.log('ScheduleScreen: No schedule data found');
@@ -659,7 +657,7 @@ export default function ScheduleScreen() {
     // Sort by day number
     daysInMonth.sort((a, b) => a.dayNumber - b.dayNumber);
     
-    console.log('ScheduleScreen: Days with events in current month:', daysInMonth.length);
+    console.log('ScheduleScreen: Days with events in current month:', daysInMonth.length, 'for', year, month + 1);
     return daysInMonth;
   }, [currentMonth, scheduleData, filterEventsByLanguage, languageFilter]);
 
