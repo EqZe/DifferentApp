@@ -178,11 +178,10 @@ const styles = StyleSheet.create({
   dayNumberToday: {
     backgroundColor: designColors.primary,
     color: '#FFFFFF',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     textAlign: 'center',
-    lineHeight: 30,
     overflow: 'hidden',
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold as any,
@@ -728,7 +727,10 @@ export default function ScheduleScreen() {
     const hasAgent = agentText && agentText.trim() !== '';
     const agentBadgeColor = getAgentBadgeColor(agentText);
     
-    const dayNumberText = String(calendarDay.dayNumber);
+    // Format date as "day/month" (e.g., "3/12" for December 3rd)
+    const monthNumber = calendarDay.fullDate.getMonth() + 1;
+    const dayNumberText = `${calendarDay.dayNumber}/${monthNumber}`;
+    
     const dayOfWeek = calendarDay.fullDate.getDay();
     const dayAbbrev = getDayAbbreviation(dayOfWeek);
     
