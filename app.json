@@ -5,11 +5,11 @@
     "owner": "different",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/natively-dark.png",
+    "icon": "./assets/images/different logo.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/natively-dark.png",
+      "image": "./assets/images/different logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
@@ -25,7 +25,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/natively-dark.png",
+        "foregroundImage": "./assets/images/different logo.png",
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
