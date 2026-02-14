@@ -145,36 +145,27 @@ const styles = StyleSheet.create({
     color: designColors.text,
   },
   calendarGrid: {
-    gap: 0,
+    paddingHorizontal: spacing.lg,
   },
   calendarRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   calendarCell: {
-    flex: 1,
     backgroundColor: designColors.surface,
-    padding: spacing.sm,
-    minHeight: 70,
-    borderWidth: 0.5,
-    borderColor: designColors.border,
-  },
-  calendarCellWithEvents: {
-    minHeight: 180,
     padding: spacing.md,
+    minHeight: 180,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: designColors.border,
+    width: (width - spacing.lg * 2 - spacing.sm * 2) / 3,
   },
   calendarCellToday: {
     backgroundColor: designColors.primaryLight,
     borderColor: designColors.primary,
     borderWidth: 2,
-  },
-  calendarCellOtherMonth: {
-    opacity: 0.3,
-  },
-  calendarCellHidden: {
-    opacity: 0,
-    minHeight: 0,
-    padding: 0,
-    borderWidth: 0,
   },
   dayNumberContainer: {
     alignItems: 'center',
@@ -436,6 +427,10 @@ const parseScheduleData = (scheduleJson: any): DaySchedule[] => {
   });
   
   console.log('ScheduleScreen (iOS): Parsed', daysArray.length, 'days');
+  daysArray.forEach(day => {
+    console.log('ScheduleScreen (iOS): Day', day.date, '- events:', Object.keys(day.events).length, 'agent:', day.agent_he || day.agent_en);
+  });
+  
   return daysArray;
 };
 
@@ -576,15 +571,6 @@ export default function ScheduleScreen() {
     });
   }, [languageFilter, getAllEvents]);
 
-  const dayHasContent = useCallback((day: CalendarDay): boolean => {
-    if (!day.scheduleDay) return false;
-    const filteredEvents = filterEventsByLanguage(day.scheduleDay.events);
-    const hasAgent = languageFilter === 'hebrew' 
-      ? (day.scheduleDay.agent_he && day.scheduleDay.agent_he.trim() !== '')
-      : (day.scheduleDay.agent_en && day.scheduleDay.agent_en.trim() !== '');
-    return filteredEvents.length > 0 || hasAgent;
-  }, [filterEventsByLanguage, languageFilter]);
-
   // Filter schedule data to only show days with events
   const daysWithEvents = useMemo(() => {
     return scheduleData.filter(day => {
@@ -629,84 +615,53 @@ export default function ScheduleScreen() {
     return hasEvents;
   }, [scheduleData, filterEventsByLanguage, languageFilter]);
 
-  const calendarGrid = useMemo((): CalendarDay[][] => {
+  // Get only days with events for the current month
+  const daysWithEventsInCurrentMonth = useMemo(() => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    
-    const firstDay = new Date(year, month, 1);
-    const firstDayOfWeek = firstDay.getDay();
-    
-    const lastDay = new Date(year, month + 1, 0);
-    const lastDate = lastDay.getDate();
     
     const today = new Date();
     const todayDate = today.getDate();
     const todayMonth = today.getMonth();
     const todayYear = today.getFullYear();
     
-    const scheduleMap = new Map<string, DaySchedule>();
+    const daysInMonth: CalendarDay[] = [];
+    
     scheduleData.forEach(day => {
-      scheduleMap.set(day.date, day);
-    });
-    
-    console.log('ScheduleScreen (iOS): Building calendar grid for', year, month + 1);
-    console.log('ScheduleScreen (iOS): Schedule map has', scheduleMap.size, 'days');
-    
-    const weeks: CalendarDay[][] = [];
-    let currentWeek: CalendarDay[] = [];
-    
-    const prevMonthLastDay = new Date(year, month, 0).getDate();
-    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
-      const dayNumber = prevMonthLastDay - i;
-      const fullDate = new Date(year, month - 1, dayNumber);
-      currentWeek.push({
-        dayNumber,
-        isCurrentMonth: false,
-        isToday: false,
-        fullDate,
-      });
-    }
-    
-    for (let day = 1; day <= lastDate; day++) {
-      const fullDate = new Date(year, month, day);
-      const dateString = `${String(day).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${String(year).slice(-2)}`;
-      const scheduleDay = scheduleMap.get(dateString);
+      const parts = day.date.split('.');
+      if (parts.length !== 3) return;
       
-      if (scheduleDay) {
-        console.log('ScheduleScreen (iOS): Found schedule for', dateString, '- events:', Object.keys(scheduleDay.events).length, 'agent:', scheduleDay.agent_he || scheduleDay.agent_en);
-      }
+      const dayNum = parseInt(parts[0], 10);
+      const dayMonth = parseInt(parts[1], 10);
+      const dayYear = parseInt(parts[2], 10) + 2000;
       
-      currentWeek.push({
-        dayNumber: day,
-        isCurrentMonth: true,
-        isToday: day === todayDate && month === todayMonth && year === todayYear,
-        scheduleDay,
-        fullDate,
-      });
+      // Only include days from the current month
+      if (dayYear !== year || dayMonth !== month + 1) return;
       
-      if (currentWeek.length === 7) {
-        weeks.push(currentWeek);
-        currentWeek = [];
-      }
-    }
-    
-    if (currentWeek.length > 0) {
-      const remainingDays = 7 - currentWeek.length;
-      for (let day = 1; day <= remainingDays; day++) {
-        const fullDate = new Date(year, month + 1, day);
-        currentWeek.push({
-          dayNumber: day,
-          isCurrentMonth: false,
-          isToday: false,
+      // Check if this day has content
+      const filteredEvents = filterEventsByLanguage(day.events);
+      const hasAgent = languageFilter === 'hebrew'
+        ? (day.agent_he && day.agent_he.trim() !== '')
+        : (day.agent_en && day.agent_en.trim() !== '');
+      
+      if (filteredEvents.length > 0 || hasAgent) {
+        const fullDate = new Date(dayYear, dayMonth - 1, dayNum);
+        daysInMonth.push({
+          dayNumber: dayNum,
+          isCurrentMonth: true,
+          isToday: dayNum === todayDate && dayMonth - 1 === todayMonth && dayYear === todayYear,
+          scheduleDay: day,
           fullDate,
         });
       }
-      weeks.push(currentWeek);
-    }
+    });
     
-    console.log('ScheduleScreen (iOS): Calendar grid built with', weeks.length, 'weeks');
-    return weeks;
-  }, [currentMonth, scheduleData]);
+    // Sort by day number
+    daysInMonth.sort((a, b) => a.dayNumber - b.dayNumber);
+    
+    console.log('ScheduleScreen (iOS): Days with events in current month:', daysInMonth.length);
+    return daysInMonth;
+  }, [currentMonth, scheduleData, filterEventsByLanguage, languageFilter]);
 
   const handleDayPress = useCallback((calendarDay: CalendarDay) => {
     if (!calendarDay.scheduleDay) {
@@ -723,40 +678,10 @@ export default function ScheduleScreen() {
   }, [daysWithEvents]);
 
   const renderCalendarCell = (calendarDay: CalendarDay, index: number) => {
-    // Check if this day has a scheduleDay from the JSON
     if (!calendarDay.scheduleDay) {
-      // No schedule data for this day - render empty cell
-      const dayNumberText = String(calendarDay.dayNumber);
-      const dayOfWeek = calendarDay.fullDate.getDay();
-      const dayAbbrev = getDayAbbreviation(dayOfWeek);
-      
-      return (
-        <View
-          key={index}
-          style={[
-            styles.calendarCell,
-            calendarDay.isToday && styles.calendarCellToday,
-            !calendarDay.isCurrentMonth && styles.calendarCellOtherMonth,
-          ]}
-        >
-          <View style={styles.dayNumberContainer}>
-            <Text
-              style={[
-                styles.dayNumber,
-                calendarDay.isToday && styles.dayNumberToday,
-              ]}
-            >
-              {dayNumberText}
-            </Text>
-            <Text style={styles.dayAbbreviation}>
-              {dayAbbrev}
-            </Text>
-          </View>
-        </View>
-      );
+      return null;
     }
     
-    // This day has schedule data - check what content to display
     const allEvents = getAllEvents(calendarDay.scheduleDay.events);
     const filteredEvents = filterEventsByLanguage(calendarDay.scheduleDay.events);
     
@@ -764,12 +689,8 @@ export default function ScheduleScreen() {
       ? calendarDay.scheduleDay.agent_he
       : calendarDay.scheduleDay.agent_en;
     
-    // Determine if this day should be expanded
     const hasAgent = agentText && agentText.trim() !== '';
     const hasFilteredEvents = filteredEvents.length > 0;
-    const shouldExpand = hasAgent || hasFilteredEvents;
-    
-    console.log('ScheduleScreen (iOS): Rendering cell for day', calendarDay.dayNumber, '- hasAgent:', hasAgent, 'hasFilteredEvents:', hasFilteredEvents, 'shouldExpand:', shouldExpand);
     
     const maxVisibleEvents = 3;
     const visibleEvents = filteredEvents.slice(0, maxVisibleEvents);
@@ -784,12 +705,9 @@ export default function ScheduleScreen() {
         key={index}
         style={[
           styles.calendarCell,
-          shouldExpand && styles.calendarCellWithEvents,
           calendarDay.isToday && styles.calendarCellToday,
-          !calendarDay.isCurrentMonth && styles.calendarCellOtherMonth,
         ]}
         onPress={() => handleDayPress(calendarDay)}
-        disabled={!shouldExpand}
       >
         <View style={styles.dayNumberContainer}>
           <Text
@@ -1038,15 +956,11 @@ export default function ScheduleScreen() {
         </View>
         
         <View style={styles.calendarGrid}>
-          {calendarGrid.map((week, weekIndex) => {
-            return (
-              <View key={weekIndex} style={styles.calendarRow}>
-                {week.map((day, dayIndex) => {
-                  return renderCalendarCell(day, dayIndex);
-                })}
-              </View>
-            );
-          })}
+          <View style={styles.calendarRow}>
+            {daysWithEventsInCurrentMonth.map((day, index) => {
+              return renderCalendarCell(day, index);
+            })}
+          </View>
         </View>
       </React.Fragment>
     );
