@@ -154,6 +154,10 @@ const styles = StyleSheet.create({
   actionButtonPending: {
     backgroundColor: '#F5AD27',
   },
+  actionButtonDisabled: {
+    backgroundColor: '#D1D5DB',
+    opacity: 0.6,
+  },
   actionButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
@@ -170,6 +174,20 @@ const styles = StyleSheet.create({
   },
   completedBadgeText: {
     color: '#2E7D32',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  pendingBadge: {
+    backgroundColor: '#FEF3E2',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pendingBadgeText: {
+    color: '#F5AD27',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -225,13 +243,16 @@ function TaskCard({
   const isYet = task.status === 'YET';
   const dueDateText = formatDate(task.dueDate);
   
+  // Determine if button should be disabled (pending tasks cannot be completed)
+  const isDisabled = isPending;
+  
   // Determine button text based on status and requirements
   let buttonText = 'התחל';
   if (task.requiresPending) {
     if (task.status === 'YET') {
       buttonText = 'התחל';
     } else if (task.status === 'PENDING') {
-      buttonText = 'סיימתי';
+      buttonText = 'בתהליך';
     }
   } else {
     buttonText = 'סיימתי';
@@ -320,13 +341,28 @@ function TaskCard({
             />
             <Text style={styles.completedBadgeText}>הושלם</Text>
           </View>
+        ) : isPending ? (
+          <View style={styles.pendingBadge}>
+            <IconSymbol
+              ios_icon_name="clock"
+              android_material_icon_name="schedule"
+              size={16}
+              color="#F5AD27"
+            />
+            <Text style={styles.pendingBadgeText}>בתהליך</Text>
+          </View>
         ) : (
           <TouchableOpacity
             style={[
               styles.actionButton,
-              isPending && styles.actionButtonPending,
+              isDisabled && styles.actionButtonDisabled,
             ]}
-            onPress={() => onComplete(task.id, task.requiresPending, task.status)}
+            onPress={() => {
+              if (!isDisabled) {
+                onComplete(task.id, task.requiresPending, task.status);
+              }
+            }}
+            disabled={isDisabled}
           >
             <Text style={styles.actionButtonText}>{buttonText}</Text>
           </TouchableOpacity>
@@ -375,6 +411,12 @@ export default function TasksScreen() {
 
   const handleCompleteTask = useCallback((taskId: string, requiresPending: boolean, currentStatus: string) => {
     console.log('🎯 INSTANT CLICK - Task button pressed', taskId);
+    
+    // Prevent completing pending tasks
+    if (currentStatus === 'PENDING') {
+      console.log('⚠️ Cannot complete pending task', taskId);
+      return;
+    }
     
     // Calculate new status ONCE upfront
     const newStatus: 'YET' | 'PENDING' | 'DONE' = 
