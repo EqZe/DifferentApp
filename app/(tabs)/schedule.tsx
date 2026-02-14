@@ -22,29 +22,31 @@ import { errorLogger } from '@/utils/errorLogger';
 
 const { width } = Dimensions.get('window');
 
-// Schedule data interfaces
-interface ScheduleEvent {
-  description: string;
-  time?: string;
+// New schedule data interfaces matching the new JSON format
+interface Event {
+  description_he: string;
+  description_en: string;
+  time: string | null;
+  type: 'flight' | 'business' | 'meeting' | 'accommodation' | 'personal' | 'other';
 }
 
-interface ScheduleDay {
+interface DaySchedule {
   date: string;
-  dayOfWeek: string;
-  assignedPerson?: 'avishi' | 'agent' | 'roni';
-  events: ScheduleEvent[];
+  day_of_week: string;
+  agent_he: string | null;
+  agent_en: string | null;
+  events: { [key: string]: Event };
 }
 
 interface ScheduleData {
-  schedule: ScheduleDay[];
-  personName?: string;
+  days: { [key: string]: DaySchedule };
 }
 
 interface CalendarDay {
   dayNumber: number;
   isCurrentMonth: boolean;
   isToday: boolean;
-  scheduleDay?: ScheduleDay;
+  scheduleDay?: DaySchedule;
   fullDate: Date;
 }
 
@@ -213,6 +215,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 32,
+    backgroundColor: '#FF9800',
   },
   assignedPersonText: {
     fontSize: 11,
@@ -409,98 +412,35 @@ const styles = StyleSheet.create({
   },
 });
 
-// Helper function to detect if text is Hebrew
-const isHebrew = (text: string): boolean => {
-  const hebrewRegex = /[\u0590-\u05FF]/;
-  return hebrewRegex.test(text);
-};
-
-// Helper to get display name for assigned person
-const getPersonDisplayName = (person: 'avishi' | 'agent' | 'roni'): string => {
-  const names = {
-    avishi: 'אבישי',
-    agent: 'סוכנת',
-    roni: 'רוני',
-  };
-  return names[person];
-};
-
-// Helper to get color for assigned person
-const getPersonColor = (person: 'avishi' | 'agent' | 'roni'): string => {
-  const colors = {
-    avishi: '#4CAF50',
-    agent: '#FF9800',
-    roni: '#2196F3',
-  };
-  return colors[person];
-};
-
-// Helper to detect if an event description is an assigned person
-const detectAssignedPerson = (description: string): 'avishi' | 'agent' | 'roni' | null => {
-  const normalized = description.toLowerCase().trim();
+// Parse schedule data from new JSON format
+const parseScheduleData = (scheduleJson: any): DaySchedule[] => {
+  console.log('ScheduleScreen: Parsing schedule data', scheduleJson);
   
-  // Check for exact matches (Hebrew and English)
-  if (normalized === 'אבישי' || normalized === 'avishi') {
-    return 'avishi';
-  }
-  if (normalized === 'סוכנת' || normalized === 'agent') {
-    return 'agent';
-  }
-  if (normalized === 'רוני' || normalized === 'roni') {
-    return 'roni';
-  }
-  
-  return null;
-};
-
-// Parse schedule data from database
-const parseScheduleData = (scheduleJson: any): ScheduleDay[] => {
-  if (!scheduleJson || !Array.isArray(scheduleJson.schedule)) {
+  if (!scheduleJson || !scheduleJson.days) {
+    console.log('ScheduleScreen: No days found in schedule data');
     return [];
   }
   
-  return scheduleJson.schedule.map((day: any) => {
-    let assignedPerson: 'avishi' | 'agent' | 'roni' | undefined = undefined;
-    const regularEvents: ScheduleEvent[] = [];
-    
-    // Separate assigned person from regular events
-    if (day.events && Array.isArray(day.events)) {
-      day.events.forEach((event: any) => {
-        const detectedPerson = detectAssignedPerson(event.description);
-        
-        if (detectedPerson) {
-          // This event is actually an assigned person
-          assignedPerson = detectedPerson;
-          console.log('ScheduleScreen: Detected assigned person:', detectedPerson, 'for date:', day.date);
-        } else {
-          // This is a regular event
-          regularEvents.push({
-            description: event.description,
-            time: event.time,
-          });
-        }
-      });
-    }
-    
-    // Sort events: timed events first
-    regularEvents.sort((a: ScheduleEvent, b: ScheduleEvent) => {
-      if (a.time && !b.time) return -1;
-      if (!a.time && b.time) return 1;
-      if (a.time && b.time) return a.time.localeCompare(b.time);
-      return 0;
-    });
-    
-    return {
+  const daysArray: DaySchedule[] = [];
+  
+  // Convert the days object to an array
+  Object.keys(scheduleJson.days).forEach((dayKey) => {
+    const day = scheduleJson.days[dayKey];
+    daysArray.push({
       date: day.date,
-      dayOfWeek: day.day_of_week,
-      assignedPerson,
-      events: regularEvents,
-    };
+      day_of_week: day.day_of_week,
+      agent_he: day.agent_he,
+      agent_en: day.agent_en,
+      events: day.events || {},
+    });
   });
+  
+  console.log('ScheduleScreen: Parsed', daysArray.length, 'days');
+  return daysArray;
 };
 
 // Find the month with the most events
-const findMonthWithMostEvents = (scheduleData: ScheduleDay[]): Date => {
+const findMonthWithMostEvents = (scheduleData: DaySchedule[]): Date => {
   if (scheduleData.length === 0) {
     return new Date();
   }
@@ -510,11 +450,13 @@ const findMonthWithMostEvents = (scheduleData: ScheduleDay[]): Date => {
   scheduleData.forEach(day => {
     const parts = day.date.split('.');
     if (parts.length === 3) {
+      const dayNum = parseInt(parts[0], 10);
       const month = parseInt(parts[1], 10);
       const year = parseInt(parts[2], 10) + 2000;
       const monthKey = `${year}-${month}`;
       
-      eventCountByMonth[monthKey] = (eventCountByMonth[monthKey] || 0) + day.events.length;
+      const eventCount = Object.keys(day.events).length;
+      eventCountByMonth[monthKey] = (eventCountByMonth[monthKey] || 0) + eventCount;
     }
   });
 
@@ -546,7 +488,7 @@ const getDayAbbreviation = (dayOfWeek: number): string => {
 export default function ScheduleScreen() {
   const { user } = useUser();
   const colorScheme = useColorScheme();
-  const [scheduleData, setScheduleData] = useState<ScheduleDay[]>([]);
+  const [scheduleData, setScheduleData] = useState<DaySchedule[]>([]);
   const [personName, setPersonName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -581,10 +523,10 @@ export default function ScheduleScreen() {
       }
 
       if (data?.schedule) {
-        console.log('ScheduleScreen: Schedule data retrieved', data.schedule);
+        console.log('ScheduleScreen: Schedule data retrieved');
         const parsedSchedule = parseScheduleData(data.schedule);
         setScheduleData(parsedSchedule);
-        setPersonName(data.schedule.person_name || user.fullName || '');
+        setPersonName(user.fullName || '');
         console.log('ScheduleScreen: Parsed schedule days:', parsedSchedule.length);
         
         if (!hasInitializedMonth && parsedSchedule.length > 0) {
@@ -617,13 +559,13 @@ export default function ScheduleScreen() {
     setRefreshing(false);
   }, [loadSchedule]);
 
-  const filterEventsByLanguage = useCallback((events: ScheduleEvent[]): ScheduleEvent[] => {
-    return events.filter(event => {
-      const eventIsHebrew = isHebrew(event.description);
+  const filterEventsByLanguage = useCallback((events: { [key: string]: Event }): Event[] => {
+    const eventsArray = Object.values(events);
+    return eventsArray.filter(event => {
       if (languageFilter === 'hebrew') {
-        return eventIsHebrew;
+        return event.description_he && event.description_he.trim() !== '';
       } else {
-        return !eventIsHebrew;
+        return event.description_en && event.description_en.trim() !== '';
       }
     });
   }, [languageFilter]);
@@ -631,8 +573,11 @@ export default function ScheduleScreen() {
   const dayHasContent = useCallback((day: CalendarDay): boolean => {
     if (!day.scheduleDay) return false;
     const filteredEvents = filterEventsByLanguage(day.scheduleDay.events);
-    return filteredEvents.length > 0 || Boolean(day.scheduleDay.assignedPerson);
-  }, [filterEventsByLanguage]);
+    const hasAgent = languageFilter === 'hebrew' 
+      ? (day.scheduleDay.agent_he && day.scheduleDay.agent_he.trim() !== '')
+      : (day.scheduleDay.agent_en && day.scheduleDay.agent_en.trim() !== '');
+    return filteredEvents.length > 0 || hasAgent;
+  }, [filterEventsByLanguage, languageFilter]);
 
   const weekHasEvents = useCallback((week: CalendarDay[]): boolean => {
     return week.some(day => dayHasContent(day));
@@ -640,36 +585,36 @@ export default function ScheduleScreen() {
 
   // Check if a specific month has any events with the current language filter
   const monthHasEvents = useCallback((year: number, month: number): boolean => {
-    console.log('ScheduleScreen: Checking if month has events:', year, month);
-    
     const hasEvents = scheduleData.some(day => {
       const parts = day.date.split('.');
       if (parts.length !== 3) return false;
       
+      const dayNum = parseInt(parts[0], 10);
       const dayMonth = parseInt(parts[1], 10);
       const dayYear = parseInt(parts[2], 10) + 2000;
       
       if (dayYear !== year || dayMonth !== month + 1) return false;
       
-      // Check if this day has assigned person
-      if (day.assignedPerson) {
-        console.log('ScheduleScreen: Month has assigned person on', day.date);
+      // Check if this day has agent
+      const hasAgent = languageFilter === 'hebrew'
+        ? (day.agent_he && day.agent_he.trim() !== '')
+        : (day.agent_en && day.agent_en.trim() !== '');
+      
+      if (hasAgent) {
         return true;
       }
       
       // Check if this day has filtered events
       const filteredEvents = filterEventsByLanguage(day.events);
       if (filteredEvents.length > 0) {
-        console.log('ScheduleScreen: Month has filtered events on', day.date);
         return true;
       }
       
       return false;
     });
     
-    console.log('ScheduleScreen: Month', year, month, 'has events:', hasEvents);
     return hasEvents;
-  }, [scheduleData, filterEventsByLanguage]);
+  }, [scheduleData, filterEventsByLanguage, languageFilter]);
 
   const calendarGrid = useMemo((): CalendarDay[][] => {
     const year = currentMonth.getFullYear();
@@ -686,7 +631,7 @@ export default function ScheduleScreen() {
     const todayMonth = today.getMonth();
     const todayYear = today.getFullYear();
     
-    const scheduleMap = new Map<string, ScheduleDay>();
+    const scheduleMap = new Map<string, DaySchedule>();
     scheduleData.forEach(day => {
       scheduleMap.set(day.date, day);
     });
@@ -708,7 +653,7 @@ export default function ScheduleScreen() {
     
     for (let day = 1; day <= lastDate; day++) {
       const fullDate = new Date(year, month, day);
-      const dateString = `${day}.${month + 1}.${String(year).slice(-2)}`;
+      const dateString = `${String(day).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}.${String(year).slice(-2)}`;
       const scheduleDay = scheduleMap.get(dateString);
       
       currentWeek.push({
@@ -761,17 +706,17 @@ export default function ScheduleScreen() {
       ? filterEventsByLanguage(calendarDay.scheduleDay.events)
       : [];
     
-    const assignedPerson = calendarDay.scheduleDay?.assignedPerson;
+    const agentText = languageFilter === 'hebrew'
+      ? calendarDay.scheduleDay?.agent_he
+      : calendarDay.scheduleDay?.agent_en;
     
     const maxVisibleEvents = 3;
     const visibleEvents = filteredEvents.slice(0, maxVisibleEvents);
     const remainingCount = filteredEvents.length - maxVisibleEvents;
     
     const dayNumberText = String(calendarDay.dayNumber);
-    const personDisplayName = assignedPerson ? getPersonDisplayName(assignedPerson) : '';
-    const personColor = assignedPerson ? getPersonColor(assignedPerson) : '';
     
-    const hasContent = assignedPerson || filteredEvents.length > 0;
+    const hasContent = (agentText && agentText.trim() !== '') || filteredEvents.length > 0;
     
     const dayOfWeek = calendarDay.fullDate.getDay();
     const dayAbbrev = getDayAbbreviation(dayOfWeek);
@@ -808,17 +753,17 @@ export default function ScheduleScreen() {
           </Text>
         </View>
         
-        {assignedPerson && (
-          <View style={[styles.assignedPersonBadge, { backgroundColor: personColor }]}>
+        {agentText && agentText.trim() !== '' && (
+          <View style={styles.assignedPersonBadge}>
             <Text style={styles.assignedPersonText}>
-              {personDisplayName}
+              {agentText}
             </Text>
           </View>
         )}
         
         {visibleEvents.map((event, eventIndex) => {
           const hasTime = Boolean(event.time);
-          const eventDescriptionText = event.description;
+          const eventDescriptionText = languageFilter === 'hebrew' ? event.description_he : event.description_en;
           const topPosition = 90 + (eventIndex * 38);
           
           return (
@@ -846,10 +791,10 @@ export default function ScheduleScreen() {
     );
   };
 
-  const renderEvent = (event: ScheduleEvent, index: number) => {
+  const renderEvent = (event: Event, index: number) => {
     const hasTime = Boolean(event.time);
     const eventTimeText = event.time || '';
-    const eventDescriptionText = event.description;
+    const eventDescriptionText = languageFilter === 'hebrew' ? event.description_he : event.description_en;
     
     return (
       <View
@@ -887,9 +832,7 @@ export default function ScheduleScreen() {
     const selectedDay = scheduleData[selectedDayIndex];
     const filteredEvents = filterEventsByLanguage(selectedDay.events);
     const hasEvents = filteredEvents.length > 0;
-    const assignedPerson = selectedDay.assignedPerson;
-    const personDisplayName = assignedPerson ? getPersonDisplayName(assignedPerson) : '';
-    const personColor = assignedPerson ? getPersonColor(assignedPerson) : '';
+    const agentText = languageFilter === 'hebrew' ? selectedDay.agent_he : selectedDay.agent_en;
     const noEventsMessage = languageFilter === 'hebrew'
       ? 'אין אירועים בעברית ליום זה'
       : 'No events in English for this day';
@@ -904,7 +847,7 @@ export default function ScheduleScreen() {
           >
             {scheduleData.map((day, index) => {
               const isActive = index === selectedDayIndex;
-              const dayOfWeekShort = day.dayOfWeek.substring(0, 3);
+              const dayOfWeekShort = day.day_of_week.substring(0, 3);
               const dayNumberOnly = day.date.split('.')[0];
               
               return (
@@ -943,13 +886,13 @@ export default function ScheduleScreen() {
 
         <View style={styles.selectedDayCard}>
           <View style={styles.selectedDayHeader}>
-            <Text style={styles.selectedDayOfWeek}>{selectedDay.dayOfWeek}</Text>
+            <Text style={styles.selectedDayOfWeek}>{selectedDay.day_of_week}</Text>
             <Text style={styles.selectedDayDate}>{selectedDay.date}</Text>
             
-            {assignedPerson && (
-              <View style={[styles.selectedDayPersonBadge, { backgroundColor: personColor }]}>
+            {agentText && agentText.trim() !== '' && (
+              <View style={[styles.selectedDayPersonBadge, { backgroundColor: '#FF9800' }]}>
                 <Text style={styles.selectedDayPersonText}>
-                  {personDisplayName}
+                  {agentText}
                 </Text>
               </View>
             )}
