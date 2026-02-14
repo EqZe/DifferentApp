@@ -156,7 +156,6 @@ const styles = StyleSheet.create({
   calendarCell: {
     backgroundColor: designColors.surface,
     padding: spacing.md,
-    minHeight: 180,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: designColors.border,
@@ -196,10 +195,6 @@ const styles = StyleSheet.create({
     textTransform: 'lowercase',
   },
   assignedPersonBadge: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 50,
     paddingVertical: 8,
     paddingHorizontal: 4,
     borderRadius: 0,
@@ -207,6 +202,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 32,
     backgroundColor: '#FF9800',
+    marginBottom: spacing.xs,
   },
   assignedPersonText: {
     fontSize: 11,
@@ -217,9 +213,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   eventBadge: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
     paddingVertical: 8,
     paddingHorizontal: 4,
     borderRadius: 0,
@@ -227,6 +220,7 @@ const styles = StyleSheet.create({
     minHeight: 32,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: spacing.xs,
   },
   eventBadgeWithTime: {
     backgroundColor: designColors.accent,
@@ -238,13 +232,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 0.3,
     flexWrap: 'wrap',
-  },
-  moreEventsText: {
-    fontSize: 10,
-    color: designColors.primary,
-    fontWeight: typography.weights.bold as any,
-    marginTop: 4,
-    textAlign: 'center',
   },
   emptyState: {
     flex: 1,
@@ -680,7 +667,6 @@ export default function ScheduleScreen() {
       return null;
     }
     
-    const allEvents = getAllEvents(calendarDay.scheduleDay.events);
     const filteredEvents = filterEventsByLanguage(calendarDay.scheduleDay.events);
     
     const agentText = languageFilter === 'hebrew'
@@ -688,15 +674,17 @@ export default function ScheduleScreen() {
       : calendarDay.scheduleDay.agent_en;
     
     const hasAgent = agentText && agentText.trim() !== '';
-    const hasFilteredEvents = filteredEvents.length > 0;
-    
-    const maxVisibleEvents = 3;
-    const visibleEvents = filteredEvents.slice(0, maxVisibleEvents);
-    const remainingCount = filteredEvents.length - maxVisibleEvents;
     
     const dayNumberText = String(calendarDay.dayNumber);
     const dayOfWeek = calendarDay.fullDate.getDay();
     const dayAbbrev = getDayAbbreviation(dayOfWeek);
+    
+    // Calculate dynamic height based on content
+    const baseHeight = 50; // Day number + abbreviation
+    const agentHeight = hasAgent ? 40 : 0;
+    const eventHeight = 40; // Each event badge height
+    const totalEventsHeight = filteredEvents.length * eventHeight;
+    const dynamicHeight = baseHeight + agentHeight + totalEventsHeight;
     
     return (
       <TouchableOpacity
@@ -704,6 +692,7 @@ export default function ScheduleScreen() {
         style={[
           styles.calendarCell,
           calendarDay.isToday && styles.calendarCellToday,
+          { height: dynamicHeight },
         ]}
         onPress={() => handleDayPress(calendarDay)}
       >
@@ -729,10 +718,9 @@ export default function ScheduleScreen() {
           </View>
         )}
         
-        {visibleEvents.map((event, eventIndex) => {
+        {filteredEvents.map((event, eventIndex) => {
           const hasTime = Boolean(event.time);
           const eventDescriptionText = languageFilter === 'hebrew' ? event.description_he : event.description_en;
-          const topPosition = 90 + (eventIndex * 38);
           
           return (
             <View
@@ -740,7 +728,6 @@ export default function ScheduleScreen() {
               style={[
                 styles.eventBadge,
                 hasTime && styles.eventBadgeWithTime,
-                { top: topPosition },
               ]}
             >
               <Text style={styles.eventBadgeText}>
@@ -749,12 +736,6 @@ export default function ScheduleScreen() {
             </View>
           );
         })}
-        
-        {remainingCount > 0 && (
-          <Text style={[styles.moreEventsText, { position: 'absolute', bottom: 4, left: 0, right: 0 }]}>
-            +{remainingCount} more
-          </Text>
-        )}
       </TouchableOpacity>
     );
   };
