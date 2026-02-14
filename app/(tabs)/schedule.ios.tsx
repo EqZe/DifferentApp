@@ -559,16 +559,22 @@ export default function ScheduleScreen() {
     setRefreshing(false);
   }, [loadSchedule]);
 
+  // Get all events from a day (no filtering by type - display ALL events)
+  const getAllEvents = useCallback((events: { [key: string]: Event }): Event[] => {
+    return Object.values(events);
+  }, []);
+
+  // Filter events by language only
   const filterEventsByLanguage = useCallback((events: { [key: string]: Event }): Event[] => {
-    const eventsArray = Object.values(events);
-    return eventsArray.filter(event => {
+    const allEvents = getAllEvents(events);
+    return allEvents.filter(event => {
       if (languageFilter === 'hebrew') {
         return event.description_he && event.description_he.trim() !== '';
       } else {
         return event.description_en && event.description_en.trim() !== '';
       }
     });
-  }, [languageFilter]);
+  }, [languageFilter, getAllEvents]);
 
   const dayHasContent = useCallback((day: CalendarDay): boolean => {
     if (!day.scheduleDay) return false;
@@ -579,9 +585,16 @@ export default function ScheduleScreen() {
     return filteredEvents.length > 0 || hasAgent;
   }, [filterEventsByLanguage, languageFilter]);
 
-  const weekHasEvents = useCallback((week: CalendarDay[]): boolean => {
-    return week.some(day => dayHasContent(day));
-  }, [dayHasContent]);
+  // Filter schedule data to only show days with events
+  const daysWithEvents = useMemo(() => {
+    return scheduleData.filter(day => {
+      const filteredEvents = filterEventsByLanguage(day.events);
+      const hasAgent = languageFilter === 'hebrew'
+        ? (day.agent_he && day.agent_he.trim() !== '')
+        : (day.agent_en && day.agent_en.trim() !== '');
+      return filteredEvents.length > 0 || hasAgent;
+    });
+  }, [scheduleData, filterEventsByLanguage, languageFilter]);
 
   // Check if a specific month has any events with the current language filter
   const monthHasEvents = useCallback((year: number, month: number): boolean => {
@@ -693,15 +706,15 @@ export default function ScheduleScreen() {
       return;
     }
     
-    const dayIndex = scheduleData.findIndex(d => d.date === calendarDay.scheduleDay?.date);
+    const dayIndex = daysWithEvents.findIndex(d => d.date === calendarDay.scheduleDay?.date);
     if (dayIndex !== -1) {
       console.log('ScheduleScreen (iOS): Navigating to day view for', calendarDay.scheduleDay.date);
       setSelectedDayIndex(dayIndex);
       setViewMode('day');
     }
-  }, [scheduleData]);
+  }, [daysWithEvents]);
 
-  const renderCalendarCell = (calendarDay: CalendarDay, index: number, hasEventsInRow: boolean, shouldHide: boolean) => {
+  const renderCalendarCell = (calendarDay: CalendarDay, index: number) => {
     const filteredEvents = calendarDay.scheduleDay 
       ? filterEventsByLanguage(calendarDay.scheduleDay.events)
       : [];
@@ -720,12 +733,6 @@ export default function ScheduleScreen() {
     
     const dayOfWeek = calendarDay.fullDate.getDay();
     const dayAbbrev = getDayAbbreviation(dayOfWeek);
-    
-    if (shouldHide) {
-      return (
-        <View key={index} style={styles.calendarCellHidden} />
-      );
-    }
     
     return (
       <TouchableOpacity
@@ -825,11 +832,11 @@ export default function ScheduleScreen() {
   };
 
   const renderDayView = () => {
-    if (scheduleData.length === 0) {
+    if (daysWithEvents.length === 0) {
       return null;
     }
 
-    const selectedDay = scheduleData[selectedDayIndex];
+    const selectedDay = daysWithEvents[selectedDayIndex];
     const filteredEvents = filterEventsByLanguage(selectedDay.events);
     const hasEvents = filteredEvents.length > 0;
     const agentText = languageFilter === 'hebrew' ? selectedDay.agent_he : selectedDay.agent_en;
@@ -845,7 +852,7 @@ export default function ScheduleScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.daySelectorScroll}
           >
-            {scheduleData.map((day, index) => {
+            {daysWithEvents.map((day, index) => {
               const isActive = index === selectedDayIndex;
               const dayOfWeekShort = day.day_of_week.substring(0, 3);
               const dayNumberOnly = day.date.split('.')[0];
@@ -987,35 +994,10 @@ export default function ScheduleScreen() {
         
         <View style={styles.calendarGrid}>
           {calendarGrid.map((week, weekIndex) => {
-            const hasEvents = weekHasEvents(week);
-            
-            if (!hasEvents) {
-              return null;
-            }
-            
-            // Find first and last day with content in this week
-            let firstContentIndex = -1;
-            let lastContentIndex = -1;
-            
-            for (let i = 0; i < week.length; i++) {
-              if (dayHasContent(week[i])) {
-                if (firstContentIndex === -1) {
-                  firstContentIndex = i;
-                }
-                lastContentIndex = i;
-              }
-            }
-            
-            // Limit to max 5 days per row
-            const daysToShow = Math.min(lastContentIndex - firstContentIndex + 1, 5);
-            const endIndex = firstContentIndex + daysToShow;
-            
             return (
               <View key={weekIndex} style={styles.calendarRow}>
                 {week.map((day, dayIndex) => {
-                  // Hide days before first content, after max 5 days, or after last content
-                  const shouldHide = dayIndex < firstContentIndex || dayIndex >= endIndex;
-                  return renderCalendarCell(day, dayIndex, hasEvents, shouldHide);
+                  return renderCalendarCell(day, dayIndex);
                 })}
               </View>
             );
