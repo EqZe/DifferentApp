@@ -438,10 +438,15 @@ const findFirstMonthWithEvents = (scheduleData: DaySchedule[]): Date => {
   return new Date();
 };
 
-// Helper to get day abbreviation
-const getDayAbbreviation = (dayOfWeek: number): string => {
-  const abbreviations = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-  return abbreviations[dayOfWeek];
+// Helper to get day abbreviation based on language
+const getDayAbbreviation = (dayOfWeek: number, language: 'hebrew' | 'english'): string => {
+  if (language === 'hebrew') {
+    const hebrewAbbreviations = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
+    return hebrewAbbreviations[dayOfWeek];
+  } else {
+    const englishAbbreviations = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    return englishAbbreviations[dayOfWeek];
+  }
 };
 
 // Helper to get agent badge color based on agent name
@@ -720,7 +725,7 @@ export default function ScheduleScreen() {
     const dayNumberText = `${calendarDay.dayNumber}/${monthNumber}`;
     
     const dayOfWeek = calendarDay.fullDate.getDay();
-    const dayAbbrev = getDayAbbreviation(dayOfWeek);
+    const dayAbbrev = getDayAbbreviation(dayOfWeek, languageFilter);
     
     return (
       <TouchableOpacity
