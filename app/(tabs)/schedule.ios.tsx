@@ -129,21 +129,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: spacing.xxl * 2,
   },
-  monthHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    paddingBottom: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: designColors.border,
-  },
-  monthTitle: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold as any,
-    color: designColors.text,
-  },
   calendarGrid: {
     paddingHorizontal: spacing.lg,
   },
@@ -904,88 +889,16 @@ export default function ScheduleScreen() {
   };
 
   const renderFullScheduleView = () => {
-    const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    
-    const currentMonthName = monthNames[currentMonth.getMonth()];
-    const currentYear = currentMonth.getFullYear();
-    const monthTitle = `${currentMonthName} ${currentYear}`;
-    
-    // Calculate previous and next month
-    const prevMonth = new Date(currentMonth);
-    prevMonth.setMonth(prevMonth.getMonth() - 1);
-    const prevMonthYear = prevMonth.getFullYear();
-    const prevMonthIndex = prevMonth.getMonth();
-    
-    const nextMonth = new Date(currentMonth);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    const nextMonthYear = nextMonth.getFullYear();
-    const nextMonthIndex = nextMonth.getMonth();
-    
-    // Check if previous and next months have events
-    const hasPrevMonthEvents = monthHasEvents(prevMonthYear, prevMonthIndex);
-    const hasNextMonthEvents = monthHasEvents(nextMonthYear, nextMonthIndex);
-    
     return (
-      <React.Fragment>
-        <View style={styles.monthHeader}>
-          <TouchableOpacity
-            onPress={() => {
-              if (hasPrevMonthEvents) {
-                setCurrentMonth(prevMonth);
-                console.log('ScheduleScreen (iOS): Previous month');
-              }
-            }}
-            style={[
-              styles.monthNavButton,
-              !hasPrevMonthEvents && styles.monthNavButtonHidden
-            ]}
-            disabled={!hasPrevMonthEvents}
-          >
-            <IconSymbol
-              ios_icon_name="chevron.left"
-              android_material_icon_name="arrow-back"
-              size={24}
-              color={designColors.primary}
-            />
-          </TouchableOpacity>
-          
-          <Text style={styles.monthTitle}>{monthTitle}</Text>
-          
-          <TouchableOpacity
-            onPress={() => {
-              if (hasNextMonthEvents) {
-                setCurrentMonth(nextMonth);
-                console.log('ScheduleScreen (iOS): Next month');
-              }
-            }}
-            style={[
-              styles.monthNavButton,
-              !hasNextMonthEvents && styles.monthNavButtonHidden
-            ]}
-            disabled={!hasNextMonthEvents}
-          >
-            <IconSymbol
-              ios_icon_name="chevron.right"
-              android_material_icon_name="arrow-forward"
-              size={24}
-              color={designColors.primary}
-            />
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.calendarGrid}>
-          {daysWithRowHeights.map((row, rowIndex) => (
-            <View key={rowIndex} style={styles.calendarRow}>
-              {row.days.map((day, dayIndex) => {
-                return renderCalendarCell(day, dayIndex, row.maxHeight);
-              })}
-            </View>
-          ))}
-        </View>
-      </React.Fragment>
+      <View style={styles.calendarGrid}>
+        {daysWithRowHeights.map((row, rowIndex) => (
+          <View key={rowIndex} style={styles.calendarRow}>
+            {row.days.map((day, dayIndex) => {
+              return renderCalendarCell(day, dayIndex, row.maxHeight);
+            })}
+          </View>
+        ))}
+      </View>
     );
   };
 
