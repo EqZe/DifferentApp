@@ -715,22 +715,57 @@ export default function ScheduleScreen() {
   }, [daysWithEvents]);
 
   const renderCalendarCell = (calendarDay: CalendarDay, index: number) => {
-    const filteredEvents = calendarDay.scheduleDay 
-      ? filterEventsByLanguage(calendarDay.scheduleDay.events)
-      : [];
+    // Check if this day has a scheduleDay from the JSON
+    if (!calendarDay.scheduleDay) {
+      // No schedule data for this day - render empty cell
+      const dayNumberText = String(calendarDay.dayNumber);
+      const dayOfWeek = calendarDay.fullDate.getDay();
+      const dayAbbrev = getDayAbbreviation(dayOfWeek);
+      
+      return (
+        <View
+          key={index}
+          style={[
+            styles.calendarCell,
+            calendarDay.isToday && styles.calendarCellToday,
+            !calendarDay.isCurrentMonth && styles.calendarCellOtherMonth,
+          ]}
+        >
+          <View style={styles.dayNumberContainer}>
+            <Text
+              style={[
+                styles.dayNumber,
+                calendarDay.isToday && styles.dayNumberToday,
+              ]}
+            >
+              {dayNumberText}
+            </Text>
+            <Text style={styles.dayAbbreviation}>
+              {dayAbbrev}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+    
+    // This day has schedule data - check what content to display
+    const allEvents = getAllEvents(calendarDay.scheduleDay.events);
+    const filteredEvents = filterEventsByLanguage(calendarDay.scheduleDay.events);
     
     const agentText = languageFilter === 'hebrew'
-      ? calendarDay.scheduleDay?.agent_he
-      : calendarDay.scheduleDay?.agent_en;
+      ? calendarDay.scheduleDay.agent_he
+      : calendarDay.scheduleDay.agent_en;
+    
+    // Determine if this day should be expanded
+    const hasAgent = agentText && agentText.trim() !== '';
+    const hasFilteredEvents = filteredEvents.length > 0;
+    const shouldExpand = hasAgent || hasFilteredEvents;
     
     const maxVisibleEvents = 3;
     const visibleEvents = filteredEvents.slice(0, maxVisibleEvents);
     const remainingCount = filteredEvents.length - maxVisibleEvents;
     
     const dayNumberText = String(calendarDay.dayNumber);
-    
-    const hasContent = (agentText && agentText.trim() !== '') || filteredEvents.length > 0;
-    
     const dayOfWeek = calendarDay.fullDate.getDay();
     const dayAbbrev = getDayAbbreviation(dayOfWeek);
     
@@ -739,12 +774,12 @@ export default function ScheduleScreen() {
         key={index}
         style={[
           styles.calendarCell,
-          hasContent && styles.calendarCellWithEvents,
+          shouldExpand && styles.calendarCellWithEvents,
           calendarDay.isToday && styles.calendarCellToday,
           !calendarDay.isCurrentMonth && styles.calendarCellOtherMonth,
         ]}
         onPress={() => handleDayPress(calendarDay)}
-        disabled={!calendarDay.scheduleDay}
+        disabled={!shouldExpand}
       >
         <View style={styles.dayNumberContainer}>
           <Text
@@ -760,7 +795,7 @@ export default function ScheduleScreen() {
           </Text>
         </View>
         
-        {agentText && agentText.trim() !== '' && (
+        {hasAgent && (
           <View style={styles.assignedPersonBadge}>
             <Text style={styles.assignedPersonText}>
               {agentText}
