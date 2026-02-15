@@ -180,7 +180,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: designColors.border,
-    width: (width - spacing.lg * 2 - spacing.sm * 2) / 3,
     overflow: 'visible',
     ...shadows.sm,
   },
@@ -963,8 +962,11 @@ export default function ScheduleScreen() {
   }, [filterEventsByLanguage, languageFilter]);
 
   const daysWithRowHeights = useMemo(() => {
-    const daysPerRow = 3;
+    const totalDays = daysWithEventsInCurrentMonth.length;
+    const daysPerRow = totalDays % 4 === 0 ? 4 : 3;
     const rows: { days: CalendarDay[]; maxHeight: number }[] = [];
+    
+    console.log('ScheduleScreen: Total days:', totalDays, 'Days per row:', daysPerRow);
     
     for (let i = 0; i < daysWithEventsInCurrentMonth.length; i += daysPerRow) {
       const rowDays = daysWithEventsInCurrentMonth.slice(i, i + daysPerRow);
@@ -979,6 +981,15 @@ export default function ScheduleScreen() {
     
     return rows;
   }, [daysWithEventsInCurrentMonth, calculateCellHeight]);
+
+  const getCellWidth = useMemo(() => {
+    const totalDays = daysWithEventsInCurrentMonth.length;
+    const daysPerRow = totalDays % 4 === 0 ? 4 : 3;
+    const gapCount = daysPerRow - 1;
+    const totalGapWidth = gapCount * spacing.sm;
+    const availableWidth = width - spacing.lg * 2 - totalGapWidth;
+    return availableWidth / daysPerRow;
+  }, [daysWithEventsInCurrentMonth.length]);
 
   const handleDayPress = useCallback((calendarDay: CalendarDay) => {
     if (!calendarDay.scheduleDay) {
@@ -1172,23 +1183,29 @@ export default function ScheduleScreen() {
         style={styles.calendarGrid}
         entering={FadeIn.duration(300)}
       >
-        {daysWithRowHeights.map((row, rowIndex) => (
-          <View key={rowIndex} style={styles.calendarRow}>
-            {row.days.map((day, dayIndex) => {
-              return (
-                <AnimatedCalendarCell
-                  key={dayIndex}
-                  calendarDay={day}
-                  index={rowIndex * 3 + dayIndex}
-                  rowMaxHeight={row.maxHeight}
-                  languageFilter={languageFilter}
-                  filterEventsByLanguage={filterEventsByLanguage}
-                  handleDayPress={handleDayPress}
-                />
-              );
-            })}
-          </View>
-        ))}
+        {daysWithRowHeights.map((row, rowIndex) => {
+          const totalDays = daysWithEventsInCurrentMonth.length;
+          const daysPerRow = totalDays % 4 === 0 ? 4 : 3;
+          
+          return (
+            <View key={rowIndex} style={styles.calendarRow}>
+              {row.days.map((day, dayIndex) => {
+                return (
+                  <View key={dayIndex} style={{ width: getCellWidth }}>
+                    <AnimatedCalendarCell
+                      calendarDay={day}
+                      index={rowIndex * daysPerRow + dayIndex}
+                      rowMaxHeight={row.maxHeight}
+                      languageFilter={languageFilter}
+                      filterEventsByLanguage={filterEventsByLanguage}
+                      handleDayPress={handleDayPress}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          );
+        })}
       </Animated.View>
     );
   };
