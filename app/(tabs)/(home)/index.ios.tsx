@@ -198,7 +198,7 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
         
-        {/* Company Logo - Position 50% lower (75px from bottom instead of 0) */}
+        {/* Company Logo - Aligned to bottom of section */}
         <Image
           source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
           style={styles.logo}
@@ -401,13 +401,13 @@ const styles = StyleSheet.create({
     marginTop: 30,
     position: 'relative',
   },
-  // Logo - Position absolute 50% lower (75px from bottom instead of 0)
+  // Logo - Aligned to bottom of section (0px from bottom)
   logo: {
     width: 150,
     height: 150,
     position: 'absolute',
     left: layout.screenPadding,
-    bottom: 75,
+    bottom: 0,
     zIndex: 13,
   },
   
