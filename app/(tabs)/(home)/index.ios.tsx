@@ -399,12 +399,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
     marginTop: 30,
-    position: 'relative',
+    position: 're`lative',
   },
   // Logo - Aligned to bottom of section (0px from bottom)
   logo: {
-    width: 170,
-    height: 170,
+    width: 180,
+    height: 180,
     position: 'absolute',
     left: layout.screenPadding,
     bottom: 0,
