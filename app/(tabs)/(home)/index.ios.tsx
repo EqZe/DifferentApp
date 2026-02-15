@@ -198,19 +198,26 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
         
+        {/* Company Logo - Position 50% lower (75px from bottom instead of 0) */}
+        <Image
+          source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        
         {/* Header Content - Aligned to Bottom with Gap */}
         <SafeAreaView style={styles.header} edges={['top']}>
           <View style={styles.headerContent}>
-            {/* Company Logo - Even bigger size without background frame, moved down */}
-            <Image
-              source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            
-            {/* Dynamic Time-Based Greeting - Fixed RTL container */}
+            {/* Dynamic Time-Based Greeting - Single line with dynamic sizing */}
             <View style={styles.greetingContainer}>
-              <Text style={styles.greetingText}>{personalizedGreeting}</Text>
+              <Text 
+                style={styles.greetingText} 
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.5}
+              >
+                {personalizedGreeting}
+              </Text>
             </View>
           </View>
         </SafeAreaView>
@@ -390,33 +397,35 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     marginTop: 30,
+    position: 'relative',
   },
-  // Logo - Even bigger size without background frame, moved down
+  // Logo - Position absolute 50% lower (75px from bottom instead of 0)
   logo: {
     width: 150,
     height: 150,
+    position: 'absolute',
+    left: layout.screenPadding,
+    bottom: 75,
+    zIndex: 13,
   },
   
-  // Greeting Container - Flex shrink to prevent overflow, aligned to right
+  // Greeting Container - Full width, aligned to right
   greetingContainer: {
     flex: 1,
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
-    marginLeft: spacing.md,
-    paddingRight: 0,
+    paddingLeft: 160, // Space for the logo
   },
   
-  // Dynamic Greeting - Prominent Typography - RTL Aligned with proper wrapping
+  // Dynamic Greeting - Prominent Typography - RTL Aligned, single line
   greetingText: {
     ...typography.h2,
     color: '#FFFFFF',
     textAlign: 'right',
     fontWeight: '700',
     writingDirection: 'rtl',
-    flexShrink: 1,
-    maxWidth: '100%',
   },
 
   // Gradient Separator - Modern transition between header and content
