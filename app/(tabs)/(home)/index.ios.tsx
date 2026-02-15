@@ -208,8 +208,10 @@ export default function HomeScreen() {
               resizeMode="contain"
             />
             
-            {/* Dynamic Time-Based Greeting */}
-            <Text style={styles.greetingText}>{personalizedGreeting}</Text>
+            {/* Dynamic Time-Based Greeting - Fixed RTL container */}
+            <View style={styles.greetingContainer}>
+              <Text style={styles.greetingText}>{personalizedGreeting}</Text>
+            </View>
           </View>
         </SafeAreaView>
 
@@ -397,15 +399,24 @@ const styles = StyleSheet.create({
     height: 150,
   },
   
-  // Dynamic Greeting - Prominent Typography - RTL Aligned
+  // Greeting Container - Flex shrink to prevent overflow, aligned to right
+  greetingContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
+    marginLeft: spacing.md,
+    paddingRight: 0,
+  },
+  
+  // Dynamic Greeting - Prominent Typography - RTL Aligned with proper wrapping
   greetingText: {
     ...typography.h2,
     color: '#FFFFFF',
     textAlign: 'right',
     fontWeight: '700',
-    marginLeft: spacing.md,
-    alignSelf: 'flex-end',
     writingDirection: 'rtl',
+    flexShrink: 1,
+    maxWidth: '100%',
   },
 
   // Gradient Separator - Modern transition between header and content
