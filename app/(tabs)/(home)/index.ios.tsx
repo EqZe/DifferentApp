@@ -201,14 +201,12 @@ export default function HomeScreen() {
         {/* Header Content - Aligned to Bottom with Gap */}
         <SafeAreaView style={styles.header} edges={['top']}>
           <View style={styles.headerContent}>
-            {/* Company Logo - Bigger size */}
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-            </View>
+            {/* Company Logo - Bigger size without background frame */}
+            <Image
+              source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
             
             {/* Dynamic Time-Based Greeting */}
             <Text style={styles.greetingText}>{personalizedGreeting}</Text>
@@ -392,18 +390,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'space-between',
   },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xs,
-  },
+  // Logo - Bigger size without background frame
   logo: {
-    width: '100%',
-    height: '100%',
+    width: 120,
+    height: 120,
   },
   
   // Dynamic Greeting - Prominent Typography - RTL Aligned
