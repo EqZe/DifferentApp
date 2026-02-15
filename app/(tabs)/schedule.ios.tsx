@@ -645,7 +645,7 @@ const AnimatedCalendarCell = React.memo(({
       style={[
         styles.calendarCell,
         calendarDay.isToday && styles.calendarCellToday,
-        { minHeight: rowMaxHeight },
+        { height: rowMaxHeight },
         animatedStyle,
       ]}
       onPress={() => handleDayPress(calendarDay)}
@@ -968,6 +968,8 @@ export default function ScheduleScreen() {
       const rowDays = daysWithEventsInCurrentMonth.slice(i, i + daysPerRow);
       const heights = rowDays.map(day => calculateCellHeight(day));
       const maxHeight = Math.max(...heights);
+      
+      console.log(`ScheduleScreen (iOS): Row ${Math.floor(i / daysPerRow)} - Heights:`, heights, 'Max:', maxHeight);
       
       rows.push({
         days: rowDays,
