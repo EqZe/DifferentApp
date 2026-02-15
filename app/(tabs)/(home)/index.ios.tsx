@@ -403,8 +403,8 @@ const styles = StyleSheet.create({
   },
   // Logo - Aligned to bottom of section (0px from bottom)
   logo: {
-    width: 150,
-    height: 150,
+    width: 170,
+    height: 170,
     position: 'absolute',
     left: layout.screenPadding,
     bottom: 0,
