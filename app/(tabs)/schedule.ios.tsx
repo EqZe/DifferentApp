@@ -644,7 +644,7 @@ const AnimatedCalendarCell = React.memo(({
       style={[
         styles.calendarCell,
         calendarDay.isToday && styles.calendarCellToday,
-        { minHeight: rowMaxHeight },
+        { height: rowMaxHeight },
         animatedStyle,
       ]}
       onPress={() => handleDayPress(calendarDay)}
