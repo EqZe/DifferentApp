@@ -201,7 +201,7 @@ export default function HomeScreen() {
         {/* Header Content - Aligned to Bottom with Gap */}
         <SafeAreaView style={styles.header} edges={['top']}>
           <View style={styles.headerContent}>
-            {/* Company Logo - Bigger size without background frame */}
+            {/* Company Logo - Even bigger size without background frame, moved down */}
             <Image
               source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
               style={styles.logo}
@@ -389,11 +389,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
+    marginTop: 30,
   },
-  // Logo - Bigger size without background frame
+  // Logo - Even bigger size without background frame, moved down
   logo: {
-    width: 120,
-    height: 120,
+    width: 150,
+    height: 150,
   },
   
   // Dynamic Greeting - Prominent Typography - RTL Aligned
