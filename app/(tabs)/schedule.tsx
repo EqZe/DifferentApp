@@ -176,11 +176,10 @@ const styles = StyleSheet.create({
   calendarCell: {
     backgroundColor: designColors.surface,
     padding: spacing.md,
-    paddingBottom: spacing.md + 4,
+    paddingBottom: spacing.md + 8,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: designColors.border,
-    overflow: 'visible',
     ...shadows.sm,
   },
   calendarCellToday: {
@@ -649,7 +648,7 @@ const AnimatedCalendarCell = React.memo(({
       style={[
         styles.calendarCell,
         calendarDay.isToday && styles.calendarCellToday,
-        { height: rowMaxHeight },
+        { minHeight: rowMaxHeight },
         animatedStyle,
       ]}
       onPress={() => handleDayPress(calendarDay)}
@@ -808,8 +807,8 @@ export default function ScheduleScreen() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [hasInitializedMonth, setHasInitializedMonth] = useState(false);
 
-  const toggleIndicatorPosition = useSharedValue(viewMode === 'full' ? 0 : 0.5);
-  const languageIndicatorPosition = useSharedValue(languageFilter === 'hebrew' ? 0 : 0.5);
+  const toggleIndicatorPosition = useSharedValue(viewMode === 'full' ? 0 : 1);
+  const languageIndicatorPosition = useSharedValue(languageFilter === 'hebrew' ? 0 : 1);
 
   const loadSchedule = useCallback(async () => {
     if (!user?.id) {
@@ -956,7 +955,7 @@ export default function ScheduleScreen() {
     const agentHeight = hasAgent ? 40 : 0;
     const eventHeight = 40;
     const totalEventsHeight = filteredEvents.length * eventHeight;
-    const bottomPadding = 8;
+    const bottomPadding = 12;
     
     return baseHeight + agentHeight + totalEventsHeight + bottomPadding;
   }, [filterEventsByLanguage, languageFilter]);
@@ -1011,7 +1010,7 @@ export default function ScheduleScreen() {
   const handleViewModeChange = (mode: 'day' | 'full') => {
     console.log('ScheduleScreen: Switched to', mode, 'view');
     setViewMode(mode);
-    toggleIndicatorPosition.value = withSpring(mode === 'full' ? 0 : 0.5, {
+    toggleIndicatorPosition.value = withSpring(mode === 'full' ? 0 : 1, {
       damping: 20,
       stiffness: 300,
     });
@@ -1021,7 +1020,7 @@ export default function ScheduleScreen() {
   const handleLanguageChange = (lang: 'hebrew' | 'english') => {
     console.log('ScheduleScreen: Language filter set to', lang);
     setLanguageFilter(lang);
-    languageIndicatorPosition.value = withSpring(lang === 'hebrew' ? 0 : 0.5, {
+    languageIndicatorPosition.value = withSpring(lang === 'hebrew' ? 0 : 1, {
       damping: 20,
       stiffness: 300,
     });
