@@ -463,7 +463,6 @@ const parseScheduleData = (scheduleJson: any): DaySchedule[] => {
   
   const daysArray: DaySchedule[] = [];
   
-  // Convert the days object to an array
   Object.keys(scheduleJson.days).forEach((dayKey) => {
     const day = scheduleJson.days[dayKey];
     daysArray.push({
@@ -545,21 +544,18 @@ const getFullDayName = (dayOfWeekString: string, language: 'hebrew' | 'english')
 
 // Helper to get agent badge colors (gradient)
 const getAgentBadgeColors = (agentText: string | null): [string, string] => {
-  if (!agentText) return ['#FF9800', '#F57C00']; // Default orange gradient
+  if (!agentText) return ['#FF9800', '#F57C00'];
   
   const normalizedAgent = agentText.trim().toLowerCase();
   
-  // Check for אבישי or רוני - warm orange gradient
   if (normalizedAgent.includes('אבישי') || normalizedAgent.includes('רוני')) {
-    return ['#FF9800', '#F57C00']; // Orange gradient
+    return ['#FF9800', '#F57C00'];
   }
   
-  // Check for סוכנת - cool green gradient
   if (normalizedAgent.includes('סוכנת')) {
-    return ['#4CAF50', '#388E3C']; // Green gradient
+    return ['#4CAF50', '#388E3C'];
   }
   
-  // Default warm orange gradient
   return ['#FF9800', '#F57C00'];
 };
 
