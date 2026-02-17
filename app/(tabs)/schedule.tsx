@@ -233,7 +233,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: 0.3,
-    flexWrap: 'wrap',
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
@@ -254,7 +253,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: 0.3,
-    flexWrap: 'wrap',
     textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
@@ -652,7 +650,7 @@ const AnimatedCalendarCell = React.memo(({
           style={styles.assignedPersonBadge}
           entering={FadeIn.delay(index * 50 + 100)}
         >
-          <Text style={styles.assignedPersonText}>
+          <Text style={styles.assignedPersonText} numberOfLines={2}>
             {agentText}
           </Text>
         </AnimatedLinearGradient>
@@ -670,7 +668,7 @@ const AnimatedCalendarCell = React.memo(({
             style={styles.eventBadge}
             entering={FadeIn.delay(index * 50 + 150 + eventIndex * 50)}
           >
-            <Text style={styles.eventBadgeText}>
+            <Text style={styles.eventBadgeText} numberOfLines={2}>
               {eventDescriptionText}
             </Text>
           </AnimatedLinearGradient>
@@ -898,8 +896,8 @@ export default function ScheduleScreen() {
     const hasAgent = agentText && agentText.trim() !== '';
     
     const baseHeight = 50;
-    const agentHeight = hasAgent ? 40 : 0;
-    const eventHeight = 40;
+    const agentHeight = hasAgent ? 48 : 0;
+    const eventHeight = 48;
     const totalEventsHeight = filteredEvents.length * eventHeight;
     const bottomPadding = 12;
     
@@ -907,11 +905,10 @@ export default function ScheduleScreen() {
   }, [filterEventsByLanguage, languageFilter]);
 
   const daysWithRowHeights = useMemo(() => {
-    const totalDays = allDaysWithEvents.length;
-    const daysPerRow = totalDays % 4 === 0 ? 4 : 3;
+    const daysPerRow = 3;
     const rows: { days: CalendarDay[]; maxHeight: number }[] = [];
     
-    console.log('ScheduleScreen: Total days:', totalDays, 'Days per row:', daysPerRow);
+    console.log('ScheduleScreen: Total days:', allDaysWithEvents.length, 'Days per row: 3 (fixed)');
     
     for (let i = 0; i < allDaysWithEvents.length; i += daysPerRow) {
       const rowDays = allDaysWithEvents.slice(i, i + daysPerRow);
@@ -930,13 +927,12 @@ export default function ScheduleScreen() {
   }, [allDaysWithEvents, calculateCellHeight]);
 
   const getCellWidth = useMemo(() => {
-    const totalDays = allDaysWithEvents.length;
-    const daysPerRow = totalDays % 4 === 0 ? 4 : 3;
+    const daysPerRow = 3;
     const gapCount = daysPerRow - 1;
     const totalGapWidth = gapCount * spacing.sm;
     const availableWidth = width - spacing.lg * 2 - totalGapWidth;
     return availableWidth / daysPerRow;
-  }, [allDaysWithEvents.length]);
+  }, []);
 
   const handleDayPress = useCallback((calendarDay: CalendarDay) => {
     if (!calendarDay.scheduleDay) {
@@ -949,9 +945,13 @@ export default function ScheduleScreen() {
       console.log('ScheduleScreen: Navigating to day view for', calendarDay.scheduleDay.date);
       setSelectedDayIndex(dayIndex);
       setViewMode('day');
+      toggleIndicatorPosition.value = withSpring(1, {
+        damping: 20,
+        stiffness: 300,
+      });
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-  }, [daysWithEvents]);
+  }, [daysWithEvents, toggleIndicatorPosition]);
 
   const handleViewModeChange = (mode: 'day' | 'full') => {
     console.log('ScheduleScreen: Switched to', mode, 'view');
@@ -1131,8 +1131,7 @@ export default function ScheduleScreen() {
         entering={FadeIn.duration(300)}
       >
         {daysWithRowHeights.map((row, rowIndex) => {
-          const totalDays = allDaysWithEvents.length;
-          const daysPerRow = totalDays % 4 === 0 ? 4 : 3;
+          const daysPerRow = 3;
           
           return (
             <View key={rowIndex} style={styles.calendarRow}>
