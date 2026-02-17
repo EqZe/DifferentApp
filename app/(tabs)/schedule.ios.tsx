@@ -478,42 +478,6 @@ const parseScheduleData = (scheduleJson: any): DaySchedule[] => {
   return daysArray;
 };
 
-// Find the first month with events (chronologically)
-const findFirstMonthWithEvents = (scheduleData: DaySchedule[]): Date => {
-  if (scheduleData.length === 0) {
-    return new Date();
-  }
-
-  let earliestDate: Date | null = null;
-
-  scheduleData.forEach(day => {
-    const parts = day.date.split('.');
-    if (parts.length === 3) {
-      const dayNum = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10);
-      const year = parseInt(parts[2], 10) + 2000;
-      
-      const eventCount = Object.keys(day.events).length;
-      const hasAgent = day.agent_he || day.agent_en;
-      
-      if (eventCount > 0 || hasAgent) {
-        const date = new Date(year, month - 1, dayNum);
-        if (!earliestDate || date < earliestDate) {
-          earliestDate = date;
-        }
-      }
-    }
-  });
-
-  if (earliestDate) {
-    const firstOfMonth = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1);
-    console.log('ScheduleScreen (iOS): First month with events:', firstOfMonth.toLocaleDateString());
-    return firstOfMonth;
-  }
-
-  return new Date();
-};
-
 // Helper to get day name based on language
 const getDayAbbreviation = (dayOfWeek: number, language: 'hebrew' | 'english'): string => {
   if (language === 'hebrew') {
@@ -800,8 +764,6 @@ export default function ScheduleScreen() {
   const [viewMode, setViewMode] = useState<'day' | 'full'>('day');
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [languageFilter, setLanguageFilter] = useState<'hebrew' | 'english'>('hebrew');
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [hasInitializedMonth, setHasInitializedMonth] = useState(false);
 
   const toggleIndicatorPosition = useSharedValue(viewMode === 'full' ? 0 : 1);
   const languageIndicatorPosition = useSharedValue(languageFilter === 'hebrew' ? 0 : 1);
@@ -836,13 +798,6 @@ export default function ScheduleScreen() {
         setScheduleData(parsedSchedule);
         setPersonName(user.fullName || '');
         console.log('ScheduleScreen (iOS): Parsed schedule days:', parsedSchedule.length);
-        
-        if (!hasInitializedMonth && parsedSchedule.length > 0) {
-          const firstMonth = findFirstMonthWithEvents(parsedSchedule);
-          setCurrentMonth(firstMonth);
-          setHasInitializedMonth(true);
-          console.log('ScheduleScreen (iOS): Auto-opened to first month with events');
-        }
       } else {
         console.log('ScheduleScreen (iOS): No schedule data found');
         setScheduleData([]);
@@ -854,7 +809,7 @@ export default function ScheduleScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user, hasInitializedMonth]);
+  }, [user]);
 
   useEffect(() => {
     loadSchedule();
@@ -892,16 +847,13 @@ export default function ScheduleScreen() {
     });
   }, [scheduleData, filterEventsByLanguage, languageFilter]);
 
-  const daysWithEventsInCurrentMonth = useMemo(() => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    
+  const allDaysWithEvents = useMemo(() => {
     const today = new Date();
     const todayDate = today.getDate();
     const todayMonth = today.getMonth();
     const todayYear = today.getFullYear();
     
-    const daysInMonth: CalendarDay[] = [];
+    const daysInCalendar: CalendarDay[] = [];
     
     scheduleData.forEach(day => {
       const parts = day.date.split('.');
@@ -911,8 +863,6 @@ export default function ScheduleScreen() {
       const dayMonth = parseInt(parts[1], 10);
       const dayYear = parseInt(parts[2], 10) + 2000;
       
-      if (dayYear !== year || dayMonth !== month + 1) return;
-      
       const filteredEvents = filterEventsByLanguage(day.events);
       const hasAgent = languageFilter === 'hebrew'
         ? (day.agent_he && day.agent_he.trim() !== '')
@@ -920,7 +870,7 @@ export default function ScheduleScreen() {
       
       if (filteredEvents.length > 0 || hasAgent) {
         const fullDate = new Date(dayYear, dayMonth - 1, dayNum);
-        daysInMonth.push({
+        daysInCalendar.push({
           dayNumber: dayNum,
           isCurrentMonth: true,
           isToday: dayNum === todayDate && dayMonth - 1 === todayMonth && dayYear === todayYear,
@@ -930,11 +880,11 @@ export default function ScheduleScreen() {
       }
     });
     
-    daysInMonth.sort((a, b) => a.dayNumber - b.dayNumber);
+    daysInCalendar.sort((a, b) => a.fullDate.getTime() - b.fullDate.getTime());
     
-    console.log('ScheduleScreen (iOS): Days with events in current month:', daysInMonth.length);
-    return daysInMonth;
-  }, [currentMonth, scheduleData, filterEventsByLanguage, languageFilter]);
+    console.log('ScheduleScreen (iOS): Total days with events across all months:', daysInCalendar.length);
+    return daysInCalendar;
+  }, [scheduleData, filterEventsByLanguage, languageFilter]);
 
   const calculateCellHeight = useCallback((calendarDay: CalendarDay): number => {
     if (!calendarDay.scheduleDay) {
@@ -957,14 +907,14 @@ export default function ScheduleScreen() {
   }, [filterEventsByLanguage, languageFilter]);
 
   const daysWithRowHeights = useMemo(() => {
-    const totalDays = daysWithEventsInCurrentMonth.length;
+    const totalDays = allDaysWithEvents.length;
     const daysPerRow = totalDays % 4 === 0 ? 4 : 3;
     const rows: { days: CalendarDay[]; maxHeight: number }[] = [];
     
     console.log('ScheduleScreen (iOS): Total days:', totalDays, 'Days per row:', daysPerRow);
     
-    for (let i = 0; i < daysWithEventsInCurrentMonth.length; i += daysPerRow) {
-      const rowDays = daysWithEventsInCurrentMonth.slice(i, i + daysPerRow);
+    for (let i = 0; i < allDaysWithEvents.length; i += daysPerRow) {
+      const rowDays = allDaysWithEvents.slice(i, i + daysPerRow);
       const heights = rowDays.map(day => calculateCellHeight(day));
       const maxHeight = Math.max(...heights);
       
@@ -977,16 +927,16 @@ export default function ScheduleScreen() {
     }
     
     return rows;
-  }, [daysWithEventsInCurrentMonth, calculateCellHeight]);
+  }, [allDaysWithEvents, calculateCellHeight]);
 
   const getCellWidth = useMemo(() => {
-    const totalDays = daysWithEventsInCurrentMonth.length;
+    const totalDays = allDaysWithEvents.length;
     const daysPerRow = totalDays % 4 === 0 ? 4 : 3;
     const gapCount = daysPerRow - 1;
     const totalGapWidth = gapCount * spacing.sm;
     const availableWidth = width - spacing.lg * 2 - totalGapWidth;
     return availableWidth / daysPerRow;
-  }, [daysWithEventsInCurrentMonth.length]);
+  }, [allDaysWithEvents.length]);
 
   const handleDayPress = useCallback((calendarDay: CalendarDay) => {
     if (!calendarDay.scheduleDay) {
@@ -1181,7 +1131,7 @@ export default function ScheduleScreen() {
         entering={FadeIn.duration(300)}
       >
         {daysWithRowHeights.map((row, rowIndex) => {
-          const totalDays = daysWithEventsInCurrentMonth.length;
+          const totalDays = allDaysWithEvents.length;
           const daysPerRow = totalDays % 4 === 0 ? 4 : 3;
           
           return (
