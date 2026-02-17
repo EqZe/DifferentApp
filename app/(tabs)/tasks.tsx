@@ -19,6 +19,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { api, type Task } from '@/utils/api';
 import ConfettiCannon from 'react-native-confetti-cannon';
+import { ConfirmModal } from '@/components/ConfirmModal';
 
 const styles = StyleSheet.create({
   container: {
@@ -378,6 +379,12 @@ export default function TasksScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showCompleted, setShowCompleted] = useState(true);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingTaskAction, setPendingTaskAction] = useState<{
+    taskId: string;
+    requiresPending: boolean;
+    currentStatus: string;
+  } | null>(null);
   const { colors } = useTheme();
   const confettiRef = useRef<any>(null);
 
@@ -410,7 +417,7 @@ export default function TasksScreen() {
   };
 
   const handleCompleteTask = useCallback((taskId: string, requiresPending: boolean, currentStatus: string) => {
-    console.log('🎯 INSTANT CLICK - Task button pressed', taskId);
+    console.log('🎯 Task button pressed - showing confirmation modal', taskId);
     
     // Prevent completing pending tasks
     if (currentStatus === 'PENDING') {
@@ -418,17 +425,33 @@ export default function TasksScreen() {
       return;
     }
     
+    // Store the pending action and show confirmation modal
+    setPendingTaskAction({ taskId, requiresPending, currentStatus });
+    setShowConfirmModal(true);
+  }, []);
+
+  const handleConfirmComplete = useCallback(() => {
+    if (!pendingTaskAction) return;
+    
+    const { taskId, requiresPending, currentStatus } = pendingTaskAction;
+    
+    console.log('✅ User confirmed - executing task completion', taskId);
+    
     // Calculate new status ONCE upfront
     const newStatus: 'YET' | 'PENDING' | 'DONE' = 
       requiresPending 
         ? (currentStatus === 'YET' ? 'PENDING' : 'DONE')
         : 'DONE';
     
-    // 🎉 INSTANT CONFETTI - Fire IMMEDIATELY if completing to DONE
+    // 🎉 INSTANT CONFETTI - Fire IMMEDIATELY on confirmation
     if (newStatus === 'DONE' && confettiRef.current) {
+      console.log('🎉 CONFETTI FIRED INSTANTLY on confirmation');
       confettiRef.current.start();
-      console.log('🎉 CONFETTI FIRED INSTANTLY');
     }
+    
+    // Close modal immediately
+    setShowConfirmModal(false);
+    setPendingTaskAction(null);
     
     // 🚀 INSTANT UI UPDATE - Optimistic update happens NOW
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
@@ -446,7 +469,13 @@ export default function TasksScreen() {
         // Revert on error
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: currentStatus } : t));
       });
-  }, [confettiRef]);
+  }, [pendingTaskAction, confettiRef]);
+
+  const handleCancelComplete = useCallback(() => {
+    console.log('❌ User cancelled task completion');
+    setShowConfirmModal(false);
+    setPendingTaskAction(null);
+  }, []);
 
   if (loading) {
     return (
@@ -531,6 +560,17 @@ export default function TasksScreen() {
             colors={['#2784F5', '#F5AD27', '#4CAF50', '#FF6B6B', '#FFD93D', '#6BCF7F']}
           />
         </View>
+
+        {/* Confirmation Modal */}
+        <ConfirmModal
+          visible={showConfirmModal}
+          title="אישור משימה"
+          message="האם אתה בטוח שברצונך לסמן את המשימה כהושלמה?"
+          confirmText="אישור"
+          cancelText="ביטול"
+          onConfirm={handleConfirmComplete}
+          onCancel={handleCancelComplete}
+        />
       </SafeAreaView>
     </LinearGradient>
   );
