@@ -293,52 +293,47 @@ const styles = StyleSheet.create({
   dayViewHeader: {
     backgroundColor: designColors.surface,
     borderRadius: radius.xl,
-    padding: spacing.xl,
+    padding: spacing.lg,
     marginBottom: spacing.lg,
-    ...shadows.lg,
-    alignItems: 'center',
+    ...shadows.md,
     borderWidth: 1,
     borderColor: designColors.border,
   },
-  dayViewDateContainer: {
-    alignItems: 'center',
+  dayViewHeaderTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: spacing.md,
   },
+  dayViewDateSection: {
+    flex: 1,
+  },
   dayViewDayOfWeek: {
-    fontSize: typography.sizes.xxxl + 4,
+    fontSize: typography.sizes.xxxl,
     fontWeight: typography.weights.bold as any,
     color: designColors.primary,
-    textAlign: 'center',
     marginBottom: spacing.xs,
     letterSpacing: 0.5,
-    textShadowColor: 'rgba(39, 132, 245, 0.1)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
   },
   dayViewDate: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.md,
     color: designColors.text.secondary,
-    textAlign: 'center',
     letterSpacing: 0.3,
   },
   dayViewAgentBadge: {
-    marginTop: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    ...shadows.md,
+    gap: spacing.xs,
+    ...shadows.sm,
   },
   dayViewAgentText: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold as any,
     color: '#FFFFFF',
     letterSpacing: 0.3,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   daySelector: {
     marginBottom: spacing.lg,
@@ -390,33 +385,28 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     padding: spacing.lg,
     ...shadows.md,
-    borderLeftWidth: 4,
-    borderLeftColor: designColors.primary,
     borderWidth: 1,
     borderColor: designColors.border,
+    overflow: 'hidden',
   },
-  eventHeader: {
+  eventCardInner: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
+    alignItems: 'flex-start',
     gap: spacing.md,
   },
   eventIconContainer: {
-    width: 52,
-    height: 52,
+    width: 56,
+    height: 56,
     borderRadius: radius.full,
-    backgroundColor: designColors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.sm,
-    borderWidth: 2,
-    borderColor: designColors.primary + '20',
   },
   eventContent: {
     flex: 1,
   },
   eventTime: {
-    fontSize: typography.sizes.lg,
+    fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold as any,
     color: designColors.primary,
     marginBottom: spacing.xs,
@@ -427,6 +417,15 @@ const styles = StyleSheet.create({
     color: designColors.text.primary,
     lineHeight: typography.sizes.md * 1.6,
     letterSpacing: 0.2,
+  },
+  eventAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    borderTopLeftRadius: radius.xl,
+    borderBottomLeftRadius: radius.xl,
   },
   noEventsContainer: {
     backgroundColor: designColors.surface,
@@ -681,14 +680,13 @@ const AnimatedCalendarCell = React.memo(({
 // Animated Event Card Component
 const AnimatedEventCard = React.memo(({ event, index, languageFilter }: any) => {
   const scale = useSharedValue(1);
-  const iconRotation = useSharedValue(0);
+  const iconScale = useSharedValue(1);
   
   useEffect(() => {
-    iconRotation.value = withRepeat(
+    iconScale.value = withRepeat(
       withSequence(
-        withTiming(-5, { duration: 1500 }),
-        withTiming(5, { duration: 1500 }),
-        withTiming(0, { duration: 1500 })
+        withTiming(1.1, { duration: 1200 }),
+        withTiming(1, { duration: 1200 })
       ),
       -1,
       false
@@ -703,7 +701,7 @@ const AnimatedEventCard = React.memo(({ event, index, languageFilter }: any) => 
   
   const animatedIconStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ rotate: `${iconRotation.value}deg` }],
+      transform: [{ scale: iconScale.value }],
     };
   });
   
@@ -728,15 +726,26 @@ const AnimatedEventCard = React.memo(({ event, index, languageFilter }: any) => 
       onPressOut={handlePressOut}
       activeOpacity={1}
     >
-      <View style={styles.eventHeader}>
-        <Animated.View style={[styles.eventIconContainer, animatedIconStyle]}>
+      <AnimatedLinearGradient
+        colors={[designColors.primary, designColors.primaryDark]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.eventAccent}
+      />
+      <View style={styles.eventCardInner}>
+        <AnimatedLinearGradient
+          colors={[designColors.primary + '20', designColors.primary + '10']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.eventIconContainer, animatedIconStyle]}
+        >
           <IconSymbol
             ios_icon_name={hasTime ? 'clock.fill' : 'circle.fill'}
             android_material_icon_name={hasTime ? 'access-time' : 'circle'}
-            size={24}
+            size={28}
             color={designColors.primary}
           />
-        </Animated.View>
+        </AnimatedLinearGradient>
         <View style={styles.eventContent}>
           {hasTime && (
             <Text style={styles.eventTime}>
@@ -1065,30 +1074,32 @@ export default function ScheduleScreen() {
           style={styles.dayViewHeader}
           entering={ZoomIn.springify()}
         >
-          <View style={styles.dayViewDateContainer}>
-            <Text style={styles.dayViewDayOfWeek}>{fullDayName}</Text>
-            <Text style={styles.dayViewDate}>{selectedDay.date}</Text>
+          <View style={styles.dayViewHeaderTop}>
+            <View style={styles.dayViewDateSection}>
+              <Text style={styles.dayViewDayOfWeek}>{fullDayName}</Text>
+              <Text style={styles.dayViewDate}>{selectedDay.date}</Text>
+            </View>
+            
+            {agentText && agentText.trim() !== '' && (
+              <AnimatedLinearGradient
+                colors={agentBadgeColors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.dayViewAgentBadge}
+                entering={FadeIn.delay(200)}
+              >
+                <IconSymbol
+                  ios_icon_name="person.fill"
+                  android_material_icon_name="person"
+                  size={16}
+                  color="#FFFFFF"
+                />
+                <Text style={styles.dayViewAgentText}>
+                  {agentText}
+                </Text>
+              </AnimatedLinearGradient>
+            )}
           </View>
-          
-          {agentText && agentText.trim() !== '' && (
-            <AnimatedLinearGradient
-              colors={agentBadgeColors}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.dayViewAgentBadge}
-              entering={FadeIn.delay(200)}
-            >
-              <IconSymbol
-                ios_icon_name="person.fill"
-                android_material_icon_name="person"
-                size={20}
-                color="#FFFFFF"
-              />
-              <Text style={styles.dayViewAgentText}>
-                {agentText}
-              </Text>
-            </AnimatedLinearGradient>
-          )}
         </Animated.View>
 
         {hasEvents ? (
