@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@/contexts/UserContext';
@@ -36,7 +35,8 @@ import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 
-// New schedule data interfaces matching the new JSON format
+// ─── Interfaces ───────────────────────────────────────────────────────────────
+
 interface Event {
   description_he: string;
   description_en: string;
@@ -66,6 +66,8 @@ interface CalendarDay {
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -287,54 +289,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dayViewContainer: {
+});
+
+// ─── Day View Styles ──────────────────────────────────────────────────────────
+
+const dayViewStyles = StyleSheet.create({
+  dayViewWrapper: {
     paddingHorizontal: spacing.lg,
   },
-  dayViewHeader: {
-    backgroundColor: designColors.surface,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    ...shadows.md,
-    borderWidth: 1,
-    borderColor: designColors.border,
-  },
-  dayViewHeaderTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
-  },
-  dayViewDateSection: {
-    flex: 1,
-  },
-  dayViewDayOfWeek: {
-    fontSize: typography.sizes.xxxl,
-    fontWeight: typography.weights.bold as any,
-    color: designColors.primary,
-    marginBottom: spacing.xs,
-    letterSpacing: 0.5,
-  },
-  dayViewDate: {
-    fontSize: typography.sizes.md,
-    color: designColors.text.secondary,
-    letterSpacing: 0.3,
-  },
-  dayViewAgentBadge: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    ...shadows.sm,
-  },
-  dayViewAgentText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold as any,
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
+
+  /* Day selector */
   daySelector: {
     marginBottom: spacing.lg,
   },
@@ -366,100 +330,225 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  daySelectorDayOfWeekActive: {
-    color: '#FFFFFF',
-  },
+  daySelectorDayOfWeekActive: { color: '#FFFFFF' },
   daySelectorDate: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold as any,
     color: designColors.text.primary,
   },
-  daySelectorDateActive: {
+  daySelectorDateActive: { color: '#FFFFFF' },
+
+  /* Hero card */
+  heroCard: {
+    borderRadius: 18,
+    marginBottom: spacing.lg,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  heroGradient: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  /* Top row: day name (right) + agent pill (left) */
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  heroDayOfWeek: {
+    fontSize: 17,
+    fontWeight: '700' as any,
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+    textAlign: 'right',
+  },
+  heroAgentPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+  },
+  heroAgentDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+  },
+  heroAgentText: {
+    fontSize: 12,
+    fontWeight: '700' as any,
     color: '#FFFFFF',
   },
-  eventsSection: {
-    gap: spacing.md,
+  /* Bottom row: big date (right) + event count (left) */
+  heroBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
   },
-  eventCard: {
-    backgroundColor: designColors.surface,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    ...shadows.md,
-    borderWidth: 1,
-    borderColor: designColors.border,
-    overflow: 'hidden',
+  heroDate: {
+    fontSize: 32,
+    fontWeight: '800' as any,
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+    lineHeight: 34,
   },
-  eventCardInner: {
+  heroEventCountWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingBottom: 2,
+  },
+  heroEventCountText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500' as any,
+  },
+
+  /* Timeline */
+  timeline: {
+    paddingBottom: spacing.xxl,
+  },
+  timelineItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  eventIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.sm,
-  },
-  eventContent: {
-    flex: 1,
-  },
-  eventTime: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold as any,
-    color: designColors.primary,
-    marginBottom: spacing.xs,
-    letterSpacing: 0.3,
-  },
-  eventDescription: {
-    fontSize: typography.sizes.md,
-    color: designColors.text.primary,
-    lineHeight: typography.sizes.md * 1.6,
-    letterSpacing: 0.2,
-  },
-  eventAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    borderTopLeftRadius: radius.xl,
-    borderBottomLeftRadius: radius.xl,
-  },
-  noEventsContainer: {
-    backgroundColor: designColors.surface,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    alignItems: 'center',
-    ...shadows.sm,
-    borderWidth: 1,
-    borderColor: designColors.border,
-  },
-  noEventsIcon: {
     marginBottom: spacing.md,
   },
-  noEventsText: {
+
+  /* Rail */
+  timelineRail: {
+    width: 56,
+    alignItems: 'center',
+    paddingTop: 4,
+    flexShrink: 0,
+  },
+  timelineDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: designColors.primary,
+    borderWidth: 3,
+    borderColor: designColors.background,
+    zIndex: 2,
+    ...shadows.sm,
+  },
+  timelineDotNoTime: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: designColors.text.secondary,
+    borderWidth: 2,
+    borderColor: designColors.background,
+    zIndex: 2,
+    marginTop: 2,
+  },
+  timelineConnector: {
+    width: 2,
+    flex: 1,
+    backgroundColor: designColors.border,
+    marginTop: 4,
+    minHeight: 30,
+  },
+  timelineTimeLabel: {
+    fontSize: 11,
+    fontWeight: '700' as any,
+    color: designColors.primary,
+    letterSpacing: 0.5,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  timelineTimeLabelEmpty: {
+    fontSize: 11,
+    color: 'transparent',
+    marginTop: 6,
+  },
+
+  /* Event card */
+  timelineCard: {
+    flex: 1,
+    marginLeft: spacing.sm,
+    backgroundColor: designColors.surface,
+    borderRadius: 16,
+    padding: spacing.md,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: designColors.border,
+    ...shadows.sm,
+    marginBottom: 2,
+  },
+  timelineCardWithTime: {
+    borderLeftWidth: 3,
+    borderLeftColor: designColors.primary,
+  },
+  timelineCardType: {
+    fontSize: 10,
+    fontWeight: '700' as any,
+    color: designColors.text.secondary,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 5,
+    textAlign: 'right',
+  },
+  timelineCardDescription: {
     fontSize: typography.sizes.md,
+    color: designColors.text.primary,
+    lineHeight: typography.sizes.md * 1.55,
+    letterSpacing: 0.1,
+    textAlign: 'right',
+  },
+  timelineCardTime: {
+    fontSize: 13,
+    fontWeight: '700' as any,
+    color: designColors.primary,
+    textAlign: 'right',
+    marginTop: 6,
+    letterSpacing: 0.2,
+  },
+
+  /* No events */
+  noEventsWrap: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: designColors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: designColors.border,
+    ...shadows.sm,
+  },
+  noEventsCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: designColors.primaryBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  noEventsTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: '700' as any,
+    color: designColors.text.primary,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  noEventsSubtitle: {
+    fontSize: typography.sizes.sm,
     color: designColors.text.secondary,
     textAlign: 'center',
-    fontStyle: 'italic',
-    letterSpacing: 0.2,
-    lineHeight: typography.sizes.md * 1.5,
+    lineHeight: typography.sizes.sm * 1.6,
   },
 });
 
-// Parse schedule data from new JSON format
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 const parseScheduleData = (scheduleJson: any): DaySchedule[] => {
-  console.log('ScheduleScreen (iOS): Parsing schedule data', scheduleJson);
-  
-  if (!scheduleJson || !scheduleJson.days) {
-    console.log('ScheduleScreen (iOS): No days found in schedule data');
-    return [];
-  }
-  
+  if (!scheduleJson || !scheduleJson.days) return [];
   const daysArray: DaySchedule[] = [];
-  
   Object.keys(scheduleJson.days).forEach((dayKey) => {
     const day = scheduleJson.days[dayKey];
     daysArray.push({
@@ -470,12 +559,9 @@ const parseScheduleData = (scheduleJson: any): DaySchedule[] => {
       events: day.events || {},
     });
   });
-  
-  console.log('ScheduleScreen (iOS): Parsed', daysArray.length, 'days');
   return daysArray;
 };
 
-// Helper to get day name based on language
 const getDayAbbreviation = (dayOfWeek: number, language: 'hebrew' | 'english'): string => {
   if (language === 'hebrew') {
     const hebrewDayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
@@ -486,7 +572,6 @@ const getDayAbbreviation = (dayOfWeek: number, language: 'hebrew' | 'english'): 
   }
 };
 
-// Helper to get full day name based on language
 const getFullDayName = (dayOfWeekString: string, language: 'hebrew' | 'english'): string => {
   if (language === 'hebrew') {
     const dayMap: { [key: string]: string } = {
@@ -503,37 +588,55 @@ const getFullDayName = (dayOfWeekString: string, language: 'hebrew' | 'english')
   return dayOfWeekString;
 };
 
-// Helper to get agent badge colors (gradient)
 const getAgentBadgeColors = (agentText: string | null): [string, string] => {
   if (!agentText) return ['#FF9800', '#F57C00'];
-  
   const normalizedAgent = agentText.trim().toLowerCase();
-  
-  if (normalizedAgent.includes('אבישי') || normalizedAgent.includes('רוני')) {
-    return ['#FF9800', '#F57C00'];
-  }
-  
-  if (normalizedAgent.includes('סוכנת')) {
+  // "סוכנת" / "agent" → green
+  if (normalizedAgent.includes('סוכנת') || normalizedAgent.includes('agent')) {
     return ['#4CAF50', '#388E3C'];
   }
-  
+  // Everyone else (אבישי, רוני, etc.) → orange
   return ['#FF9800', '#F57C00'];
 };
 
-// Animated Calendar Cell Component
-const AnimatedCalendarCell = React.memo(({ 
-  calendarDay, 
-  index, 
-  rowMaxHeight, 
+const getEventTypeLabel = (type: string, language: 'hebrew' | 'english'): string => {
+  if (language === 'hebrew') {
+    const map: Record<string, string> = {
+      flight: 'טיסה',
+      business: 'עסקי',
+      meeting: 'פגישה',
+      accommodation: 'לינה',
+      personal: 'אישי',
+      other: '',
+    };
+    return map[type] ?? '';
+  } else {
+    const map: Record<string, string> = {
+      flight: 'FLIGHT',
+      business: 'BUSINESS',
+      meeting: 'MEETING',
+      accommodation: 'STAY',
+      personal: 'PERSONAL',
+      other: '',
+    };
+    return map[type] ?? '';
+  }
+};
+
+// ─── Calendar Cell (full view) ────────────────────────────────────────────────
+
+const AnimatedCalendarCell = React.memo(({
+  calendarDay,
+  index,
+  rowMaxHeight,
   languageFilter,
   filterEventsByLanguage,
   handleDayPress,
 }: any) => {
   const scale = useSharedValue(1);
   const shadowOpacity = useSharedValue(0.05);
-  
   const pulseAnimation = useSharedValue(0);
-  
+
   useEffect(() => {
     if (calendarDay.isToday) {
       pulseAnimation.value = withRepeat(
@@ -546,59 +649,44 @@ const AnimatedCalendarCell = React.memo(({
       );
     }
   }, [calendarDay.isToday]);
-  
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-      shadowOpacity: shadowOpacity.value,
-    };
-  });
-  
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    shadowOpacity: shadowOpacity.value,
+  }));
+
   const pulseStyle = useAnimatedStyle(() => {
     if (!calendarDay.isToday) return {};
-    
-    const opacity = interpolate(
-      pulseAnimation.value,
-      [0, 1],
-      [0.3, 0.8],
-      Extrapolate.CLAMP
-    );
-    
     return {
-      opacity,
+      opacity: interpolate(pulseAnimation.value, [0, 1], [0.3, 0.8], Extrapolate.CLAMP),
     };
   });
-  
+
   const handlePressIn = () => {
     scale.value = withSpring(0.95, { damping: 15, stiffness: 300 });
     shadowOpacity.value = withTiming(0.15, { duration: 150 });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
-  
+
   const handlePressOut = () => {
     scale.value = withSpring(1, { damping: 15, stiffness: 300 });
     shadowOpacity.value = withTiming(0.05, { duration: 150 });
   };
-  
-  if (!calendarDay.scheduleDay) {
-    return null;
-  }
-  
+
+  if (!calendarDay.scheduleDay) return null;
+
   const filteredEvents = filterEventsByLanguage(calendarDay.scheduleDay.events);
-  
   const agentText = languageFilter === 'hebrew'
     ? calendarDay.scheduleDay.agent_he
     : calendarDay.scheduleDay.agent_en;
-  
   const hasAgent = agentText && agentText.trim() !== '';
   const agentBadgeColors = getAgentBadgeColors(agentText);
-  
+
   const monthNumber = calendarDay.fullDate.getMonth() + 1;
   const dayNumberText = `${calendarDay.dayNumber}/${monthNumber}`;
-  
   const dayOfWeek = calendarDay.fullDate.getDay();
   const dayAbbrev = getDayAbbreviation(dayOfWeek, languageFilter);
-  
+
   return (
     <AnimatedTouchable
       entering={FadeInDown.delay(index * 50).springify()}
@@ -626,21 +714,14 @@ const AnimatedCalendarCell = React.memo(({
           ]}
         />
       )}
-      
+
       <View style={styles.dayNumberContainer}>
-        <Text
-          style={[
-            styles.dayNumber,
-            calendarDay.isToday && styles.dayNumberToday,
-          ]}
-        >
+        <Text style={[styles.dayNumber, calendarDay.isToday && styles.dayNumberToday]}>
           {dayNumberText}
         </Text>
-        <Text style={styles.dayAbbreviation}>
-          {dayAbbrev}
-        </Text>
+        <Text style={styles.dayAbbreviation}>{dayAbbrev}</Text>
       </View>
-      
+
       {hasAgent && (
         <AnimatedLinearGradient
           colors={agentBadgeColors}
@@ -654,10 +735,11 @@ const AnimatedCalendarCell = React.memo(({
           </Text>
         </AnimatedLinearGradient>
       )}
-      
-      {filteredEvents.map((event, eventIndex) => {
-        const eventDescriptionText = languageFilter === 'hebrew' ? event.description_he : event.description_en;
-        
+
+      {filteredEvents.map((event: Event, eventIndex: number) => {
+        const eventDescriptionText = languageFilter === 'hebrew'
+          ? event.description_he
+          : event.description_en;
         return (
           <AnimatedLinearGradient
             key={eventIndex}
@@ -677,89 +759,72 @@ const AnimatedCalendarCell = React.memo(({
   );
 });
 
-// Animated Event Card Component
-const AnimatedEventCard = React.memo(({ event, index, languageFilter }: any) => {
+// ─── Timeline Event Card (day view) ──────────────────────────────────────────
+
+const TimelineEventCard = React.memo(({ event, index, isLast, languageFilter }: {
+  event: Event;
+  index: number;
+  isLast: boolean;
+  languageFilter: 'hebrew' | 'english';
+}) => {
   const scale = useSharedValue(1);
-  const iconScale = useSharedValue(1);
-  
-  useEffect(() => {
-    iconScale.value = withRepeat(
-      withSequence(
-        withTiming(1.1, { duration: 1200 }),
-        withTiming(1, { duration: 1200 })
-      ),
-      -1,
-      false
-    );
-  }, []);
-  
-  const animatedCardStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
-  
-  const animatedIconStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: iconScale.value }],
-    };
-  });
-  
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   const handlePressIn = () => {
-    scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
+    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
-  
   const handlePressOut = () => {
     scale.value = withSpring(1, { damping: 15, stiffness: 300 });
   };
-  
+
   const hasTime = Boolean(event.time);
-  const eventTimeText = event.time || '';
-  const eventDescriptionText = languageFilter === 'hebrew' ? event.description_he : event.description_en;
-  
+  const description = languageFilter === 'hebrew' ? event.description_he : event.description_en;
+  const typeLabel = getEventTypeLabel(event.type ?? 'other', languageFilter);
+
   return (
-    <AnimatedTouchable
-      entering={FadeInUp.delay(index * 100).springify()}
-      style={[styles.eventCard, animatedCardStyle]}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      activeOpacity={1}
+    <Animated.View
+      entering={FadeInDown.delay(150 + index * 80).springify()}
+      style={dayViewStyles.timelineItem}
     >
-      <AnimatedLinearGradient
-        colors={[designColors.primary, designColors.primaryDark]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.eventAccent}
-      />
-      <View style={styles.eventCardInner}>
-        <AnimatedLinearGradient
-          colors={[designColors.primary + '20', designColors.primary + '10']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.eventIconContainer, animatedIconStyle]}
-        >
-          <IconSymbol
-            ios_icon_name={hasTime ? 'clock.fill' : 'circle.fill'}
-            android_material_icon_name={hasTime ? 'access-time' : 'circle'}
-            size={28}
-            color={designColors.primary}
-          />
-        </AnimatedLinearGradient>
-        <View style={styles.eventContent}>
-          {hasTime && (
-            <Text style={styles.eventTime}>
-              {eventTimeText}
-            </Text>
-          )}
-          <Text style={styles.eventDescription}>
-            {eventDescriptionText}
-          </Text>
-        </View>
+      {/* Rail */}
+      <View style={dayViewStyles.timelineRail}>
+        <View style={hasTime ? dayViewStyles.timelineDot : dayViewStyles.timelineDotNoTime} />
+        {!isLast && <View style={dayViewStyles.timelineConnector} />}
+        {hasTime ? (
+          <Text style={dayViewStyles.timelineTimeLabel}>{event.time}</Text>
+        ) : (
+          <Text style={dayViewStyles.timelineTimeLabelEmpty}>{'  '}</Text>
+        )}
       </View>
-    </AnimatedTouchable>
+
+      {/* Card */}
+      <AnimatedTouchable
+        style={[
+          dayViewStyles.timelineCard,
+          hasTime && dayViewStyles.timelineCardWithTime,
+          animatedStyle,
+        ]}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={1}
+      >
+        {typeLabel !== '' && (
+          <Text style={dayViewStyles.timelineCardType}>{typeLabel}</Text>
+        )}
+        <Text style={dayViewStyles.timelineCardDescription}>{description}</Text>
+        {hasTime && (
+          <Text style={dayViewStyles.timelineCardTime}>{event.time}</Text>
+        )}
+      </AnimatedTouchable>
+    </Animated.View>
   );
 });
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ScheduleScreen() {
   const { user } = useUser();
@@ -777,14 +842,10 @@ export default function ScheduleScreen() {
 
   const loadSchedule = useCallback(async () => {
     if (!user?.id) {
-      console.log('ScheduleScreen (iOS): No user ID, skipping schedule load');
       setLoading(false);
       return;
     }
-
     try {
-      console.log('ScheduleScreen (iOS): Loading schedule for user', user.id);
-      
       const { data, error } = await supabase
         .from('users')
         .select('schedule')
@@ -792,7 +853,6 @@ export default function ScheduleScreen() {
         .single();
 
       if (error) {
-        console.error('ScheduleScreen (iOS): Failed to fetch schedule', error);
         errorLogger.logError(error, 'Failed to fetch user schedule');
         setScheduleData([]);
         setLoading(false);
@@ -800,17 +860,13 @@ export default function ScheduleScreen() {
       }
 
       if (data?.schedule) {
-        console.log('ScheduleScreen (iOS): Schedule data retrieved');
         const parsedSchedule = parseScheduleData(data.schedule);
         setScheduleData(parsedSchedule);
         setPersonName(user.fullName || '');
-        console.log('ScheduleScreen (iOS): Parsed schedule days:', parsedSchedule.length);
       } else {
-        console.log('ScheduleScreen (iOS): No schedule data found');
         setScheduleData([]);
       }
     } catch (error) {
-      console.error('ScheduleScreen (iOS): Error loading schedule', error);
       errorLogger.logError(error, 'Error loading schedule');
       setScheduleData([]);
     } finally {
@@ -823,7 +879,6 @@ export default function ScheduleScreen() {
   }, [loadSchedule]);
 
   const onRefresh = useCallback(async () => {
-    console.log('ScheduleScreen (iOS): Refreshing schedule');
     setRefreshing(true);
     await loadSchedule();
     setRefreshing(false);
@@ -834,15 +889,14 @@ export default function ScheduleScreen() {
   }, []);
 
   const filterEventsByLanguage = useCallback((events: { [key: string]: Event }): Event[] => {
-    const allEvents = getAllEvents(events);
-    return allEvents.filter(event => {
+    return Object.values(events).filter(event => {
       if (languageFilter === 'hebrew') {
         return event.description_he && event.description_he.trim() !== '';
       } else {
         return event.description_en && event.description_en.trim() !== '';
       }
     });
-  }, [languageFilter, getAllEvents]);
+  }, [languageFilter]);
 
   const daysWithEvents = useMemo(() => {
     return scheduleData.filter(day => {
@@ -856,136 +910,93 @@ export default function ScheduleScreen() {
 
   const allDaysWithEvents = useMemo(() => {
     const today = new Date();
-    const todayDate = today.getDate();
-    const todayMonth = today.getMonth();
-    const todayYear = today.getFullYear();
-    
     const daysInCalendar: CalendarDay[] = [];
-    
+
     scheduleData.forEach(day => {
       const parts = day.date.split('.');
       if (parts.length !== 3) return;
-      
+
       const dayNum = parseInt(parts[0], 10);
       const dayMonth = parseInt(parts[1], 10);
       const dayYear = parseInt(parts[2], 10) + 2000;
-      
+
       const filteredEvents = filterEventsByLanguage(day.events);
       const hasAgent = languageFilter === 'hebrew'
         ? (day.agent_he && day.agent_he.trim() !== '')
         : (day.agent_en && day.agent_en.trim() !== '');
-      
+
       if (filteredEvents.length > 0 || hasAgent) {
         const fullDate = new Date(dayYear, dayMonth - 1, dayNum);
         daysInCalendar.push({
           dayNumber: dayNum,
           isCurrentMonth: true,
-          isToday: dayNum === todayDate && dayMonth - 1 === todayMonth && dayYear === todayYear,
+          isToday:
+            dayNum === today.getDate() &&
+            dayMonth - 1 === today.getMonth() &&
+            dayYear === today.getFullYear(),
           scheduleDay: day,
           fullDate,
         });
       }
     });
-    
+
     daysInCalendar.sort((a, b) => a.fullDate.getTime() - b.fullDate.getTime());
-    
-    console.log('ScheduleScreen (iOS): Total days with events across all months:', daysInCalendar.length);
     return daysInCalendar;
   }, [scheduleData, filterEventsByLanguage, languageFilter]);
 
   const calculateCellHeight = useCallback((calendarDay: CalendarDay): number => {
-    if (!calendarDay.scheduleDay) {
-      return 50;
-    }
-    
+    if (!calendarDay.scheduleDay) return 50;
     const filteredEvents = filterEventsByLanguage(calendarDay.scheduleDay.events);
     const agentText = languageFilter === 'hebrew'
       ? calendarDay.scheduleDay.agent_he
       : calendarDay.scheduleDay.agent_en;
     const hasAgent = agentText && agentText.trim() !== '';
-    
-    const baseHeight = 50;
-    const agentHeight = hasAgent ? 48 : 0;
-    const eventHeight = 48;
-    const totalEventsHeight = filteredEvents.length * eventHeight;
-    const bottomPadding = 12;
-    
-    return baseHeight + agentHeight + totalEventsHeight + bottomPadding;
+    return 50 + (hasAgent ? 48 : 0) + filteredEvents.length * 48 + 12;
   }, [filterEventsByLanguage, languageFilter]);
 
   const daysWithRowHeights = useMemo(() => {
     const daysPerRow = 3;
     const rows: { days: CalendarDay[]; maxHeight: number }[] = [];
-    
-    console.log('ScheduleScreen (iOS): Total days:', allDaysWithEvents.length, 'Days per row: 3 (fixed)');
-    
     for (let i = 0; i < allDaysWithEvents.length; i += daysPerRow) {
       const rowDays = allDaysWithEvents.slice(i, i + daysPerRow);
       const heights = rowDays.map(day => calculateCellHeight(day));
-      const maxHeight = Math.max(...heights);
-      
-      console.log(`ScheduleScreen (iOS): Row ${Math.floor(i / daysPerRow)} - Heights:`, heights, 'Max:', maxHeight);
-      
-      rows.push({
-        days: rowDays,
-        maxHeight,
-      });
+      rows.push({ days: rowDays, maxHeight: Math.max(...heights) });
     }
-    
     return rows;
   }, [allDaysWithEvents, calculateCellHeight]);
 
   const getCellWidth = useMemo(() => {
     const daysPerRow = 3;
-    const gapCount = daysPerRow - 1;
-    const totalGapWidth = gapCount * spacing.sm;
-    const availableWidth = width - spacing.lg * 2 - totalGapWidth;
-    return availableWidth / daysPerRow;
+    const totalGapWidth = (daysPerRow - 1) * spacing.sm;
+    return (width - spacing.lg * 2 - totalGapWidth) / daysPerRow;
   }, []);
 
   const handleDayPress = useCallback((calendarDay: CalendarDay) => {
-    if (!calendarDay.scheduleDay) {
-      console.log('ScheduleScreen (iOS): No events for this day');
-      return;
-    }
-    
+    if (!calendarDay.scheduleDay) return;
     const dayIndex = daysWithEvents.findIndex(d => d.date === calendarDay.scheduleDay?.date);
     if (dayIndex !== -1) {
-      console.log('ScheduleScreen (iOS): Navigating to day view for', calendarDay.scheduleDay.date);
       setSelectedDayIndex(dayIndex);
       setViewMode('day');
-      toggleIndicatorPosition.value = withSpring(1, {
-        damping: 20,
-        stiffness: 300,
-      });
+      toggleIndicatorPosition.value = withSpring(1, { damping: 20, stiffness: 300 });
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
   }, [daysWithEvents, toggleIndicatorPosition]);
 
   const handleViewModeChange = (mode: 'day' | 'full') => {
-    console.log('ScheduleScreen (iOS): Switched to', mode, 'view');
     setViewMode(mode);
-    toggleIndicatorPosition.value = withSpring(mode === 'full' ? 0 : 1, {
-      damping: 20,
-      stiffness: 300,
-    });
+    toggleIndicatorPosition.value = withSpring(mode === 'full' ? 0 : 1, { damping: 20, stiffness: 300 });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const handleLanguageChange = (lang: 'hebrew' | 'english') => {
-    console.log('ScheduleScreen (iOS): Language filter set to', lang);
     setLanguageFilter(lang);
-    languageIndicatorPosition.value = withSpring(lang === 'hebrew' ? 0 : 1, {
-      damping: 20,
-      stiffness: 300,
-    });
+    languageIndicatorPosition.value = withSpring(lang === 'hebrew' ? 0 : 1, { damping: 20, stiffness: 300 });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const toggleIndicatorStyle = useAnimatedStyle(() => {
     const containerWidth = width - spacing.lg * 2 - spacing.xs * 2;
     const buttonWidth = containerWidth / 2;
-    
     return {
       width: buttonWidth,
       left: spacing.xs + toggleIndicatorPosition.value * buttonWidth,
@@ -995,74 +1006,70 @@ export default function ScheduleScreen() {
   const languageIndicatorStyle = useAnimatedStyle(() => {
     const containerWidth = width - spacing.lg * 2 - spacing.xs * 2;
     const buttonWidth = containerWidth / 2;
-    
     return {
       width: buttonWidth,
       left: spacing.xs + languageIndicatorPosition.value * buttonWidth,
     };
   });
 
+  // ── Render: Day View ────────────────────────────────────────────────────────
+
   const renderDayView = () => {
-    if (daysWithEvents.length === 0) {
-      return null;
-    }
+    if (daysWithEvents.length === 0) return null;
 
     const selectedDay = daysWithEvents[selectedDayIndex];
     const filteredEvents = filterEventsByLanguage(selectedDay.events);
     const hasEvents = filteredEvents.length > 0;
+
     const agentText = languageFilter === 'hebrew' ? selectedDay.agent_he : selectedDay.agent_en;
+    const hasAgent = agentText && agentText.trim() !== '';
     const agentBadgeColors = getAgentBadgeColors(agentText);
-    const noEventsMessage = languageFilter === 'hebrew'
-      ? 'אין אירועים בעברית ליום זה'
-      : 'No events in English for this day';
-    
     const fullDayName = getFullDayName(selectedDay.day_of_week, languageFilter);
 
+    const noEventsTitle = languageFilter === 'hebrew' ? 'אין אירועים' : 'No Events';
+    const noEventsSub = languageFilter === 'hebrew'
+      ? 'אין אירועים ביום זה.'
+      : 'Nothing scheduled for this day.';
+    const eventCountLabel = languageFilter === 'hebrew'
+      ? `${filteredEvents.length} אירועים`
+      : `${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}`;
+
     return (
-      <Animated.View 
-        style={styles.dayViewContainer}
-        entering={FadeIn.duration(300)}
-      >
-        <View style={styles.daySelector}>
+      <Animated.View style={dayViewStyles.dayViewWrapper} entering={FadeIn.duration(250)}>
+
+        {/* Day selector */}
+        <View style={dayViewStyles.daySelector}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.daySelectorScroll}
+            contentContainerStyle={dayViewStyles.daySelectorScroll}
           >
             {daysWithEvents.map((day, index) => {
               const isActive = index === selectedDayIndex;
-              const dayOfWeekShort = day.day_of_week.substring(0, 3);
-              const dayNumberOnly = day.date.split('.')[0];
-              
               return (
                 <AnimatedTouchable
                   key={index}
                   entering={FadeInDown.delay(index * 30).springify()}
                   style={[
-                    styles.daySelectorItem,
-                    isActive && styles.daySelectorItemActive,
+                    dayViewStyles.daySelectorItem,
+                    isActive && dayViewStyles.daySelectorItemActive,
                   ]}
                   onPress={() => {
-                    console.log('ScheduleScreen (iOS): Selected day', index);
                     setSelectedDayIndex(index);
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.daySelectorDayOfWeek,
-                      isActive && styles.daySelectorDayOfWeekActive,
-                    ]}
-                  >
-                    {dayOfWeekShort}
+                  <Text style={[
+                    dayViewStyles.daySelectorDayOfWeek,
+                    isActive && dayViewStyles.daySelectorDayOfWeekActive,
+                  ]}>
+                    {day.day_of_week.substring(0, 3)}
                   </Text>
-                  <Text
-                    style={[
-                      styles.daySelectorDate,
-                      isActive && styles.daySelectorDateActive,
-                    ]}
-                  >
-                    {dayNumberOnly}
+                  <Text style={[
+                    dayViewStyles.daySelectorDate,
+                    isActive && dayViewStyles.daySelectorDateActive,
+                  ]}>
+                    {day.date.split('.')[0]}
                   </Text>
                 </AnimatedTouchable>
               );
@@ -1070,102 +1077,101 @@ export default function ScheduleScreen() {
           </ScrollView>
         </View>
 
-        <Animated.View 
-          style={styles.dayViewHeader}
-          entering={ZoomIn.springify()}
-        >
-          <View style={styles.dayViewHeaderTop}>
-            <View style={styles.dayViewDateSection}>
-              <Text style={styles.dayViewDayOfWeek}>{fullDayName}</Text>
-              <Text style={styles.dayViewDate}>{selectedDay.date}</Text>
+        {/* Hero card */}
+        <Animated.View style={dayViewStyles.heroCard} entering={FadeInDown.delay(50).springify()}>
+          <AnimatedLinearGradient
+            colors={agentBadgeColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={dayViewStyles.heroGradient}
+          >
+            {/* Top row: day name + agent pill */}
+            <View style={dayViewStyles.heroTopRow}>
+              <Text style={dayViewStyles.heroDayOfWeek}>{fullDayName}</Text>
+              {hasAgent && (
+                <View style={dayViewStyles.heroAgentPill}>
+                  <View style={dayViewStyles.heroAgentDot} />
+                  <Text style={dayViewStyles.heroAgentText}>{agentText}</Text>
+                </View>
+              )}
             </View>
-            
-            {agentText && agentText.trim() !== '' && (
-              <AnimatedLinearGradient
-                colors={agentBadgeColors}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.dayViewAgentBadge}
-                entering={FadeIn.delay(200)}
-              >
-                <IconSymbol
-                  ios_icon_name="person.fill"
-                  android_material_icon_name="person"
-                  size={16}
-                  color="#FFFFFF"
-                />
-                <Text style={styles.dayViewAgentText}>
-                  {agentText}
-                </Text>
-              </AnimatedLinearGradient>
-            )}
-          </View>
+
+            {/* Bottom row: big date + event count */}
+            <View style={dayViewStyles.heroBottomRow}>
+              <Text style={dayViewStyles.heroDate}>{selectedDay.date}</Text>
+              {hasEvents && (
+                <View style={dayViewStyles.heroEventCountWrap}>
+                  <IconSymbol
+                    ios_icon_name="calendar"
+                    android_material_icon_name="calendar-today"
+                    size={12}
+                    color="rgba(255,255,255,0.8)"
+                  />
+                  <Text style={dayViewStyles.heroEventCountText}>{eventCountLabel}</Text>
+                </View>
+              )}
+            </View>
+          </AnimatedLinearGradient>
         </Animated.View>
 
+        {/* Timeline or empty state */}
         {hasEvents ? (
-          <View style={styles.eventsSection}>
+          <View style={dayViewStyles.timeline}>
             {filteredEvents.map((event, eventIndex) => (
-              <AnimatedEventCard
+              <TimelineEventCard
                 key={eventIndex}
                 event={event}
                 index={eventIndex}
+                isLast={eventIndex === filteredEvents.length - 1}
                 languageFilter={languageFilter}
               />
             ))}
           </View>
         ) : (
-          <Animated.View 
-            style={styles.noEventsContainer}
+          <Animated.View
+            style={dayViewStyles.noEventsWrap}
             entering={FadeInUp.delay(300).springify()}
           >
-            <View style={styles.noEventsIcon}>
+            <View style={dayViewStyles.noEventsCircle}>
               <IconSymbol
                 ios_icon_name="calendar"
                 android_material_icon_name="calendar-today"
-                size={48}
-                color={designColors.text.secondary}
+                size={32}
+                color={designColors.primary}
               />
             </View>
-            <Text style={styles.noEventsText}>
-              {noEventsMessage}
-            </Text>
+            <Text style={dayViewStyles.noEventsTitle}>{noEventsTitle}</Text>
+            <Text style={dayViewStyles.noEventsSubtitle}>{noEventsSub}</Text>
           </Animated.View>
         )}
       </Animated.View>
     );
   };
 
-  const renderFullScheduleView = () => {
-    return (
-      <Animated.View 
-        style={styles.calendarGrid}
-        entering={FadeIn.duration(300)}
-      >
-        {daysWithRowHeights.map((row, rowIndex) => {
-          const daysPerRow = 3;
-          
-          return (
-            <View key={rowIndex} style={styles.calendarRow}>
-              {row.days.map((day, dayIndex) => {
-                return (
-                  <View key={dayIndex} style={{ width: getCellWidth }}>
-                    <AnimatedCalendarCell
-                      calendarDay={day}
-                      index={rowIndex * daysPerRow + dayIndex}
-                      rowMaxHeight={row.maxHeight}
-                      languageFilter={languageFilter}
-                      filterEventsByLanguage={filterEventsByLanguage}
-                      handleDayPress={handleDayPress}
-                    />
-                  </View>
-                );
-              })}
+  // ── Render: Full Schedule View ──────────────────────────────────────────────
+
+  const renderFullScheduleView = () => (
+    <Animated.View style={styles.calendarGrid} entering={FadeIn.duration(300)}>
+      {daysWithRowHeights.map((row, rowIndex) => (
+        <View key={rowIndex} style={styles.calendarRow}>
+          {row.days.map((day, dayIndex) => (
+            <View key={dayIndex} style={{ width: getCellWidth }}>
+              <AnimatedCalendarCell
+                calendarDay={day}
+                index={rowIndex * 3 + dayIndex}
+                rowMaxHeight={row.maxHeight}
+                languageFilter={languageFilter}
+                filterEventsByLanguage={filterEventsByLanguage}
+                handleDayPress={handleDayPress}
+              />
             </View>
-          );
-        })}
-      </Animated.View>
-    );
-  };
+          ))}
+        </View>
+      ))}
+    </Animated.View>
+  );
+
+  // ── Loading ─────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -1181,6 +1187,8 @@ export default function ScheduleScreen() {
     );
   }
 
+  // ── Main Render ─────────────────────────────────────────────────────────────
+
   const hasSchedule = scheduleData.length > 0;
   const greetingText = personName ? `לוח הזמנים של ${personName}` : 'לוח הזמנים שלך';
 
@@ -1191,87 +1199,48 @@ export default function ScheduleScreen() {
         style={StyleSheet.absoluteFillObject}
       />
 
-      <Animated.View 
-        style={styles.header}
-        entering={FadeInDown.springify()}
-      >
+      <Animated.View style={styles.header} entering={FadeInDown.springify()}>
         <Text style={styles.headerTitle}>לוח זמנים</Text>
         {hasSchedule && <Text style={styles.headerSubtitle}>{greetingText}</Text>}
       </Animated.View>
 
       {hasSchedule ? (
         <React.Fragment>
-          <Animated.View 
-            style={styles.viewToggle}
-            entering={FadeInDown.delay(100).springify()}
-          >
+          {/* View toggle */}
+          <Animated.View style={styles.viewToggle} entering={FadeInDown.delay(100).springify()}>
             <AnimatedLinearGradient
               colors={[designColors.primary, designColors.primaryDark]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={[styles.toggleIndicator, toggleIndicatorStyle]}
             />
-            <TouchableOpacity
-              style={styles.toggleButton}
-              onPress={() => handleViewModeChange('full')}
-            >
-              <Text
-                style={[
-                  styles.toggleButtonText,
-                  viewMode === 'full' && styles.toggleButtonTextActive,
-                ]}
-              >
+            <TouchableOpacity style={styles.toggleButton} onPress={() => handleViewModeChange('full')}>
+              <Text style={[styles.toggleButtonText, viewMode === 'full' && styles.toggleButtonTextActive]}>
                 לוח מלא
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.toggleButton}
-              onPress={() => handleViewModeChange('day')}
-            >
-              <Text
-                style={[
-                  styles.toggleButtonText,
-                  viewMode === 'day' && styles.toggleButtonTextActive,
-                ]}
-              >
+            <TouchableOpacity style={styles.toggleButton} onPress={() => handleViewModeChange('day')}>
+              <Text style={[styles.toggleButtonText, viewMode === 'day' && styles.toggleButtonTextActive]}>
                 תצוגת יום
               </Text>
             </TouchableOpacity>
           </Animated.View>
 
-          <Animated.View 
-            style={styles.languageToggle}
-            entering={FadeInDown.delay(150).springify()}
-          >
+          {/* Language toggle */}
+          <Animated.View style={styles.languageToggle} entering={FadeInDown.delay(150).springify()}>
             <AnimatedLinearGradient
               colors={[designColors.secondary, designColors.secondaryDark]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={[styles.languageIndicator, languageIndicatorStyle]}
             />
-            <TouchableOpacity
-              style={styles.languageButton}
-              onPress={() => handleLanguageChange('hebrew')}
-            >
-              <Text
-                style={[
-                  styles.languageButtonText,
-                  languageFilter === 'hebrew' && styles.languageButtonTextActive,
-                ]}
-              >
+            <TouchableOpacity style={styles.languageButton} onPress={() => handleLanguageChange('hebrew')}>
+              <Text style={[styles.languageButtonText, languageFilter === 'hebrew' && styles.languageButtonTextActive]}>
                 עברית
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.languageButton}
-              onPress={() => handleLanguageChange('english')}
-            >
-              <Text
-                style={[
-                  styles.languageButtonText,
-                  languageFilter === 'english' && styles.languageButtonTextActive,
-                ]}
-              >
+            <TouchableOpacity style={styles.languageButton} onPress={() => handleLanguageChange('english')}>
+              <Text style={[styles.languageButtonText, languageFilter === 'english' && styles.languageButtonTextActive]}>
                 English
               </Text>
             </TouchableOpacity>
@@ -1302,10 +1271,7 @@ export default function ScheduleScreen() {
             />
           }
         >
-          <Animated.View 
-            style={styles.emptyStateIcon}
-            entering={ZoomIn.springify()}
-          >
+          <Animated.View style={styles.emptyStateIcon} entering={ZoomIn.springify()}>
             <IconSymbol
               ios_icon_name="calendar"
               android_material_icon_name="calendar-today"
@@ -1313,16 +1279,10 @@ export default function ScheduleScreen() {
               color={designColors.text.secondary}
             />
           </Animated.View>
-          <Animated.Text 
-            style={styles.emptyStateTitle}
-            entering={FadeInUp.delay(100).springify()}
-          >
+          <Animated.Text style={styles.emptyStateTitle} entering={FadeInUp.delay(100).springify()}>
             אין לוח זמנים זמין
           </Animated.Text>
-          <Animated.Text 
-            style={styles.emptyStateText}
-            entering={FadeInUp.delay(200).springify()}
-          >
+          <Animated.Text style={styles.emptyStateText} entering={FadeInUp.delay(200).springify()}>
             לוח הזמנים שלך יופיע כאן לאחר שהמנהל יגדיר אותו עבורך.{'\n'}
             משוך למטה כדי לרענן.
           </Animated.Text>
