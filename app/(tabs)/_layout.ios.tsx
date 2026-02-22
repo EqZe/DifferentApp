@@ -1,16 +1,45 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Slot, useRouter } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import { useUser } from '@/contexts/UserContext';
 import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
 import { Href } from 'expo-router';
+import { api } from '@/utils/api';
 
 export default function TabLayout() {
   const { user, isLoading } = useUser();
   const router = useRouter();
+  const [hasContainers, setHasContainers] = useState(false);
+  const [checkingContainers, setCheckingContainers] = useState(true);
 
   console.log('TabLayout (iOS) rendering, user:', user?.fullName, 'hasContract:', user?.hasContract);
+
+  // Check if user has any containers
+  useEffect(() => {
+    async function checkUserContainers() {
+      if (!user?.id) {
+        setHasContainers(false);
+        setCheckingContainers(false);
+        return;
+      }
+
+      try {
+        console.log('TabLayout (iOS): Checking if user has containers');
+        const containers = await api.getContainers(user.id);
+        const hasRecords = containers.length > 0;
+        console.log('TabLayout (iOS): User has', containers.length, 'containers, showing tab:', hasRecords);
+        setHasContainers(hasRecords);
+      } catch (error) {
+        console.error('TabLayout (iOS): Error checking containers', error);
+        setHasContainers(false);
+      } finally {
+        setCheckingContainers(false);
+      }
+    }
+
+    checkUserContainers();
+  }, [user?.id]);
 
   // Redirect to register if user is null
   useEffect(() => {
@@ -68,9 +97,9 @@ export default function TabLayout() {
     });
   }
 
-  // Add containers tab for second-stage users (signed agreement)
-  if (user && user.hasContract) {
-    console.log('Adding containers tab for second-stage user (iOS)');
+  // Add containers tab ONLY if user has container records
+  if (user && hasContainers) {
+    console.log('Adding containers tab (iOS) - user has container records');
     tabs.push({
       name: 'containers',
       route: '/(tabs)/containers' as Href,
