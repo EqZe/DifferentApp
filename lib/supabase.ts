@@ -138,3 +138,17 @@ export interface TaskMetadata {
   created_at: string;
   updated_at: string;
 }
+
+export interface UserContainer {
+  id: string;
+  auth_user_id: string;
+  container_id_per_user: string;
+  items_ready: string | null;
+  items_paid: string | null;
+  items_in_garage: string | null;
+  items_on_container: string | null;
+  container_sent: string | null;
+  container_arrive: string | null;
+  created_at: string;
+  updated_at: string;
+}

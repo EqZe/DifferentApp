@@ -68,6 +68,17 @@ export default function TabLayout() {
     });
   }
 
+  // Add containers tab for second-stage users (signed agreement)
+  if (user && user.hasContract) {
+    console.log('Adding containers tab for second-stage user (iOS)');
+    tabs.push({
+      name: 'containers',
+      route: '/(tabs)/containers' as Href,
+      icon: 'inventory',
+      label: 'מכולות',
+    });
+  }
+
   // Profile tab is always last
   tabs.push({
     name: 'profile',

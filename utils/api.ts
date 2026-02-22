@@ -1,6 +1,6 @@
 
 import { supabase } from '@/lib/supabase';
-import type { User, Post, PostBlock, Task } from '@/lib/supabase';
+import type { User, Post, PostBlock, Task, UserContainer } from '@/lib/supabase';
 
 // Helper function to convert snake_case to camelCase for frontend compatibility
 function toCamelCase<T extends Record<string, any>>(obj: T): any {
@@ -87,6 +87,20 @@ export interface TaskFrontend {
   dueDate: string | null;
   status: 'YET' | 'PENDING' | 'DONE'; // Task status
   requiresPending: boolean; // Whether task requires PENDING status before DONE
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContainerFrontend {
+  id: string;
+  userId: string; // This is auth_user_id
+  containerIdPerUser: string;
+  itemsReady: string | null;
+  itemsPaid: string | null;
+  itemsInGarage: string | null;
+  itemsOnContainer: string | null;
+  containerSent: string | null;
+  containerArrive: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -713,6 +727,129 @@ export const api = {
 
     console.log('API: Task deleted');
   },
+
+  // Containers endpoints
+  getContainers: async (authUserId: string): Promise<ContainerFrontend[]> => {
+    console.log('API: Getting containers for user', authUserId);
+    
+    const { data, error } = await supabase
+      .from('user_containers')
+      .select('*')
+      .eq('auth_user_id', authUserId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('API: Get containers failed', error);
+      throw new Error(error.message || 'שגיאה בטעינת מכולות');
+    }
+
+    console.log('API: Containers retrieved', data?.length || 0);
+    
+    return data?.map((container: any) => {
+      const camelData = toCamelCase(container);
+      return {
+        ...camelData,
+        userId: camelData.authUserId,
+      };
+    }) || [];
+  },
+
+  createContainer: async (
+    authUserId: string,
+    containerIdPerUser: string
+  ): Promise<ContainerFrontend> => {
+    console.log('API: Creating container', { authUserId, containerIdPerUser });
+    
+    const { data, error } = await supabase
+      .from('user_containers')
+      .insert({
+        auth_user_id: authUserId,
+        container_id_per_user: containerIdPerUser,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('API: Create container failed', error);
+      throw new Error(error.message || 'שגיאה ביצירת מכולה');
+    }
+
+    console.log('API: Container created', data);
+    const camelData = toCamelCase(data);
+    return {
+      ...camelData,
+      userId: camelData.authUserId,
+    };
+  },
+
+  updateContainer: async (
+    containerId: string,
+    updates: {
+      itemsReady?: string | null;
+      itemsPaid?: string | null;
+      itemsInGarage?: string | null;
+      itemsOnContainer?: string | null;
+      containerSent?: string | null;
+      containerArrive?: string | null;
+    }
+  ): Promise<ContainerFrontend> => {
+    console.log('API: Updating container', { containerId, updates });
+    
+    const updateData: any = {};
+    if (updates.itemsReady !== undefined) {
+      updateData.items_ready = updates.itemsReady;
+    }
+    if (updates.itemsPaid !== undefined) {
+      updateData.items_paid = updates.itemsPaid;
+    }
+    if (updates.itemsInGarage !== undefined) {
+      updateData.items_in_garage = updates.itemsInGarage;
+    }
+    if (updates.itemsOnContainer !== undefined) {
+      updateData.items_on_container = updates.itemsOnContainer;
+    }
+    if (updates.containerSent !== undefined) {
+      updateData.container_sent = updates.containerSent;
+    }
+    if (updates.containerArrive !== undefined) {
+      updateData.container_arrive = updates.containerArrive;
+    }
+
+    const { data, error } = await supabase
+      .from('user_containers')
+      .update(updateData)
+      .eq('id', containerId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('API: Update container failed', error);
+      throw new Error(error.message || 'שגיאה בעדכון מכולה');
+    }
+
+    console.log('API: Container updated', data);
+    const camelData = toCamelCase(data);
+    return {
+      ...camelData,
+      userId: camelData.authUserId,
+    };
+  },
+
+  deleteContainer: async (containerId: string): Promise<void> => {
+    console.log('API: Deleting container', containerId);
+    
+    const { error } = await supabase
+      .from('user_containers')
+      .delete()
+      .eq('id', containerId);
+
+    if (error) {
+      console.error('API: Delete container failed', error);
+      throw new Error(error.message || 'שגיאה במחיקת מכולה');
+    }
+
+    console.log('API: Container deleted');
+  },
 };
 
 // Export types for use in components
@@ -721,6 +858,7 @@ export type {
   PostFrontend as Post, 
   PostBlockFrontend as PostBlock,
   TaskFrontend as Task,
+  ContainerFrontend as Container,
   Category,
   CategoryWithPosts 
 };
