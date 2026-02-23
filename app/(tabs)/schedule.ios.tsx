@@ -739,7 +739,7 @@ const AnimatedCalendarCell = React.memo(({
           style={styles.assignedPersonBadge}
           entering={FadeIn.delay(index * 50 + 100)}
         >
-          <Text style={styles.assignedPersonText} numberOfLines={2}>
+          <Text style={styles.assignedPersonText}>
             {agentText}
           </Text>
         </AnimatedLinearGradient>
@@ -758,7 +758,7 @@ const AnimatedCalendarCell = React.memo(({
             style={styles.eventBadge}
             entering={FadeIn.delay(index * 50 + 150 + eventIndex * 50)}
           >
-            <Text style={styles.eventBadgeText} numberOfLines={2}>
+            <Text style={styles.eventBadgeText}>
               {eventDescriptionText}
             </Text>
           </AnimatedLinearGradient>
@@ -960,7 +960,23 @@ export default function ScheduleScreen() {
       ? calendarDay.scheduleDay.agent_he
       : calendarDay.scheduleDay.agent_en;
     const hasAgent = agentText && agentText.trim() !== '';
-    return 50 + (hasAgent ? 48 : 0) + filteredEvents.length * 48 + 12;
+    
+    const baseHeight = 50;
+    const agentHeight = hasAgent ? 48 : 0;
+    
+    // Calculate dynamic height for each event based on text length
+    let totalEventsHeight = 0;
+    filteredEvents.forEach(event => {
+      const eventText = languageFilter === 'hebrew' ? event.description_he : event.description_en;
+      const textLength = eventText.length;
+      // Estimate height: base 48px + additional height for longer text
+      // Roughly 15 characters per line at font size 11
+      const estimatedLines = Math.ceil(textLength / 15);
+      const eventHeight = Math.max(48, 32 + (estimatedLines * 16));
+      totalEventsHeight += eventHeight;
+    });
+    
+    return baseHeight + agentHeight + totalEventsHeight + 12;
   }, [filterEventsByLanguage, languageFilter]);
 
   const daysWithRowHeights = useMemo(() => {
