@@ -505,19 +505,17 @@ const getFullDayName = (dayOfWeekString: string, language: 'hebrew' | 'english')
 
 // Helper to get agent badge colors (gradient)
 const getAgentBadgeColors = (agentText: string | null): [string, string] => {
-  if (!agentText) return ['#FF9800', '#F57C00'];
+  if (!agentText) return ['#9C27B0', '#7B1FA2']; // Purple for empty/null
   
   const normalizedAgent = agentText.trim().toLowerCase();
   
+  // Only Avishai or Roni get orange
   if (normalizedAgent.includes('אבישי') || normalizedAgent.includes('רוני')) {
-    return ['#FF9800', '#F57C00'];
+    return ['#FF9800', '#F57C00']; // Orange
   }
   
-  if (normalizedAgent.includes('סוכנת')) {
-    return ['#4CAF50', '#388E3C'];
-  }
-  
-  return ['#FF9800', '#F57C00'];
+  // Everyone else (including "סוכנת") gets purple
+  return ['#9C27B0', '#7B1FA2']; // Purple
 };
 
 // Animated Calendar Cell Component
