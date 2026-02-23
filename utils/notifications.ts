@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { supabase } from '@/lib/supabase';
 
 // Configure how notifications are handled when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -153,6 +154,26 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       console.log('Notifications: ⚠️ All token retrieval attempts failed - push notifications will not work');
       console.log('Notifications: This is normal in development mode without EAS configuration');
       return null;
+    }
+
+    // Save token to database
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        console.log('Notifications: Saving push token to database for user:', user.id);
+        const { error } = await supabase
+          .from('users')
+          .update({ push_token: token })
+          .eq('auth_user_id', user.id);
+        
+        if (error) {
+          console.log('Notifications: ⚠️ Failed to save push token to database:', error);
+        } else {
+          console.log('Notifications: ✅ Push token saved to database');
+        }
+      }
+    } catch (dbError) {
+      console.log('Notifications: ⚠️ Error saving push token to database:', dbError);
     }
 
     return token;
