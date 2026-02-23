@@ -261,9 +261,9 @@ export default function ContainersScreen() {
         {/* Summary row */}
         {containers.length > 0 && (
           <View style={s.summaryRow}>
-            <SummaryTile num={arrived}   label="הגיעו"  color="#059669" bg="#ecfdf5" />
-            <SummaryTile num={inTransit} label="בדרך"   color="#b45309" bg="#fffbeb" />
             <SummaryTile num={preparing} label="בהכנה"  color="#6d28d9" bg="#f5f3ff" />
+            <SummaryTile num={inTransit} label="בדרך"   color="#b45309" bg="#fffbeb" />
+            <SummaryTile num={arrived}   label="הגיעו"  color="#059669" bg="#ecfdf5" />
           </View>
         )}
 
@@ -411,13 +411,14 @@ const s = StyleSheet.create({
     marginRight: 10,      // gap from chevron
   },
   progressTrack: {
+    position: 'relative',
     flex: 1,
     height: 5,
     backgroundColor: '#f1f5f9',
     borderRadius: 10,
     overflow: 'hidden',
   },
-  progressFill: { height: '100%', borderRadius: 10 },
+  progressFill: { height: '100%', borderRadius: 10, position: 'absolute', right: 0 },
   progressPct: {
     fontSize: 12,
     fontWeight: '700',
