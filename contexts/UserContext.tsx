@@ -10,6 +10,7 @@ interface UserContextType {
   session: Session | null;
   setUser: (user: User | null) => void;
   refreshUser: () => Promise<void>;
+  registerPushNotifications: () => Promise<string | null>;
   isLoading: boolean;
 }
 
@@ -42,28 +43,42 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const registerPushToken = async (authUserId: string) => {
+  const registerPushToken = async (authUserId: string): Promise<string | null> => {
     try {
-      console.log('UserContext: Starting push notification token registration');
+      console.log('👤 UserContext: Starting push notification token registration for user:', authUserId);
       const pushToken = await registerForPushNotificationsAsync();
       
       if (pushToken) {
-        console.log('UserContext: ✅ Push token obtained:', pushToken);
+        console.log('👤 UserContext: ✅ Push token obtained:', pushToken);
         
         try {
           await api.savePushToken(authUserId, pushToken);
-          console.log('UserContext: ✅ Push token saved to database');
+          console.log('👤 UserContext: ✅ Push token saved to database');
+          return pushToken;
         } catch (saveError: any) {
-          console.log('UserContext: ⚠️ Failed to save push token:', saveError?.message || saveError);
+          console.log('👤 UserContext: ⚠️ Failed to save push token:', saveError?.message || saveError);
+          return null;
         }
       } else {
-        console.log('UserContext: ℹ️ No push token obtained (expected in development/simulator)');
+        console.log('👤 UserContext: ℹ️ No push token obtained (expected in development/simulator)');
+        return null;
       }
     } catch (error: any) {
-      console.log('UserContext: ⚠️ Push notification setup failed:', error?.message || error);
+      console.log('👤 UserContext: ⚠️ Push notification setup failed:', error?.message || error);
       // This is non-critical - app continues to work without push notifications
+      return null;
     }
   };
+
+  // Expose registerPushNotifications so it can be called manually from UI
+  const registerPushNotifications = useCallback(async (): Promise<string | null> => {
+    if (!session?.user?.id) {
+      console.log('👤 UserContext: Cannot register push notifications - no session');
+      return null;
+    }
+    console.log('👤 UserContext: Manual push notification registration triggered');
+    return registerPushToken(session.user.id);
+  }, [session]);
 
   useEffect(() => {
     console.log('UserContext: Initializing Supabase Auth session');
@@ -136,7 +151,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <UserContext.Provider value={{ user, session, setUser, refreshUser, isLoading }}>
+    <UserContext.Provider value={{ user, session, setUser, refreshUser, registerPushNotifications, isLoading }}>
       {children}
     </UserContext.Provider>
   );
