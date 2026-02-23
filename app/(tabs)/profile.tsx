@@ -2,9 +2,6 @@
 import LottieView from 'lottie-react-native';
 import { api } from '@/utils/api';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
 import {
   View,
   Text,
@@ -18,6 +15,9 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
 import { sendTestTaskReminders } from '@/utils/notifications';
 import React, { useState, useEffect } from 'react';
 import { IconSymbol } from '@/components/IconSymbol';
@@ -186,6 +186,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#856404',
     textAlign: 'right',
+    lineHeight: 22,
   },
   infoCard: {
     backgroundColor: '#D1ECF1',
@@ -199,6 +200,21 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#0C5460',
     textAlign: 'right',
+    lineHeight: 22,
+  },
+  successCard: {
+    backgroundColor: '#D4EDDA',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: '#C3E6CB',
+  },
+  successText: {
+    ...typography.body,
+    color: '#155724',
+    textAlign: 'right',
+    lineHeight: 22,
   },
 });
 
@@ -282,8 +298,8 @@ export default function ProfileScreen() {
       if (token) {
         console.log('ProfileScreen: ✅ Push token registered:', token);
         Alert.alert(
-          'הצלחה!',
-          'הרישום להתראות הושלם בהצלחה. תקבל התראות על עדכונים במערכת.',
+          'הצלחה! 🎉',
+          'הרישום להתראות הושלם בהצלחה.\n\nתקבל התראות על:\n• עדכוני משימות\n• שינויים במכולות\n• עדכוני לוח זמנים',
           [{ text: 'אישור' }]
         );
         // Refresh user data to show updated push token status
@@ -291,14 +307,21 @@ export default function ProfileScreen() {
       } else {
         console.log('ProfileScreen: ⚠️ No push token obtained');
         Alert.alert(
-          'שים לב',
-          'לא ניתן לרשום להתראות. ודא שהאפליקציה רצה על מכשיר פיזי ושניתנו הרשאות להתראות.',
+          'שים לב ⚠️',
+          'לא ניתן לרשום להתראות כרגע.\n\nנסה:\n1. ודא שיש חיבור אינטרנט יציב\n2. סגור ופתח מחדש את האפליקציה\n3. אם הבעיה נמשכת, נסה להתנתק ולהתחבר מחדש',
           [{ text: 'אישור' }]
         );
       }
     } catch (error: any) {
       console.error('ProfileScreen: ❌ Push notification registration failed:', error);
-      Alert.alert('שגיאה', error.message || 'שגיאה ברישום להתראות');
+      
+      // Show detailed error message
+      const errorMessage = error.message || 'שגיאה לא ידועה ברישום להתראות';
+      Alert.alert(
+        'שגיאה ברישום להתראות',
+        errorMessage,
+        [{ text: 'אישור' }]
+      );
     }
   };
 
@@ -393,7 +416,20 @@ export default function ProfileScreen() {
             {isRegisteringPush && (
               <View style={styles.infoCard}>
                 <Text style={styles.infoText}>
-                  ⏳ מבצע רישום אוטומטי להתראות... אנא המתן.
+                  ⏳ מבצע רישום להתראות... אנא המתן.
+                </Text>
+              </View>
+            )}
+
+            {/* Success message if registered */}
+            {user.pushToken && !isRegisteringPush && (
+              <View style={styles.successCard}>
+                <Text style={styles.successText}>
+                  ✅ רשום בהצלחה להתראות!{'\n\n'}
+                  תקבל התראות על:{'\n'}
+                  • עדכוני משימות{'\n'}
+                  • שינויים במכולות{'\n'}
+                  • עדכוני לוח זמנים
                 </Text>
               </View>
             )}
@@ -402,8 +438,8 @@ export default function ProfileScreen() {
             {!user.pushToken && !isRegisteringPush && (
               <View style={styles.warningCard}>
                 <Text style={styles.warningText}>
-                  ⚠️ לא רשום להתראות! לחץ על הכפתור למטה כדי להירשם ולקבל עדכונים על משימות, מכולות ולוח זמנים.
-                  {'\n\n'}
+                  ⚠️ לא רשום להתראות!{'\n\n'}
+                  לחץ על הכפתור למטה כדי להירשם ולקבל עדכונים על משימות, מכולות ולוח זמנים.{'\n\n'}
                   💡 שים לב: התראות עובדות רק על מכשיר פיזי (לא על סימולטור).
                 </Text>
               </View>
@@ -429,7 +465,7 @@ export default function ProfileScreen() {
               style={styles.button}
               onPress={handleTestNotification}
             >
-              <Text style={styles.buttonText}>שלח התראת בדיקה</Text>
+              <Text style={styles.buttonText}>שלח התראת בדיקה (3 התראות)</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -57,6 +57,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       const permissionResult = await Notifications.getPermissionsAsync();
       existingStatus = permissionResult.status;
       console.log('🔔 Notifications: Existing permission status:', existingStatus);
+      console.log('🔔 Notifications: Full permission details:', JSON.stringify(permissionResult, null, 2));
     } catch (permError) {
       console.log('🔔 Notifications: ⚠️ Could not check existing permissions:', permError);
       // Continue to request permissions anyway
@@ -91,6 +92,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     // Check if running in Expo Go
     const isExpoGo = Constants.appOwnership === 'expo';
     console.log('🔔 Notifications: Running in Expo Go:', isExpoGo);
+    console.log('🔔 Notifications: App ownership:', Constants.appOwnership);
     
     // Try to get projectId from Constants
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
@@ -112,7 +114,8 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       owner,
       experienceId,
       hasProjectId: hasValidProjectId,
-      isExpoGo
+      isExpoGo,
+      appOwnership: Constants.appOwnership
     });
 
     let token: string | null = null;
@@ -122,6 +125,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     if (isExpoGo) {
       console.log('🔔 Notifications: Expo Go detected - using experienceId approach');
       try {
+        console.log('🔔 Notifications: Attempting with experienceId:', experienceId);
         const result = await Notifications.getExpoPushTokenAsync({ 
           experienceId 
         });
@@ -129,11 +133,12 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
         console.log('🔔 Notifications: ✅ Successfully obtained push token in Expo Go:', token);
       } catch (expoGoError: any) {
         console.log('🔔 Notifications: ❌ Expo Go token retrieval failed:', expoGoError?.message || expoGoError);
+        console.log('🔔 Notifications: Full error:', JSON.stringify(expoGoError, null, 2));
         lastError = expoGoError;
         
         // Try alternative experienceId format
         try {
-          console.log('🔔 Notifications: Trying alternative experienceId format...');
+          console.log('🔔 Notifications: Trying alternative experienceId format (slug only)...');
           const altExperienceId = slug;
           const result = await Notifications.getExpoPushTokenAsync({ 
             experienceId: altExperienceId 
@@ -142,6 +147,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
           console.log('🔔 Notifications: ✅ Successfully obtained push token with alternative format:', token);
         } catch (altError: any) {
           console.log('🔔 Notifications: ❌ Alternative format also failed:', altError?.message || altError);
+          console.log('🔔 Notifications: Full alt error:', JSON.stringify(altError, null, 2));
           lastError = altError;
         }
       }
@@ -194,9 +200,10 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     if (!token) {
       console.log('🔔 Notifications: ⚠️ All token retrieval attempts failed');
       console.log('🔔 Notifications: Last error:', lastError?.message || lastError);
+      console.log('🔔 Notifications: Full last error:', JSON.stringify(lastError, null, 2));
       
       if (isExpoGo) {
-        throw new Error('לא ניתן לקבל טוקן התראות ב-Expo Go. נסה:\n1. ודא שיש חיבור אינטרנט\n2. סגור ופתח מחדש את האפליקציה\n3. אם הבעיה נמשכת, צור EAS Build');
+        throw new Error('לא ניתן לקבל טוקן התראות ב-Expo Go.\n\nנסה:\n1. ודא שיש חיבור אינטרנט יציב\n2. סגור ופתח מחדש את האפליקציה\n3. אם הבעיה נמשכת, נסה להתנתק ולהתחבר מחדש');
       } else {
         throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
       }
@@ -208,6 +215,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     return token;
   } catch (error: any) {
     console.log('🔔 Notifications: ⚠️ Push notification registration failed:', error?.message || error);
+    console.log('🔔 Notifications: Full error details:', JSON.stringify(error, null, 2));
     // Re-throw the error so the caller can handle it and show appropriate UI
     throw error;
   }
