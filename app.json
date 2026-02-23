@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Different",
@@ -57,13 +58,16 @@
         }
       ]
     ],
-    "scheme": "Different",
+    "scheme": "different",
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "router": {},
-      "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev"
+      "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev",
+      "eas": {
+        "projectId": "your-eas-project-id-here"
+      }
     }
   }
 }
