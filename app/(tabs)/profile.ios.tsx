@@ -173,6 +173,19 @@ const styles = StyleSheet.create({
     ...typography.button,
     color: '#FFFFFF',
   },
+  warningCard: {
+    backgroundColor: '#FFF3CD',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: '#FFE69C',
+  },
+  warningText: {
+    ...typography.body,
+    color: '#856404',
+    textAlign: 'right',
+  },
 });
 
 function formatDate(dateString: string | null | undefined): string {
@@ -201,6 +214,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     console.log('ProfileScreen: Component mounted, user:', user?.fullName);
     console.log('ProfileScreen: Session:', session ? 'exists' : 'none');
+    console.log('ProfileScreen: Push token:', user?.pushToken ? 'exists' : 'null');
     
     // Refresh user data when screen is focused
     if (session && user) {
@@ -364,6 +378,15 @@ export default function ProfileScreen() {
               </View>
               <Text style={styles.infoLabel}>סטטוס התראות</Text>
             </View>
+
+            {/* Warning if push token is null */}
+            {!user.pushToken && (
+              <View style={styles.warningCard}>
+                <Text style={styles.warningText}>
+                  ⚠️ לא רשום להתראות! לחץ על הכפתור למטה כדי להירשם ולקבל עדכונים על משימות, מכולות ולוח זמנים.
+                </Text>
+              </View>
+            )}
 
             {/* Register for Push Notifications Button */}
             <TouchableOpacity
