@@ -21,9 +21,10 @@ Notifications.setNotificationHandler({
  */
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   try {
-    console.log('🔔 Notifications: Starting push notification registration');
+    console.log('🔔 Notifications: ========== STARTING PUSH NOTIFICATION REGISTRATION ==========');
     console.log('🔔 Notifications: Device.isDevice =', Device.isDevice);
     console.log('🔔 Notifications: Platform.OS =', Platform.OS);
+    console.log('🔔 Notifications: App ownership =', Constants.appOwnership);
 
     // Check if running on a physical device
     if (!Device.isDevice) {
@@ -52,6 +53,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     }
 
     // Check existing permissions
+    console.log('🔔 Notifications: Checking existing permissions...');
     let existingStatus = 'undetermined';
     try {
       const permissionResult = await Notifications.getPermissionsAsync();
@@ -92,7 +94,6 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     // Check if running in Expo Go
     const isExpoGo = Constants.appOwnership === 'expo';
     console.log('🔔 Notifications: Running in Expo Go:', isExpoGo);
-    console.log('🔔 Notifications: App ownership:', Constants.appOwnership);
     
     // Try to get projectId from Constants
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
@@ -101,12 +102,12 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     if (hasValidProjectId) {
       console.log('🔔 Notifications: Found EAS project ID in config:', projectId);
     } else {
-      console.log('🔔 Notifications: No EAS project ID found - using development mode');
+      console.log('🔔 Notifications: ⚠️ No EAS project ID found in app.json - using development mode');
     }
     
     // Build experienceId for development/Expo Go
     const slug = Constants.expoConfig?.slug || 'Different';
-    const owner = Constants.expoConfig?.owner || Constants.manifest?.owner || 'different';
+    const owner = Constants.expoConfig?.owner || 'different';
     const experienceId = `@${owner}/${slug}`;
     
     console.log('🔔 Notifications: Configuration:', {
@@ -121,7 +122,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     let token: string | null = null;
     let lastError: any = null;
     
-    // For Expo Go, we need to use experienceId
+    // For Expo Go, we MUST use experienceId
     if (isExpoGo) {
       console.log('🔔 Notifications: Expo Go detected - using experienceId approach');
       try {
@@ -136,10 +137,10 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
         console.log('🔔 Notifications: Full error:', JSON.stringify(expoGoError, null, 2));
         lastError = expoGoError;
         
-        // Try alternative experienceId format
+        // Try without the @ prefix
         try {
-          console.log('🔔 Notifications: Trying alternative experienceId format (slug only)...');
-          const altExperienceId = slug;
+          console.log('🔔 Notifications: Trying without @ prefix...');
+          const altExperienceId = `${owner}/${slug}`;
           const result = await Notifications.getExpoPushTokenAsync({ 
             experienceId: altExperienceId 
           });
@@ -147,12 +148,12 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
           console.log('🔔 Notifications: ✅ Successfully obtained push token with alternative format:', token);
         } catch (altError: any) {
           console.log('🔔 Notifications: ❌ Alternative format also failed:', altError?.message || altError);
-          console.log('🔔 Notifications: Full alt error:', JSON.stringify(altError, null, 2));
           lastError = altError;
         }
       }
     } else {
       // Try multiple approaches for standalone builds
+      console.log('🔔 Notifications: Standalone build detected - trying multiple approaches');
       const attempts = [
         // Attempt 1: Use projectId if available (for EAS builds)
         async () => {
@@ -173,12 +174,6 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
           const result = await Notifications.getExpoPushTokenAsync();
           return result.data;
         },
-        // Attempt 4: Try with just the slug
-        async () => {
-          console.log('🔔 Notifications: Attempt 4 - Using slug only:', slug);
-          const result = await Notifications.getExpoPushTokenAsync({ experienceId: slug });
-          return result.data;
-        }
       ];
 
       // Try each approach until one succeeds
@@ -203,19 +198,21 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       console.log('🔔 Notifications: Full last error:', JSON.stringify(lastError, null, 2));
       
       if (isExpoGo) {
-        throw new Error('לא ניתן לקבל טוקן התראות ב-Expo Go.\n\nנסה:\n1. ודא שיש חיבור אינטרנט יציב\n2. סגור ופתח מחדש את האפליקציה\n3. אם הבעיה נמשכת, נסה להתנתק ולהתחבר מחדש');
+        throw new Error('לא ניתן לקבל טוקן התראות ב-Expo Go.\n\nנסה:\n1. ודא שיש חיבור אינטרנט יציב\n2. סגור ופתח מחדש את האפליקציה\n3. אם הבעיה נמשכת, נסה להתנתק ולהתחבר מחדש\n\nשגיאה טכנית: ' + (lastError?.message || 'Unknown error'));
       } else {
-        throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
+        throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.\n\nשגיאה טכנית: ' + (lastError?.message || 'Unknown error'));
       }
     }
 
     console.log('🔔 Notifications: ✅ Push token obtained successfully:', token);
     console.log('🔔 Notifications: Token will be saved by the caller (UserContext)');
+    console.log('🔔 Notifications: ========== REGISTRATION COMPLETE ==========');
 
     return token;
   } catch (error: any) {
     console.log('🔔 Notifications: ⚠️ Push notification registration failed:', error?.message || error);
     console.log('🔔 Notifications: Full error details:', JSON.stringify(error, null, 2));
+    console.log('🔔 Notifications: Error stack:', error?.stack);
     // Re-throw the error so the caller can handle it and show appropriate UI
     throw error;
   }
@@ -319,7 +316,7 @@ export async function sendTestTaskReminders(taskTitle: string): Promise<void> {
       const { status: newStatus } = await Notifications.requestPermissionsAsync();
       if (newStatus !== 'granted') {
         console.log('🔔 Notifications: ⚠️ Permission denied, cannot send notifications');
-        return;
+        throw new Error('לא ניתנו הרשאות להתראות');
       }
     }
 

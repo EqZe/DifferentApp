@@ -215,6 +215,20 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     lineHeight: 22,
   },
+  errorCard: {
+    backgroundColor: '#F8D7DA',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: '#F5C6CB',
+  },
+  errorText: {
+    ...typography.body,
+    color: '#721C24',
+    textAlign: 'right',
+    lineHeight: 22,
+  },
 });
 
 function formatDate(dateString: string | null | undefined): string {
@@ -235,6 +249,7 @@ function formatDate(dateString: string | null | undefined): string {
 export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
   const router = useRouter();
   const { user, session, refreshUser, registerPushNotifications, isRegisteringPush } = useUser();
   const colorScheme = useColorScheme();
@@ -289,13 +304,16 @@ export default function ProfileScreen() {
   };
 
   const handleRegisterPushNotifications = async () => {
-    console.log('ProfileScreen: User tapped register push notifications button');
+    console.log('ProfileScreen: ========== USER TAPPED REGISTER BUTTON ==========');
+    setRegistrationError(null); // Clear previous errors
     
     try {
+      console.log('ProfileScreen: Calling registerPushNotifications from UserContext...');
       const token = await registerPushNotifications();
+      console.log('ProfileScreen: registerPushNotifications returned:', token ? 'token received' : 'null');
       
       if (token) {
-        console.log('ProfileScreen: ✅ Push token registered:', token);
+        console.log('ProfileScreen: ✅ Push token registered successfully:', token);
         Alert.alert(
           'הצלחה! 🎉',
           'הרישום להתראות הושלם בהצלחה.\n\nתקבל התראות על:\n• עדכוני משימות\n• שינויים במכולות\n• עדכוני לוח זמנים',
@@ -304,18 +322,23 @@ export default function ProfileScreen() {
         // Refresh user data to show updated push token status
         await refreshUser();
       } else {
-        console.log('ProfileScreen: ⚠️ No push token obtained');
+        console.log('ProfileScreen: ⚠️ No push token obtained (returned null)');
+        const errorMsg = 'לא ניתן לרשום להתראות כרגע.\n\nנסה:\n1. ודא שיש חיבור אינטרנט יציב\n2. סגור ופתח מחדש את האפליקציה\n3. אם הבעיה נמשכת, נסה להתנתק ולהתחבר מחדש';
+        setRegistrationError(errorMsg);
         Alert.alert(
           'שים לב ⚠️',
-          'לא ניתן לרשום להתראות כרגע.\n\nנסה:\n1. ודא שיש חיבור אינטרנט יציב\n2. סגור ופתח מחדש את האפליקציה\n3. אם הבעיה נמשכת, נסה להתנתק ולהתחבר מחדש',
+          errorMsg,
           [{ text: 'אישור' }]
         );
       }
     } catch (error: any) {
-      console.error('ProfileScreen: ❌ Push notification registration failed:', error);
+      console.error('ProfileScreen: ❌ Push notification registration failed with error:', error);
+      console.error('ProfileScreen: Error message:', error?.message);
+      console.error('ProfileScreen: Error stack:', error?.stack);
       
       // Show detailed error message
       const errorMessage = error.message || 'שגיאה לא ידועה ברישום להתראות';
+      setRegistrationError(errorMessage);
       Alert.alert(
         'שגיאה ברישום להתראות',
         errorMessage,
@@ -421,7 +444,7 @@ export default function ProfileScreen() {
             )}
 
             {/* Success message if registered */}
-            {user.pushToken && !isRegisteringPush && (
+            {user.pushToken && !isRegisteringPush && !registrationError && (
               <View style={styles.successCard}>
                 <Text style={styles.successText}>
                   ✅ רשום בהצלחה להתראות!{'\n\n'}
@@ -433,8 +456,18 @@ export default function ProfileScreen() {
               </View>
             )}
 
+            {/* Error message if registration failed */}
+            {registrationError && !isRegisteringPush && (
+              <View style={styles.errorCard}>
+                <Text style={styles.errorText}>
+                  ❌ שגיאה ברישום:{'\n\n'}
+                  {registrationError}
+                </Text>
+              </View>
+            )}
+
             {/* Warning if push token is null */}
-            {!user.pushToken && !isRegisteringPush && (
+            {!user.pushToken && !isRegisteringPush && !registrationError && (
               <View style={styles.warningCard}>
                 <Text style={styles.warningText}>
                   ⚠️ לא רשום להתראות!{'\n\n'}
