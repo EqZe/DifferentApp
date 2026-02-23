@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@/contexts/UserContext';
@@ -589,14 +590,22 @@ const getFullDayName = (dayOfWeekString: string, language: 'hebrew' | 'english')
 };
 
 const getAgentBadgeColors = (agentText: string | null): [string, string] => {
-  if (!agentText) return ['#FF9800', '#F57C00'];
+  if (!agentText) return ['#9C27B0', '#BA68C8']; // Purple for empty/null
+  
   const normalizedAgent = agentText.trim().toLowerCase();
-  // "סוכנת" / "agent" → green
-  if (normalizedAgent.includes('סוכנת') || normalizedAgent.includes('agent')) {
-    return ['#4CAF50', '#388E3C'];
+  
+  // Check if it's "סוכנת" (agent) - gets green
+  if (normalizedAgent.includes('סוכנת') || normalizedAgent === 'agent') {
+    return ['#4CAF50', '#66BB6A']; // Green for agent
   }
-  // Everyone else (אבישי, רוני, etc.) → orange
-  return ['#FF9800', '#F57C00'];
+  
+  // Check if it's Avishai or Roni - gets orange
+  if (normalizedAgent.includes('אבישי') || normalizedAgent.includes('רוני')) {
+    return ['#FF9800', '#FFB74D']; // Orange for Avishai/Roni
+  }
+  
+  // Everyone else gets purple
+  return ['#9C27B0', '#BA68C8']; // Purple for others
 };
 
 const getEventTypeLabel = (type: string, language: 'hebrew' | 'english'): string => {
