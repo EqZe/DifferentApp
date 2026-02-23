@@ -28,7 +28,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     // Check if running on a physical device
     if (!Device.isDevice) {
       console.log('🔔 Notifications: ⚠️ Skipping - must use physical device for push notifications');
-      return null;
+      throw new Error('התראות דורשות מכשיר פיזי. לא ניתן להשתמש בסימולטור.');
     }
 
     // Configure notification channel for Android FIRST (before requesting permissions)
@@ -73,20 +73,24 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
         console.log('🔔 Notifications: Permission request result:', status);
       } catch (requestError) {
         console.log('🔔 Notifications: ⚠️ Permission request failed:', requestError);
-        return null;
+        throw new Error('לא ניתנו הרשאות להתראות. אנא אפשר התראות בהגדרות המכשיר.');
       }
     }
 
     // If permission not granted, return null
     if (finalStatus !== 'granted') {
       console.log('🔔 Notifications: ❌ Permission not granted, cannot register for push notifications');
-      return null;
+      throw new Error('לא ניתנו הרשאות להתראות. אנא אפשר התראות בהגדרות המכשיר.');
     }
 
     console.log('🔔 Notifications: ✅ Permissions granted, attempting to get Expo push token');
 
     // Get the Expo push token
     console.log('🔔 Notifications: Attempting to get Expo push token');
+    
+    // Check if running in Expo Go
+    const isExpoGo = Constants.appOwnership === 'expo';
+    console.log('🔔 Notifications: Running in Expo Go:', isExpoGo);
     
     // Try to get projectId from Constants
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
@@ -107,58 +111,95 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       slug,
       owner,
       experienceId,
-      hasProjectId: hasValidProjectId
+      hasProjectId: hasValidProjectId,
+      isExpoGo
     });
 
     let token: string | null = null;
+    let lastError: any = null;
     
-    // Try multiple approaches to get the token
-    const attempts = [
-      // Attempt 1: Use projectId if available (for EAS builds)
-      async () => {
-        if (!hasValidProjectId) throw new Error('No valid project ID');
-        console.log('🔔 Notifications: Attempt 1 - Using EAS project ID');
-        const result = await Notifications.getExpoPushTokenAsync({ projectId: projectId! });
-        return result.data;
-      },
-      // Attempt 2: Use experienceId (for Expo Go / development)
-      async () => {
-        console.log('🔔 Notifications: Attempt 2 - Using experience ID:', experienceId);
-        const result = await Notifications.getExpoPushTokenAsync({ experienceId });
-        return result.data;
-      },
-      // Attempt 3: Try without parameters (works in some environments)
-      async () => {
-        console.log('🔔 Notifications: Attempt 3 - Using default configuration');
-        const result = await Notifications.getExpoPushTokenAsync();
-        return result.data;
-      },
-      // Attempt 4: Try with just the slug
-      async () => {
-        console.log('🔔 Notifications: Attempt 4 - Using slug only:', slug);
-        const result = await Notifications.getExpoPushTokenAsync({ experienceId: slug });
-        return result.data;
-      }
-    ];
-
-    // Try each approach until one succeeds
-    for (let i = 0; i < attempts.length; i++) {
+    // For Expo Go, we need to use experienceId
+    if (isExpoGo) {
+      console.log('🔔 Notifications: Expo Go detected - using experienceId approach');
       try {
-        token = await attempts[i]();
-        if (token) {
-          console.log('🔔 Notifications: ✅ Successfully obtained push token (attempt', i + 1, '):', token);
-          break;
+        const result = await Notifications.getExpoPushTokenAsync({ 
+          experienceId 
+        });
+        token = result.data;
+        console.log('🔔 Notifications: ✅ Successfully obtained push token in Expo Go:', token);
+      } catch (expoGoError: any) {
+        console.log('🔔 Notifications: ❌ Expo Go token retrieval failed:', expoGoError?.message || expoGoError);
+        lastError = expoGoError;
+        
+        // Try alternative experienceId format
+        try {
+          console.log('🔔 Notifications: Trying alternative experienceId format...');
+          const altExperienceId = slug;
+          const result = await Notifications.getExpoPushTokenAsync({ 
+            experienceId: altExperienceId 
+          });
+          token = result.data;
+          console.log('🔔 Notifications: ✅ Successfully obtained push token with alternative format:', token);
+        } catch (altError: any) {
+          console.log('🔔 Notifications: ❌ Alternative format also failed:', altError?.message || altError);
+          lastError = altError;
         }
-      } catch (attemptError: any) {
-        console.log(`🔔 Notifications: Attempt ${i + 1} failed:`, attemptError?.message || attemptError);
-        // Continue to next attempt
+      }
+    } else {
+      // Try multiple approaches for standalone builds
+      const attempts = [
+        // Attempt 1: Use projectId if available (for EAS builds)
+        async () => {
+          if (!hasValidProjectId) throw new Error('No valid project ID');
+          console.log('🔔 Notifications: Attempt 1 - Using EAS project ID');
+          const result = await Notifications.getExpoPushTokenAsync({ projectId: projectId! });
+          return result.data;
+        },
+        // Attempt 2: Use experienceId (for Expo Go / development)
+        async () => {
+          console.log('🔔 Notifications: Attempt 2 - Using experience ID:', experienceId);
+          const result = await Notifications.getExpoPushTokenAsync({ experienceId });
+          return result.data;
+        },
+        // Attempt 3: Try without parameters (works in some environments)
+        async () => {
+          console.log('🔔 Notifications: Attempt 3 - Using default configuration');
+          const result = await Notifications.getExpoPushTokenAsync();
+          return result.data;
+        },
+        // Attempt 4: Try with just the slug
+        async () => {
+          console.log('🔔 Notifications: Attempt 4 - Using slug only:', slug);
+          const result = await Notifications.getExpoPushTokenAsync({ experienceId: slug });
+          return result.data;
+        }
+      ];
+
+      // Try each approach until one succeeds
+      for (let i = 0; i < attempts.length; i++) {
+        try {
+          token = await attempts[i]();
+          if (token) {
+            console.log('🔔 Notifications: ✅ Successfully obtained push token (attempt', i + 1, '):', token);
+            break;
+          }
+        } catch (attemptError: any) {
+          console.log(`🔔 Notifications: Attempt ${i + 1} failed:`, attemptError?.message || attemptError);
+          lastError = attemptError;
+          // Continue to next attempt
+        }
       }
     }
 
     if (!token) {
-      console.log('🔔 Notifications: ⚠️ All token retrieval attempts failed - push notifications will not work');
-      console.log('🔔 Notifications: This is normal in development mode without EAS configuration');
-      return null;
+      console.log('🔔 Notifications: ⚠️ All token retrieval attempts failed');
+      console.log('🔔 Notifications: Last error:', lastError?.message || lastError);
+      
+      if (isExpoGo) {
+        throw new Error('לא ניתן לקבל טוקן התראות ב-Expo Go. נסה:\n1. ודא שיש חיבור אינטרנט\n2. סגור ופתח מחדש את האפליקציה\n3. אם הבעיה נמשכת, צור EAS Build');
+      } else {
+        throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
+      }
     }
 
     console.log('🔔 Notifications: ✅ Push token obtained successfully:', token);
@@ -167,8 +208,8 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     return token;
   } catch (error: any) {
     console.log('🔔 Notifications: ⚠️ Push notification registration failed:', error?.message || error);
-    console.log('🔔 Notifications: This is expected in development mode - push notifications require EAS build or proper configuration');
-    return null;
+    // Re-throw the error so the caller can handle it and show appropriate UI
+    throw error;
   }
 }
 
