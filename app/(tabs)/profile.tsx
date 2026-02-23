@@ -187,6 +187,19 @@ const styles = StyleSheet.create({
     color: '#856404',
     textAlign: 'right',
   },
+  infoCard: {
+    backgroundColor: '#D1ECF1',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: '#BEE5EB',
+  },
+  infoText: {
+    ...typography.body,
+    color: '#0C5460',
+    textAlign: 'right',
+  },
 });
 
 function formatDate(dateString: string | null | undefined): string {
@@ -207,9 +220,8 @@ function formatDate(dateString: string | null | undefined): string {
 export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isRegisteringNotifications, setIsRegisteringNotifications] = useState(false);
   const router = useRouter();
-  const { user, session, refreshUser, registerPushNotifications } = useUser();
+  const { user, session, refreshUser, registerPushNotifications, isRegisteringPush } = useUser();
   const colorScheme = useColorScheme();
 
   useEffect(() => {
@@ -263,7 +275,6 @@ export default function ProfileScreen() {
 
   const handleRegisterPushNotifications = async () => {
     console.log('ProfileScreen: User tapped register push notifications button');
-    setIsRegisteringNotifications(true);
     
     try {
       const token = await registerPushNotifications();
@@ -288,8 +299,6 @@ export default function ProfileScreen() {
     } catch (error: any) {
       console.error('ProfileScreen: ❌ Push notification registration failed:', error);
       Alert.alert('שגיאה', error.message || 'שגיאה ברישום להתראות');
-    } finally {
-      setIsRegisteringNotifications(false);
     }
   };
 
@@ -380,11 +389,22 @@ export default function ProfileScreen() {
               <Text style={styles.infoLabel}>סטטוס התראות</Text>
             </View>
 
+            {/* Info about automatic registration */}
+            {isRegisteringPush && (
+              <View style={styles.infoCard}>
+                <Text style={styles.infoText}>
+                  ⏳ מבצע רישום אוטומטי להתראות... אנא המתן.
+                </Text>
+              </View>
+            )}
+
             {/* Warning if push token is null */}
-            {!user.pushToken && (
+            {!user.pushToken && !isRegisteringPush && (
               <View style={styles.warningCard}>
                 <Text style={styles.warningText}>
                   ⚠️ לא רשום להתראות! לחץ על הכפתור למטה כדי להירשם ולקבל עדכונים על משימות, מכולות ולוח זמנים.
+                  {'\n\n'}
+                  💡 שים לב: התראות עובדות רק על מכשיר פיזי (לא על סימולטור).
                 </Text>
               </View>
             )}
@@ -393,9 +413,9 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.notificationButton}
               onPress={handleRegisterPushNotifications}
-              disabled={isRegisteringNotifications}
+              disabled={isRegisteringPush}
             >
-              {isRegisteringNotifications ? (
+              {isRegisteringPush ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={styles.notificationButtonText}>

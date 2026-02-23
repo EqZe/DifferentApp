@@ -12,6 +12,7 @@ interface UserContextType {
   refreshUser: () => Promise<void>;
   registerPushNotifications: () => Promise<string | null>;
   isLoading: boolean;
+  isRegisteringPush: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -20,21 +21,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRegisteringPush, setIsRegisteringPush] = useState(false);
 
   const loadUserProfile = useCallback(async (authUserId: string) => {
     try {
       console.log('UserContext: Loading user profile for auth user', authUserId);
       const userData = await api.getUserByAuthId(authUserId);
       console.log('UserContext: ✅ User profile loaded -', userData.fullName, 'hasContract:', userData.hasContract);
+      console.log('UserContext: Push token status:', userData.pushToken ? 'exists' : 'NULL');
       setUserState(userData);
 
-      // Register for push notifications after successful login (non-blocking)
-      // Use setTimeout to ensure this doesn't block the UI
-      setTimeout(() => {
-        registerPushToken(authUserId).catch(err => {
-          console.log('UserContext: Push token registration failed (non-critical):', err?.message || err);
-        });
-      }, 1000);
+      // Automatically register for push notifications if not already registered
+      // Only attempt if push_token is null
+      if (!userData.pushToken) {
+        console.log('UserContext: 🔔 Push token is NULL, attempting automatic registration...');
+        // Use setTimeout to ensure this doesn't block the UI and happens after the screen is fully loaded
+        setTimeout(() => {
+          registerPushToken(authUserId).catch(err => {
+            console.log('UserContext: ⚠️ Automatic push token registration failed (non-critical):', err?.message || err);
+          });
+        }, 2000); // Increased delay to 2 seconds to ensure everything is loaded
+      } else {
+        console.log('UserContext: ✅ Push token already exists, skipping automatic registration');
+      }
     } catch (error) {
       console.error('UserContext: ❌ Error loading user profile:', error);
       setUserState(null);
@@ -44,6 +53,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const registerPushToken = async (authUserId: string): Promise<string | null> => {
+    setIsRegisteringPush(true);
     try {
       console.log('👤 UserContext: Starting push notification token registration for user:', authUserId);
       const pushToken = await registerForPushNotificationsAsync();
@@ -53,20 +63,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
         
         try {
           await api.savePushToken(authUserId, pushToken);
-          console.log('👤 UserContext: ✅ Push token saved to database');
+          console.log('👤 UserContext: ✅ Push token saved to database successfully');
+          
+          // Refresh user data to update the push_token in state
+          const freshUserData = await api.getUserByAuthId(authUserId);
+          setUserState(freshUserData);
+          console.log('👤 UserContext: ✅ User data refreshed, push_token now:', freshUserData.pushToken ? 'exists' : 'NULL');
+          
           return pushToken;
         } catch (saveError: any) {
-          console.log('👤 UserContext: ⚠️ Failed to save push token:', saveError?.message || saveError);
+          console.log('👤 UserContext: ⚠️ Failed to save push token to database:', saveError?.message || saveError);
           return null;
         }
       } else {
         console.log('👤 UserContext: ℹ️ No push token obtained (expected in development/simulator)');
+        console.log('👤 UserContext: ℹ️ Push notifications require a physical device');
         return null;
       }
     } catch (error: any) {
       console.log('👤 UserContext: ⚠️ Push notification setup failed:', error?.message || error);
       // This is non-critical - app continues to work without push notifications
       return null;
+    } finally {
+      setIsRegisteringPush(false);
     }
   };
 
@@ -76,7 +95,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('👤 UserContext: Cannot register push notifications - no session');
       return null;
     }
-    console.log('👤 UserContext: Manual push notification registration triggered');
+    console.log('👤 UserContext: Manual push notification registration triggered by user');
     return registerPushToken(session.user.id);
   }, [session]);
 
@@ -144,6 +163,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('UserContext: Refreshing user data from database');
       const freshUserData = await api.getUserByAuthId(session.user.id);
       console.log('UserContext: ✅ User data refreshed, hasContract:', freshUserData.hasContract);
+      console.log('UserContext: Push token status:', freshUserData.pushToken ? 'exists' : 'NULL');
       setUserState(freshUserData);
     } catch (error) {
       console.error('UserContext: ❌ Failed to refresh user data', error);
@@ -151,7 +171,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <UserContext.Provider value={{ user, session, setUser, refreshUser, registerPushNotifications, isLoading }}>
+    <UserContext.Provider value={{ user, session, setUser, refreshUser, registerPushNotifications, isLoading, isRegisteringPush }}>
       {children}
     </UserContext.Provider>
   );
