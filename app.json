@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "Different",
@@ -71,7 +70,7 @@
       "router": {},
       "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev",
       "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID_HERE"
+        "projectId": "fe404aca-e46f-42d5-ac3a-50c265d87ae7"
       }
     },
     "updates": {
