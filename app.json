@@ -8,6 +8,7 @@
     "icon": "./assets/images/different logo.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "owner": "ilayrachkovski",
     "splash": {
       "image": "./assets/images/different logo.png",
       "resizeMode": "contain",
