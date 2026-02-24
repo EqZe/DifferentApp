@@ -62,6 +62,9 @@
     "experiments": {
       "typedRoutes": true
     },
+    "updates": {
+      "enabled": false
+    },
     "extra": {
       "router": {},
       "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev",
