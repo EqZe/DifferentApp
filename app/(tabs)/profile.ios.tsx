@@ -1,10 +1,8 @@
 
-import LottieView from 'lottie-react-native';
-import { api } from '@/utils/api';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
+import { useUser } from '@/contexts/UserContext';
+import React, { useState, useEffect } from 'react';
+import { IconSymbol } from '@/components/IconSymbol';
 import {
   View,
   Text,
@@ -17,217 +15,245 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { sendTestTaskReminders } from '@/utils/notifications';
-import React, { useState, useEffect } from 'react';
-import { IconSymbol } from '@/components/IconSymbol';
-import { useUser } from '@/contexts/UserContext';
+import { sendTestTaskReminders, registerForPushNotificationsAsync } from '@/utils/notifications';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import LottieView from 'lottie-react-native';
+import { api } from '@/utils/api';
+import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: designColors.background.primary,
   },
   scrollContent: {
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl * 2,
   },
   header: {
-    paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
     paddingBottom: spacing.lg,
+    alignItems: 'center',
   },
-  greeting: {
-    ...typography.h1,
-    color: designColors.text.primary,
-    marginBottom: spacing.xs,
-    textAlign: 'right',
-  },
-  subtitle: {
-    ...typography.body,
-    color: designColors.text.secondary,
-    textAlign: 'right',
-  },
-  section: {
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.lg,
-  },
-  sectionTitle: {
-    ...typography.h3,
-    color: designColors.text.primary,
-    marginBottom: spacing.md,
-    textAlign: 'right',
-  },
-  card: {
-    backgroundColor: designColors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+  avatarContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: designColors.primary.main,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.md,
     ...shadows.medium,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: designColors.border,
+  avatarText: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
-  infoLabel: {
-    ...typography.body,
-    color: designColors.text.secondary,
-    textAlign: 'right',
-  },
-  infoValue: {
-    ...typography.bodyBold,
+  name: {
+    fontSize: typography.sizes.xxl,
+    fontWeight: typography.weights.bold,
     color: designColors.text.primary,
-    textAlign: 'right',
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  email: {
+    fontSize: typography.sizes.md,
+    color: designColors.text.secondary,
+    textAlign: 'center',
+  },
+  section: {
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold,
+    color: designColors.text.primary,
+    marginBottom: spacing.md,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
+  },
+  card: {
+    backgroundColor: designColors.background.secondary,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadows.small,
+  },
+  row: {
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  rowLast: {
+    marginBottom: 0,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: designColors.primary.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: I18nManager.isRTL ? 0 : spacing.md,
+    marginLeft: I18nManager.isRTL ? spacing.md : 0,
+  },
+  rowContent: {
+    flex: 1,
+  },
+  rowLabel: {
+    fontSize: typography.sizes.sm,
+    color: designColors.text.secondary,
+    marginBottom: spacing.xs,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
+  },
+  rowValue: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium,
+    color: designColors.text.primary,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
+  },
+  badge: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    alignSelf: 'flex-start',
+  },
+  badgeText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: '#FFFFFF',
   },
   button: {
-    backgroundColor: designColors.primary,
-    borderRadius: radius.md,
-    padding: spacing.md,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     alignItems: 'center',
-    marginTop: spacing.md,
+    marginBottom: spacing.md,
     ...shadows.small,
+  },
+  buttonPrimary: {
+    backgroundColor: designColors.primary.main,
+  },
+  buttonSecondary: {
+    backgroundColor: designColors.secondary.main,
+  },
+  buttonDanger: {
+    backgroundColor: designColors.error.main,
   },
   buttonText: {
-    ...typography.button,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
     color: '#FFFFFF',
   },
-  logoutButton: {
-    backgroundColor: designColors.error,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    alignItems: 'center',
-    marginTop: spacing.lg,
-    ...shadows.small,
-  },
-  logoutButtonText: {
-    ...typography.button,
-    color: '#FFFFFF',
+  buttonDisabled: {
+    opacity: 0.5,
   },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: spacing.xl,
   },
   modalContent: {
-    backgroundColor: designColors.surface,
-    borderRadius: radius.lg,
+    backgroundColor: designColors.background.secondary,
+    borderRadius: radius.xl,
     padding: spacing.xl,
-    width: '80%',
+    width: '100%',
     maxWidth: 400,
     ...shadows.large,
   },
   modalTitle: {
-    ...typography.h2,
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
     color: designColors.text.primary,
     marginBottom: spacing.md,
     textAlign: 'center',
   },
   modalText: {
-    ...typography.body,
+    fontSize: typography.sizes.md,
     color: designColors.text.secondary,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
     textAlign: 'center',
+    lineHeight: 24,
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
     gap: spacing.md,
   },
   modalButton: {
     flex: 1,
+    borderRadius: radius.lg,
     padding: spacing.md,
-    borderRadius: radius.md,
     alignItems: 'center',
   },
   modalButtonCancel: {
-    backgroundColor: designColors.border,
+    backgroundColor: designColors.background.tertiary,
   },
   modalButtonConfirm: {
-    backgroundColor: designColors.error,
+    backgroundColor: designColors.error.main,
   },
   modalButtonText: {
-    ...typography.button,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+  },
+  modalButtonTextCancel: {
+    color: designColors.text.primary,
+  },
+  modalButtonTextConfirm: {
     color: '#FFFFFF',
   },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-    alignSelf: 'flex-start',
-  },
-  statusBadgeText: {
-    ...typography.caption,
-    fontWeight: '600',
-  },
-  notificationButton: {
-    backgroundColor: designColors.secondary,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    alignItems: 'center',
-    marginTop: spacing.md,
+  notificationCard: {
+    backgroundColor: designColors.background.secondary,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 2,
     ...shadows.small,
   },
-  notificationButtonText: {
-    ...typography.button,
+  notificationCardSuccess: {
+    borderColor: designColors.success.main,
+    backgroundColor: designColors.success.light + '20',
+  },
+  notificationCardWarning: {
+    borderColor: designColors.warning.main,
+    backgroundColor: designColors.warning.light + '20',
+  },
+  notificationCardError: {
+    borderColor: designColors.error.main,
+    backgroundColor: designColors.error.light + '20',
+  },
+  notificationTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    marginBottom: spacing.xs,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
+  },
+  notificationTitleSuccess: {
+    color: designColors.success.main,
+  },
+  notificationTitleWarning: {
+    color: designColors.warning.main,
+  },
+  notificationTitleError: {
+    color: designColors.error.main,
+  },
+  notificationText: {
+    fontSize: typography.sizes.sm,
+    color: designColors.text.secondary,
+    lineHeight: 20,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
+  },
+  loadingContainer: {
+    flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  loadingText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
     color: '#FFFFFF',
-  },
-  warningCard: {
-    backgroundColor: '#FFF3CD',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginTop: spacing.md,
-    borderWidth: 1,
-    borderColor: '#FFE69C',
-  },
-  warningText: {
-    ...typography.body,
-    color: '#856404',
-    textAlign: 'right',
-    lineHeight: 22,
-  },
-  infoCard: {
-    backgroundColor: '#D1ECF1',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginTop: spacing.md,
-    borderWidth: 1,
-    borderColor: '#BEE5EB',
-  },
-  infoText: {
-    ...typography.body,
-    color: '#0C5460',
-    textAlign: 'right',
-    lineHeight: 22,
-  },
-  successCard: {
-    backgroundColor: '#D4EDDA',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginTop: spacing.md,
-    borderWidth: 1,
-    borderColor: '#C3E6CB',
-  },
-  successText: {
-    ...typography.body,
-    color: '#155724',
-    textAlign: 'right',
-    lineHeight: 22,
-  },
-  errorCard: {
-    backgroundColor: '#F8D7DA',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginTop: spacing.md,
-    borderWidth: 1,
-    borderColor: '#F5C6CB',
-  },
-  errorText: {
-    ...typography.body,
-    color: '#721C24',
-    textAlign: 'right',
-    lineHeight: 22,
   },
 });
 
@@ -241,118 +267,100 @@ function formatDate(dateString: string | null | undefined): string {
       month: 'long',
       day: 'numeric',
     });
-  } catch (error) {
-    return 'תאריך לא תקין';
+  } catch {
+    return dateString;
   }
 }
 
 export default function ProfileScreen() {
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [registrationError, setRegistrationError] = useState<string | null>(null);
-  const router = useRouter();
-  const { user, session, refreshUser, registerPushNotifications, isRegisteringPush } = useUser();
   const colorScheme = useColorScheme();
+  const { user, session, refreshUser } = useUser();
+  const router = useRouter();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isRegisteringPush, setIsRegisteringPush] = useState(false);
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
   useEffect(() => {
-    console.log('ProfileScreen: Component mounted, user:', user?.fullName);
-    console.log('ProfileScreen: Session:', session ? 'exists' : 'none');
-    console.log('ProfileScreen: Push token:', user?.pushToken ? 'exists' : 'null');
-    
-    // Refresh user data when screen is focused
     if (session && user) {
-      refreshUser();
+      console.log('ProfileScreen (iOS): User session active', user.fullName);
+      console.log('ProfileScreen (iOS): Push token status:', user.pushToken ? 'registered ✅' : 'not registered ⚠️');
     }
-  }, [session, user, refreshUser]);
+  }, [session, user]);
+
+  // Refresh user data when screen comes into focus
+  useEffect(() => {
+    refreshUser();
+  }, []);
 
   const handleLogout = async () => {
-    console.log('ProfileScreen: User tapped logout button');
+    try {
+      console.log('ProfileScreen (iOS): User confirmed logout');
+      await api.signOut();
+      console.log('ProfileScreen (iOS): Logout successful, redirecting to register');
+      router.replace('/register');
+    } catch (error: any) {
+      console.error('ProfileScreen (iOS): Logout failed', error);
+      Alert.alert('שגיאה', error.message || 'שגיאה בהתנתקות');
+    } finally {
+      setShowLogoutModal(false);
+    }
+  };
+
+  const confirmLogout = () => {
     setShowLogoutModal(true);
   };
 
-  const confirmLogout = async () => {
-    console.log('ProfileScreen: User confirmed logout');
-    setIsLoggingOut(true);
-    
-    try {
-      await api.signOut();
-      console.log('ProfileScreen: ✅ Logout successful');
-      setShowLogoutModal(false);
-      router.replace('/register');
-    } catch (error: any) {
-      console.error('ProfileScreen: ❌ Logout failed:', error);
-      Alert.alert('שגיאה', error.message || 'שגיאה בהתנתקות');
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
   const handleTestNotification = async () => {
-    console.log('ProfileScreen: User tapped test notification button');
-    
     try {
-      await sendTestTaskReminders('בדיקת התראות מערכת');
+      console.log('ProfileScreen (iOS): User tapped Test Notification button');
+      await sendTestTaskReminders('בדיקת התראות מהפרופיל');
       Alert.alert(
-        'התראות נשלחו',
-        'נשלחו 3 התראות בדיקה (7 ימים, 3 ימים, יום אחד). בדוק את מגש ההתראות.',
-        [{ text: 'אישור' }]
+        'התראות נשלחו!',
+        'שלוש התראות נשלחו:\n\n1. תזכורת 7 ימים (מיידית)\n2. תזכורת 3 ימים (אחרי 2 שניות)\n3. תזכורת יום אחד (אחרי 4 שניות)\n\nבדוק את מגש ההתראות שלך!'
       );
     } catch (error: any) {
-      console.error('ProfileScreen: ❌ Test notification failed:', error);
-      Alert.alert('שגיאה', error.message || 'שגיאה בשליחת התראות בדיקה');
+      console.error('ProfileScreen (iOS): Test notification failed', error);
+      Alert.alert('שגיאה', error.message || 'שגיאה בשליחת התראת בדיקה');
     }
   };
 
   const handleRegisterPushNotifications = async () => {
-    console.log('ProfileScreen: ========== USER TAPPED REGISTER BUTTON ==========');
-    setRegistrationError(null); // Clear previous errors
+    console.log('ProfileScreen (iOS): User tapped Register for Notifications button');
+    setRegistrationError(null);
+    setRegistrationSuccess(false);
+    setIsRegisteringPush(true);
     
     try {
-      console.log('ProfileScreen: Calling registerPushNotifications from UserContext...');
-      const token = await registerPushNotifications();
-      console.log('ProfileScreen: registerPushNotifications returned:', token ? 'token received' : 'null');
+      const token = await registerForPushNotificationsAsync();
       
-      if (token) {
-        console.log('ProfileScreen: ✅ Push token registered successfully:', token);
-        Alert.alert(
-          'הצלחה! 🎉',
-          'הרישום להתראות הושלם בהצלחה.\n\nתקבל התראות על:\n• עדכוני משימות\n• שינויים במכולות\n• עדכוני לוח זמנים',
-          [{ text: 'אישור' }]
-        );
-        // Refresh user data to show updated push token status
+      if (token && session?.user?.id) {
+        console.log('ProfileScreen (iOS): Push token obtained, saving to database');
+        await api.savePushToken(session.user.id, token);
+        console.log('ProfileScreen (iOS): Push token saved successfully');
+        
+        // Refresh user data to show updated push_token status
         await refreshUser();
+        
+        setRegistrationSuccess(true);
+        console.log('ProfileScreen (iOS): ✅ Push notification registration complete');
       } else {
-        console.log('ProfileScreen: ⚠️ No push token obtained (returned null)');
-        const errorMsg = 'לא ניתן לרשום להתראות כרגע.\n\nנסה:\n1. ודא שיש חיבור אינטרנט יציב\n2. סגור ופתח מחדש את האפליקציה\n3. אם הבעיה נמשכת, נסה להתנתק ולהתחבר מחדש';
-        setRegistrationError(errorMsg);
-        Alert.alert(
-          'שים לב ⚠️',
-          errorMsg,
-          [{ text: 'אישור' }]
-        );
+        throw new Error('לא התקבל טוקן התראות');
       }
     } catch (error: any) {
-      console.error('ProfileScreen: ❌ Push notification registration failed with error:', error);
-      console.error('ProfileScreen: Error message:', error?.message);
-      console.error('ProfileScreen: Error stack:', error?.stack);
-      
-      // Show detailed error message
-      const errorMessage = error.message || 'שגיאה לא ידועה ברישום להתראות';
-      setRegistrationError(errorMessage);
-      Alert.alert(
-        'שגיאה ברישום להתראות',
-        errorMessage,
-        [{ text: 'אישור' }]
-      );
+      console.error('ProfileScreen (iOS): Push notification registration failed', error);
+      setRegistrationError(error.message || 'שגיאה ברישום להתראות');
+    } finally {
+      setIsRegisteringPush(false);
     }
   };
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={designColors.primary} />
-          <Text style={{ ...typography.body, color: designColors.text.secondary, marginTop: spacing.md }}>
+          <ActivityIndicator size="large" color={designColors.primary.main} />
+          <Text style={{ marginTop: spacing.md, color: designColors.text.secondary }}>
             טוען פרטי משתמש...
           </Text>
         </View>
@@ -360,62 +368,129 @@ export default function ProfileScreen() {
     );
   }
 
-  const greetingText = `שלום, ${user.fullName}`;
-  const subtitleText = user.hasContract ? 'משתמש עם הסכם' : 'משתמש ללא הסכם';
-  const contractStatusText = user.hasContract ? 'יש הסכם' : 'אין הסכם';
-  const contractStatusColor = user.hasContract ? designColors.success : designColors.warning;
-  const travelDateText = formatDate(user.travelDate);
-  const pushTokenStatusText = user.pushToken ? 'רשום להתראות ✓' : 'לא רשום להתראות';
-  const pushTokenStatusColor = user.pushToken ? designColors.success : designColors.error;
+  const userInitials = user.fullName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+  const hasContract = user.hasContract;
+  const hasPushToken = !!user.pushToken;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>{greetingText}</Text>
-          <Text style={styles.subtitle}>{subtitleText}</Text>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>{userInitials}</Text>
+          </View>
+          <Text style={styles.name}>{user.fullName}</Text>
+          <Text style={styles.email}>{user.email || user.phoneNumber || 'אין מייל'}</Text>
         </View>
 
         {/* User Info Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>פרטים אישיים</Text>
+          
           <View style={styles.card}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoValue}>{user.fullName}</Text>
-              <Text style={styles.infoLabel}>שם מלא</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoValue}>{user.city}</Text>
-              <Text style={styles.infoLabel}>עיר</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoValue}>{user.phoneNumber || 'לא הוזן'}</Text>
-              <Text style={styles.infoLabel}>טלפון</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoValue}>{user.email || 'לא הוזן'}</Text>
-              <Text style={styles.infoLabel}>אימייל</Text>
-            </View>
-            <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-              <View style={[styles.statusBadge, { backgroundColor: contractStatusColor + '20' }]}>
-                <Text style={[styles.statusBadgeText, { color: contractStatusColor }]}>
-                  {contractStatusText}
-                </Text>
+            <View style={styles.row}>
+              <View style={styles.iconContainer}>
+                <IconSymbol 
+                  ios_icon_name="person.fill" 
+                  android_material_icon_name="person"
+                  size={20} 
+                  color={designColors.primary.main} 
+                />
               </View>
-              <Text style={styles.infoLabel}>סטטוס הסכם</Text>
+              <View style={styles.rowContent}>
+                <Text style={styles.rowLabel}>שם מלא</Text>
+                <Text style={styles.rowValue}>{user.fullName}</Text>
+              </View>
+            </View>
+
+            <View style={styles.row}>
+              <View style={styles.iconContainer}>
+                <IconSymbol 
+                  ios_icon_name="location.fill" 
+                  android_material_icon_name="location-on"
+                  size={20} 
+                  color={designColors.primary.main} 
+                />
+              </View>
+              <View style={styles.rowContent}>
+                <Text style={styles.rowLabel}>עיר</Text>
+                <Text style={styles.rowValue}>{user.city}</Text>
+              </View>
+            </View>
+
+            {user.phoneNumber && (
+              <View style={styles.row}>
+                <View style={styles.iconContainer}>
+                  <IconSymbol 
+                    ios_icon_name="phone.fill" 
+                    android_material_icon_name="phone"
+                    size={20} 
+                    color={designColors.primary.main} 
+                  />
+                </View>
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowLabel}>טלפון</Text>
+                  <Text style={styles.rowValue}>{user.phoneNumber}</Text>
+                </View>
+              </View>
+            )}
+
+            <View style={[styles.row, styles.rowLast]}>
+              <View style={styles.iconContainer}>
+                <IconSymbol 
+                  ios_icon_name="doc.text.fill" 
+                  android_material_icon_name="description"
+                  size={20} 
+                  color={designColors.primary.main} 
+                />
+              </View>
+              <View style={styles.rowContent}>
+                <Text style={styles.rowLabel}>סטטוס חוזה</Text>
+                <View 
+                  style={[
+                    styles.badge, 
+                    { backgroundColor: hasContract ? designColors.success.main : designColors.warning.main }
+                  ]}
+                >
+                  <Text style={styles.badgeText}>
+                    {hasContract ? 'חוזה חתום ✓' : 'ממתין לחוזה'}
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
         </View>
 
-        {/* Travel Info Section (only if has contract) */}
-        {user.hasContract && (
+        {/* Travel Info Section */}
+        {hasContract && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>פרטי נסיעה</Text>
+            
             <View style={styles.card}>
-              <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-                <Text style={styles.infoValue}>{travelDateText}</Text>
-                <Text style={styles.infoLabel}>תאריך נסיעה</Text>
+              <View style={[styles.row, styles.rowLast]}>
+                <View style={styles.iconContainer}>
+                  <IconSymbol 
+                    ios_icon_name="calendar" 
+                    android_material_icon_name="calendar-today"
+                    size={20} 
+                    color={designColors.primary.main} 
+                  />
+                </View>
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowLabel}>תאריך נסיעה</Text>
+                  <Text style={styles.rowValue}>{formatDate(user.travelDate)}</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -424,93 +499,88 @@ export default function ProfileScreen() {
         {/* Push Notifications Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>התראות</Text>
-          <View style={styles.card}>
-            <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-              <View style={[styles.statusBadge, { backgroundColor: pushTokenStatusColor + '20' }]}>
-                <Text style={[styles.statusBadgeText, { color: pushTokenStatusColor }]}>
-                  {pushTokenStatusText}
-                </Text>
-              </View>
-              <Text style={styles.infoLabel}>סטטוס התראות</Text>
+          
+          {/* Registration Status Card */}
+          {hasPushToken && !registrationSuccess && (
+            <View style={[styles.notificationCard, styles.notificationCardSuccess]}>
+              <Text style={[styles.notificationTitle, styles.notificationTitleSuccess]}>
+                ✅ רשום להתראות
+              </Text>
+              <Text style={styles.notificationText}>
+                אתה רשום להתראות בהצלחה. תקבל תזכורות על משימות ועדכונים חשובים.
+              </Text>
             </View>
+          )}
 
-            {/* Info about automatic registration */}
-            {isRegisteringPush && (
-              <View style={styles.infoCard}>
-                <Text style={styles.infoText}>
-                  ⏳ מבצע רישום להתראות... אנא המתן.
-                </Text>
-              </View>
-            )}
+          {!hasPushToken && !registrationSuccess && !isRegisteringPush && (
+            <View style={[styles.notificationCard, styles.notificationCardWarning]}>
+              <Text style={[styles.notificationTitle, styles.notificationTitleWarning]}>
+                ⚠️ לא רשום להתראות
+              </Text>
+              <Text style={styles.notificationText}>
+                הירשם להתראות כדי לקבל תזכורות על משימות ועדכונים חשובים.
+                {'\n\n'}
+                💡 התראות דורשות מכשיר פיזי (לא סימולטור).
+              </Text>
+            </View>
+          )}
 
-            {/* Success message if registered */}
-            {user.pushToken && !isRegisteringPush && !registrationError && (
-              <View style={styles.successCard}>
-                <Text style={styles.successText}>
-                  ✅ רשום בהצלחה להתראות!{'\n\n'}
-                  תקבל התראות על:{'\n'}
-                  • עדכוני משימות{'\n'}
-                  • שינויים במכולות{'\n'}
-                  • עדכוני לוח זמנים
-                </Text>
-              </View>
-            )}
+          {registrationSuccess && (
+            <View style={[styles.notificationCard, styles.notificationCardSuccess]}>
+              <Text style={[styles.notificationTitle, styles.notificationTitleSuccess]}>
+                🎉 נרשמת בהצלחה!
+              </Text>
+              <Text style={styles.notificationText}>
+                ההרשמה להתראות הושלמה בהצלחה. תתחיל לקבל תזכורות ועדכונים.
+              </Text>
+            </View>
+          )}
 
-            {/* Error message if registration failed */}
-            {registrationError && !isRegisteringPush && (
-              <View style={styles.errorCard}>
-                <Text style={styles.errorText}>
-                  ❌ שגיאה ברישום:{'\n\n'}
-                  {registrationError}
-                </Text>
-              </View>
-            )}
+          {registrationError && (
+            <View style={[styles.notificationCard, styles.notificationCardError]}>
+              <Text style={[styles.notificationTitle, styles.notificationTitleError]}>
+                ❌ שגיאה ברישום
+              </Text>
+              <Text style={styles.notificationText}>{registrationError}</Text>
+            </View>
+          )}
 
-            {/* Warning if push token is null */}
-            {!user.pushToken && !isRegisteringPush && !registrationError && (
-              <View style={styles.warningCard}>
-                <Text style={styles.warningText}>
-                  ⚠️ לא רשום להתראות!{'\n\n'}
-                  לחץ על הכפתור למטה כדי להירשם ולקבל עדכונים על משימות, מכולות ולוח זמנים.{'\n\n'}
-                  💡 שים לב: התראות עובדות רק על מכשיר פיזי (לא על סימולטור).
-                </Text>
-              </View>
-            )}
-
-            {/* Register for Push Notifications Button */}
+          {/* Register Button */}
+          {!hasPushToken && !registrationSuccess && (
             <TouchableOpacity
-              style={styles.notificationButton}
+              style={[styles.button, styles.buttonPrimary, isRegisteringPush && styles.buttonDisabled]}
               onPress={handleRegisterPushNotifications}
               disabled={isRegisteringPush}
             >
               {isRegisteringPush ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={styles.loadingText}>מבצע רישום...</Text>
+                </View>
               ) : (
-                <Text style={styles.notificationButtonText}>
-                  {user.pushToken ? 'רענן רישום להתראות' : 'הירשם להתראות'}
-                </Text>
+                <Text style={styles.buttonText}>הירשם להתראות</Text>
               )}
             </TouchableOpacity>
+          )}
 
-            {/* Test Notification Button */}
+          {/* Test Notification Button (Development) */}
+          {__DEV__ && (
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, styles.buttonSecondary]}
               onPress={handleTestNotification}
             >
-              <Text style={styles.buttonText}>שלח התראת בדיקה (3 התראות)</Text>
+              <Text style={styles.buttonText}>שלח התראת בדיקה (פיתוח)</Text>
             </TouchableOpacity>
-          </View>
+          )}
         </View>
 
         {/* Logout Button */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-          >
-            <Text style={styles.logoutButtonText}>התנתק</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.button, styles.buttonDanger]}
+          onPress={confirmLogout}
+        >
+          <Text style={styles.buttonText}>התנתק</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Logout Confirmation Modal */}
@@ -524,26 +594,24 @@ export default function ProfileScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>התנתקות</Text>
             <Text style={styles.modalText}>
-              האם אתה בטוח שברצונך להתנתק מהמערכת?
+              האם אתה בטוח שברצונך להתנתק מהחשבון?
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
                 onPress={() => setShowLogoutModal(false)}
-                disabled={isLoggingOut}
               >
-                <Text style={styles.modalButtonText}>ביטול</Text>
+                <Text style={[styles.modalButtonText, styles.modalButtonTextCancel]}>
+                  ביטול
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonConfirm]}
-                onPress={confirmLogout}
-                disabled={isLoggingOut}
+                onPress={handleLogout}
               >
-                {isLoggingOut ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.modalButtonText}>התנתק</Text>
-                )}
+                <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
+                  התנתק
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

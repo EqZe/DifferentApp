@@ -37,8 +37,10 @@
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "WAKE_LOCK"
-      ]
+        "WAKE_LOCK",
+        "POST_NOTIFICATIONS"
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/images/final_quest_240x240.png",
@@ -67,7 +69,10 @@
     },
     "extra": {
       "router": {},
-      "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev"
+      "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev",
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID_HERE"
+      }
     },
     "updates": {
       "fallbackToCacheTimeout": 0

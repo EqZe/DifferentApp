@@ -95,14 +95,16 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     const isExpoGo = Constants.appOwnership === 'expo';
     console.log('🔔 Notifications: Running in Expo Go:', isExpoGo);
     
-    // Try to get projectId from Constants
+    // Try to get projectId from Constants (EAS project ID)
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-    const hasValidProjectId = projectId && projectId !== 'your-project-id-here' && projectId.length > 10;
+    const hasValidProjectId = projectId && projectId !== 'YOUR_EAS_PROJECT_ID_HERE' && projectId.length > 10;
     
     if (hasValidProjectId) {
-      console.log('🔔 Notifications: Found EAS project ID in config:', projectId);
+      console.log('🔔 Notifications: ✅ Found valid EAS project ID in config:', projectId);
     } else {
-      console.log('🔔 Notifications: ⚠️ No EAS project ID found in app.json - using development mode');
+      console.log('🔔 Notifications: ⚠️ No valid EAS project ID found in app.json');
+      console.log('🔔 Notifications: ⚠️ Please add your EAS project ID to app.json under extra.eas.projectId');
+      console.log('🔔 Notifications: ⚠️ You can find your project ID by running: eas project:info');
     }
     
     // Build experienceId for development/Expo Go
@@ -122,80 +124,57 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     let token: string | null = null;
     let lastError: any = null;
     
-    // For Expo Go, we MUST use experienceId
-    if (isExpoGo) {
-      console.log('🔔 Notifications: Expo Go detected - using experienceId approach');
+    // Strategy 1: Try with EAS projectId first (for production builds)
+    if (hasValidProjectId && !isExpoGo) {
       try {
-        console.log('🔔 Notifications: Attempting with experienceId:', experienceId);
+        console.log('🔔 Notifications: Attempt 1 - Using EAS project ID (production build)');
+        const result = await Notifications.getExpoPushTokenAsync({ 
+          projectId: projectId! 
+        });
+        token = result.data;
+        console.log('🔔 Notifications: ✅ Successfully obtained push token with EAS project ID:', token);
+      } catch (projectIdError: any) {
+        console.log('🔔 Notifications: ⚠️ EAS project ID approach failed:', projectIdError?.message || projectIdError);
+        lastError = projectIdError;
+      }
+    }
+    
+    // Strategy 2: For Expo Go, use experienceId
+    if (!token && isExpoGo) {
+      try {
+        console.log('🔔 Notifications: Attempt 2 - Using experienceId (Expo Go)');
         const result = await Notifications.getExpoPushTokenAsync({ 
           experienceId 
         });
         token = result.data;
         console.log('🔔 Notifications: ✅ Successfully obtained push token in Expo Go:', token);
       } catch (expoGoError: any) {
-        console.log('🔔 Notifications: ❌ Expo Go token retrieval failed:', expoGoError?.message || expoGoError);
-        console.log('🔔 Notifications: Full error:', JSON.stringify(expoGoError, null, 2));
+        console.log('🔔 Notifications: ⚠️ Expo Go experienceId approach failed:', expoGoError?.message || expoGoError);
         lastError = expoGoError;
-        
-        // Try without the @ prefix
-        try {
-          console.log('🔔 Notifications: Trying without @ prefix...');
-          const altExperienceId = `${owner}/${slug}`;
-          const result = await Notifications.getExpoPushTokenAsync({ 
-            experienceId: altExperienceId 
-          });
-          token = result.data;
-          console.log('🔔 Notifications: ✅ Successfully obtained push token with alternative format:', token);
-        } catch (altError: any) {
-          console.log('🔔 Notifications: ❌ Alternative format also failed:', altError?.message || altError);
-          lastError = altError;
-        }
       }
-    } else {
-      // Try multiple approaches for standalone builds
-      console.log('🔔 Notifications: Standalone build detected - trying multiple approaches');
-      const attempts = [
-        // Attempt 1: Use projectId if available (for EAS builds)
-        async () => {
-          if (!hasValidProjectId) throw new Error('No valid project ID');
-          console.log('🔔 Notifications: Attempt 1 - Using EAS project ID');
-          const result = await Notifications.getExpoPushTokenAsync({ projectId: projectId! });
-          return result.data;
-        },
-        // Attempt 2: Use experienceId (for Expo Go / development)
-        async () => {
-          console.log('🔔 Notifications: Attempt 2 - Using experience ID:', experienceId);
-          const result = await Notifications.getExpoPushTokenAsync({ experienceId });
-          return result.data;
-        },
-        // Attempt 3: Try without parameters (works in some environments)
-        async () => {
-          console.log('🔔 Notifications: Attempt 3 - Using default configuration');
-          const result = await Notifications.getExpoPushTokenAsync();
-          return result.data;
-        },
-      ];
-
-      // Try each approach until one succeeds
-      for (let i = 0; i < attempts.length; i++) {
-        try {
-          token = await attempts[i]();
-          if (token) {
-            console.log('🔔 Notifications: ✅ Successfully obtained push token (attempt', i + 1, '):', token);
-            break;
-          }
-        } catch (attemptError: any) {
-          console.log(`🔔 Notifications: Attempt ${i + 1} failed:`, attemptError?.message || attemptError);
-          lastError = attemptError;
-          // Continue to next attempt
-        }
+    }
+    
+    // Strategy 3: Try without parameters (fallback)
+    if (!token) {
+      try {
+        console.log('🔔 Notifications: Attempt 3 - Using default configuration (fallback)');
+        const result = await Notifications.getExpoPushTokenAsync();
+        token = result.data;
+        console.log('🔔 Notifications: ✅ Successfully obtained push token with default config:', token);
+      } catch (defaultError: any) {
+        console.log('🔔 Notifications: ⚠️ Default configuration approach failed:', defaultError?.message || defaultError);
+        lastError = defaultError;
       }
     }
 
     if (!token) {
-      console.log('🔔 Notifications: ⚠️ All token retrieval attempts failed');
+      console.log('🔔 Notifications: ❌ All token retrieval attempts failed');
       console.log('🔔 Notifications: Last error:', lastError?.message || lastError);
       console.log('🔔 Notifications: Full last error:', JSON.stringify(lastError, null, 2));
+      
+      if (!hasValidProjectId && !isExpoGo) {
+        throw new Error('לא ניתן לקבל טוקן התראות.\n\nנדרש EAS Project ID בקובץ app.json.\nאנא צור קשר עם התמיכה.\n\nשגיאה טכנית: Missing EAS project ID');
+      }
       
       if (isExpoGo) {
         throw new Error('לא ניתן לקבל טוקן התראות ב-Expo Go.\n\nנסה:\n1. ודא שיש חיבור אינטרנט יציב\n2. סגור ופתח מחדש את האפליקציה\n3. אם הבעיה נמשכת, נסה להתנתק ולהתחבר מחדש\n\nשגיאה טכנית: ' + (lastError?.message || 'Unknown error'));
