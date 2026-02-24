@@ -1,11 +1,17 @@
 
 import React, { useEffect, useState } from 'react';
 import { Slot, useRouter } from 'expo-router';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, I18nManager } from 'react-native';
 import { useUser } from '@/contexts/UserContext';
 import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
 import { Href } from 'expo-router';
 import { api } from '@/utils/api';
+
+// Ensure RTL is enabled
+if (!I18nManager.isRTL) {
+  I18nManager.allowRTL(true);
+  I18nManager.forceRTL(true);
+}
 
 export default function TabLayout() {
   const { user, isLoading } = useUser();

@@ -1,9 +1,15 @@
 
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, I18nManager } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUser } from '@/contexts/UserContext';
 import { useTheme } from '@react-navigation/native';
+
+// Ensure RTL is enabled
+if (!I18nManager.isRTL) {
+  I18nManager.allowRTL(true);
+  I18nManager.forceRTL(true);
+}
 
 export default function IndexScreen() {
   const router = useRouter();

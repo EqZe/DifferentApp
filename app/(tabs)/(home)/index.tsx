@@ -25,10 +25,6 @@ import { api, type CategoryWithPosts } from '@/utils/api';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
 import LottieView from 'lottie-react-native';
 
-// Enable RTL for Hebrew
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
-
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_PADDING = layout.screenPadding;
 const CARD_GAP = spacing.md;
