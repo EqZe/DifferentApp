@@ -2,7 +2,6 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 
 // Configure how notifications are handled when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -14,7 +13,8 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Register for push notifications and return the Expo push token
+ * Register for push notifications and return the RAW DEVICE push token
+ * Uses getDevicePushTokenAsync() to bypass Expo's push proxy and avoid EXPO_TOKEN errors
  * Returns null if registration fails or device is not physical
  * NOTE: This function does NOT save the token to the database
  * The caller (UserContext) is responsible for saving the token
@@ -24,12 +24,19 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     console.log('🔔 Notifications: ========== STARTING PUSH NOTIFICATION REGISTRATION ==========');
     console.log('🔔 Notifications: Device.isDevice =', Device.isDevice);
     console.log('🔔 Notifications: Platform.OS =', Platform.OS);
-    console.log('🔔 Notifications: App ownership =', Constants.appOwnership);
 
     // Check if running on a physical device
     if (!Device.isDevice) {
-      console.log('🔔 Notifications: ⚠️ Skipping - must use physical device for push notifications');
-      throw new Error('התראות דורשות מכשיר פיזי. לא ניתן להשתמש בסימולטור.');
+      console.log('🔔 Notifications: ⚠️ Must use physical device for Push Notifications');
+      // Graceful handling for web where permissions might be denied or not applicable
+      if (Platform.OS === 'web') {
+        const permission = await Notifications.getPermissionsAsync();
+        if (permission.status !== 'granted') {
+          console.log('🔔 Notifications: ⚠️ Push notification registration failed: Web permissions denied.');
+          return null;
+        }
+      }
+      return null;
     }
 
     // Configure notification channel for Android FIRST (before requesting permissions)
@@ -54,140 +61,42 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
     // Check existing permissions
     console.log('🔔 Notifications: Checking existing permissions...');
-    let existingStatus = 'undetermined';
-    try {
-      const permissionResult = await Notifications.getPermissionsAsync();
-      existingStatus = permissionResult.status;
-      console.log('🔔 Notifications: Existing permission status:', existingStatus);
-      console.log('🔔 Notifications: Full permission details:', JSON.stringify(permissionResult, null, 2));
-    } catch (permError) {
-      console.log('🔔 Notifications: ⚠️ Could not check existing permissions:', permError);
-      // Continue to request permissions anyway
-    }
-
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
+
+    console.log('🔔 Notifications: Existing permission status:', existingStatus);
 
     // Request permissions if not already granted
     if (existingStatus !== 'granted') {
-      try {
-        console.log('🔔 Notifications: Requesting permissions from user...');
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-        console.log('🔔 Notifications: Permission request result:', status);
-      } catch (requestError) {
-        console.log('🔔 Notifications: ⚠️ Permission request failed:', requestError);
-        throw new Error('לא ניתנו הרשאות להתראות. אנא אפשר התראות בהגדרות המכשיר.');
-      }
+      console.log('🔔 Notifications: Requesting permissions from user...');
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+      console.log('🔔 Notifications: Permission request result:', status);
     }
 
-    // If permission not granted, return null
+    // If permission not granted, throw error
     if (finalStatus !== 'granted') {
       console.log('🔔 Notifications: ❌ Permission not granted, cannot register for push notifications');
       throw new Error('לא ניתנו הרשאות להתראות. אנא אפשר התראות בהגדרות המכשיר.');
     }
 
-    console.log('🔔 Notifications: ✅ Permissions granted, attempting to get Expo push token');
+    console.log('🔔 Notifications: ✅ Permissions granted, attempting to get raw device push token');
 
-    // Get the Expo push token
-    console.log('🔔 Notifications: Attempting to get Expo push token');
-    
-    // Check if running in Expo Go
-    const isExpoGo = Constants.appOwnership === 'expo';
-    console.log('🔔 Notifications: Running in Expo Go:', isExpoGo);
-    
-    // Try to get projectId from Constants (EAS project ID)
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-    const hasValidProjectId = projectId && projectId !== 'YOUR_EAS_PROJECT_ID_HERE' && projectId.length > 10;
-    
-    if (hasValidProjectId) {
-      console.log('🔔 Notifications: ✅ Found valid EAS project ID in config:', projectId);
-    } else {
-      console.log('🔔 Notifications: ⚠️ No valid EAS project ID found in app.json');
-      console.log('🔔 Notifications: ⚠️ Please add your EAS project ID to app.json under extra.eas.projectId');
-      console.log('🔔 Notifications: ⚠️ You can find your project ID by running: eas project:info');
-    }
-    
-    // Build experienceId for development/Expo Go
-    const slug = Constants.expoConfig?.slug || 'Different';
-    const owner = Constants.expoConfig?.owner || 'different';
-    const experienceId = `@${owner}/${slug}`;
-    
-    console.log('🔔 Notifications: Configuration:', {
-      slug,
-      owner,
-      experienceId,
-      hasProjectId: hasValidProjectId,
-      isExpoGo,
-      appOwnership: Constants.appOwnership
-    });
+    // CRITICAL CHANGE: Using getDevicePushTokenAsync to bypass Expo's push proxy
+    // This gets the raw FCM (Android) or APNs (iOS) token without needing EXPO_TOKEN
+    const token = await Notifications.getDevicePushTokenAsync();
 
-    let token: string | null = null;
-    let lastError: any = null;
-    
-    // Strategy 1: Try with EAS projectId first (for production builds)
-    if (hasValidProjectId && !isExpoGo) {
-      try {
-        console.log('🔔 Notifications: Attempt 1 - Using EAS project ID (production build)');
-        const result = await Notifications.getExpoPushTokenAsync({ 
-          projectId: projectId! 
-        });
-        token = result.data;
-        console.log('🔔 Notifications: ✅ Successfully obtained push token with EAS project ID:', token);
-      } catch (projectIdError: any) {
-        console.log('🔔 Notifications: ⚠️ EAS project ID approach failed:', projectIdError?.message || projectIdError);
-        lastError = projectIdError;
-      }
-    }
-    
-    // Strategy 2: For Expo Go, use experienceId
-    if (!token && isExpoGo) {
-      try {
-        console.log('🔔 Notifications: Attempt 2 - Using experienceId (Expo Go)');
-        const result = await Notifications.getExpoPushTokenAsync({ 
-          experienceId 
-        });
-        token = result.data;
-        console.log('🔔 Notifications: ✅ Successfully obtained push token in Expo Go:', token);
-      } catch (expoGoError: any) {
-        console.log('🔔 Notifications: ⚠️ Expo Go experienceId approach failed:', expoGoError?.message || expoGoError);
-        lastError = expoGoError;
-      }
-    }
-    
-    // Strategy 3: Try without parameters (fallback)
-    if (!token) {
-      try {
-        console.log('🔔 Notifications: Attempt 3 - Using default configuration (fallback)');
-        const result = await Notifications.getExpoPushTokenAsync();
-        token = result.data;
-        console.log('🔔 Notifications: ✅ Successfully obtained push token with default config:', token);
-      } catch (defaultError: any) {
-        console.log('🔔 Notifications: ⚠️ Default configuration approach failed:', defaultError?.message || defaultError);
-        lastError = defaultError;
-      }
+    if (!token || !token.data) {
+      console.log('🔔 Notifications: ❌ Failed to obtain raw device push token');
+      throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
     }
 
-    if (!token) {
-      console.log('🔔 Notifications: ❌ All token retrieval attempts failed');
-      console.log('🔔 Notifications: Last error:', lastError?.message || lastError);
-      console.log('🔔 Notifications: Full last error:', JSON.stringify(lastError, null, 2));
-      
-      if (!hasValidProjectId && !isExpoGo) {
-        throw new Error('לא ניתן לקבל טוקן התראות.\n\nנדרש EAS Project ID בקובץ app.json.\nאנא צור קשר עם התמיכה.\n\nשגיאה טכנית: Missing EAS project ID');
-      }
-      
-      if (isExpoGo) {
-        throw new Error('לא ניתן לקבל טוקן התראות ב-Expo Go.\n\nנסה:\n1. ודא שיש חיבור אינטרנט יציב\n2. סגור ופתח מחדש את האפליקציה\n3. אם הבעיה נמשכת, נסה להתנתק ולהתחבר מחדש\n\nשגיאה טכנית: ' + (lastError?.message || 'Unknown error'));
-      } else {
-        throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.\n\nשגיאה טכנית: ' + (lastError?.message || 'Unknown error'));
-      }
-    }
-
-    console.log('🔔 Notifications: ✅ Push token obtained successfully:', token);
+    console.log('🔔 Notifications: ✅ Raw device push token obtained successfully:', token.data);
+    console.log('🔔 Notifications: Token type:', token.type); // 'ios' or 'android'
     console.log('🔔 Notifications: Token will be saved by the caller (UserContext)');
     console.log('🔔 Notifications: ========== REGISTRATION COMPLETE ==========');
 
-    return token;
+    return token.data; // Return the raw token data (FCM or APNs token)
   } catch (error: any) {
     console.log('🔔 Notifications: ⚠️ Push notification registration failed:', error?.message || error);
     console.log('🔔 Notifications: Full error details:', JSON.stringify(error, null, 2));
@@ -382,7 +291,8 @@ export async function cancelAllNotifications(): Promise<void> {
 }
 
 /**
- * Send a push notification via Supabase Edge Function to specific Expo push tokens
+ * Send a push notification via Supabase Edge Function to specific raw device push tokens
+ * NOTE: Now expects raw FCM/APNs tokens, not Expo push tokens
  */
 export async function sendPushNotificationToTokens(
   accessToken: string,
