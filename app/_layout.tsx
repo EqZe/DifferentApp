@@ -17,19 +17,21 @@ import { StatusBar } from "expo-status-bar";
 import { SystemBars } from "react-native-edge-to-edge";
 import React, { useEffect } from "react";
 import { Stack, router } from "expo-router";
-import { Colors } from "@/constants/Colors";
+import { Colors, isRTL } from "@/constants/Colors";
 import Constants from "expo-constants";
 
 // Force RTL layout for Hebrew - MUST be at the very top before any components render
 // This is critical for Android to apply RTL correctly
-if (!I18nManager.isRTL) {
-  I18nManager.allowRTL(true);
-  I18nManager.forceRTL(true);
-  
-  // On Android, changing RTL requires an app restart
-  if (Platform.OS === 'android') {
-    console.log('🔄 RTL was not enabled. Forcing RTL and reloading app...');
-    // The app will restart automatically on Android when RTL changes
+if (Platform.OS !== 'web') {
+  if (!I18nManager.isRTL) {
+    I18nManager.allowRTL(true);
+    I18nManager.forceRTL(true);
+    
+    // On Android, changing RTL requires an app restart
+    if (Platform.OS === 'android') {
+      console.log('🔄 RTL was not enabled. Forcing RTL and reloading app...');
+      // The app will restart automatically on Android when RTL changes
+    }
   }
 }
 
@@ -64,6 +66,7 @@ const CustomDarkTheme: Theme = {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const { isConnected } = useNetworkState();
+  const rtl = isRTL();
 
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -73,10 +76,10 @@ export default function RootLayout() {
     // Log backend URL and RTL status at app startup for debugging
     const backendUrl = Constants.expoConfig?.extra?.backendUrl;
     console.log('🚀 App starting with backend URL:', backendUrl);
-    console.log('🔄 RTL enabled:', I18nManager.isRTL);
+    console.log('🔄 RTL enabled:', rtl);
     console.log('📱 Platform:', Platform.OS);
-    console.log('🌍 Writing Direction:', I18nManager.isRTL ? 'RTL' : 'LTR');
-  }, []);
+    console.log('🌍 Writing Direction:', rtl ? 'RTL' : 'LTR');
+  }, [rtl]);
 
   useEffect(() => {
     if (loaded) {
@@ -98,7 +101,7 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, direction: I18nManager.isRTL ? 'rtl' : 'ltr' }}>
+    <GestureHandlerRootView style={{ flex: 1, direction: rtl ? 'rtl' : 'ltr' }}>
       <ThemeProvider value={colorScheme === "dark" ? CustomDarkTheme : LightTheme}>
         <UserProvider>
           <WidgetProvider>

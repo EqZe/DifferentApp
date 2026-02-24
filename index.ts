@@ -12,10 +12,12 @@ if (Platform.OS !== 'web') {
     console.log('🔄 RTL forced for native platform');
   }
 } else {
-  // For web, set the HTML dir attribute
+  // For web, set the HTML dir attribute AND global flag
   if (typeof document !== 'undefined') {
+    // Set global flag for web RTL detection
+    global.__IS_RTL__ = true;
     document.documentElement.setAttribute('dir', 'rtl');
     document.body.setAttribute('dir', 'rtl');
-    console.log('🔄 RTL forced for web platform via HTML dir attribute');
+    console.log('🔄 RTL forced for web platform via HTML dir attribute and global flag');
   }
 }

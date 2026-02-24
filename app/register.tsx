@@ -13,7 +13,6 @@ import {
   Alert,
   Image,
   ScrollView,
-  I18nManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@react-navigation/native';
@@ -22,6 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@/contexts/UserContext';
 import { IconSymbol } from '@/components/IconSymbol';
 import { api } from '@/utils/api';
+import { isRTL } from '@/constants/Colors';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -34,16 +34,11 @@ import Animated, {
 
 const { width, height } = Dimensions.get('window');
 
-// Ensure RTL is enabled - this is a safety check
-if (!I18nManager.isRTL) {
-  I18nManager.allowRTL(true);
-  I18nManager.forceRTL(true);
-}
-
 export default function RegisterScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { setUser } = useUser();
+  const rtl = isRTL();
   
   const [step, setStep] = useState(1);
   const [fullName, setFullName] = useState('');
@@ -58,8 +53,8 @@ export default function RegisterScreen() {
   
   const progress = useSharedValue(0);
 
-  console.log('RegisterScreen - RTL status:', I18nManager.isRTL, 'Platform:', Platform.OS);
-  console.log('RegisterScreen - Writing Direction:', I18nManager.isRTL ? 'RTL' : 'LTR');
+  console.log('RegisterScreen - RTL status:', rtl, 'Platform:', Platform.OS);
+  console.log('RegisterScreen - Writing Direction:', rtl ? 'RTL' : 'LTR');
 
   const progressStyle = useAnimatedStyle(() => {
     return {
@@ -207,7 +202,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background, direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background, direction: rtl ? 'rtl' : 'ltr' }]} edges={['top']}>
       <KeyboardAvoidingView
         behavior="position"
         style={styles.keyboardView}

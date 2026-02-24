@@ -1,24 +1,22 @@
 
 import React, { useEffect, useState } from 'react';
 import { Slot, useRouter } from 'expo-router';
-import { View, StyleSheet, I18nManager, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { useUser } from '@/contexts/UserContext';
 import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
 import { Href } from 'expo-router';
 import { api } from '@/utils/api';
-
-// Ensure RTL is enabled consistently
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
+import { isRTL } from '@/constants/Colors';
 
 export default function TabLayout() {
   const { user, isLoading } = useUser();
   const router = useRouter();
   const [hasContainers, setHasContainers] = useState(false);
   const [checkingContainers, setCheckingContainers] = useState(true);
+  const rtl = isRTL();
 
   console.log('TabLayout (iOS) rendering, user:', user?.fullName, 'hasContract:', user?.hasContract);
-  console.log('TabLayout (iOS) - RTL status:', I18nManager.isRTL, 'Platform:', Platform.OS);
+  console.log('TabLayout (iOS) - RTL status:', rtl, 'Platform:', Platform.OS);
 
   // Check if user has any containers
   useEffect(() => {
@@ -122,7 +120,7 @@ export default function TabLayout() {
   });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { direction: rtl ? 'rtl' : 'ltr' }]}>
       {/* This renders the actual screen content */}
       <Slot />
       
