@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Different",
@@ -38,8 +39,7 @@
         "VIBRATE",
         "WAKE_LOCK",
         "POST_NOTIFICATIONS"
-      ],
-      "googleServicesFile": "./google-services.json"
+      ]
     },
     "web": {
       "favicon": "./assets/images/final_quest_240x240.png",
