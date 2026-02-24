@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { api, type User } from '@/utils/api';
@@ -22,20 +22,40 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRegisteringPush, setIsRegisteringPush] = useState(false);
-  const hasAttemptedAutoRegistration = useRef(false);
-  const autoRegistrationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const loadUserProfile = useCallback(async (authUserId: string) => {
+    try {
+      console.log('UserContext: Loading user profile for auth user', authUserId);
+      const userData = await api.getUserByAuthId(authUserId);
+      console.log('UserContext: ✅ User profile loaded -', userData.fullName, 'hasContract:', userData.hasContract);
+      console.log('UserContext: Push token status:', userData.pushToken ? 'exists' : 'NULL');
+      setUserState(userData);
+
+      // Automatically register for push notifications if not already registered
+      // Only attempt if push_token is null
+      if (!userData.pushToken) {
+        console.log('UserContext: 🔔 Push token is NULL, attempting automatic registration...');
+        // Use setTimeout to ensure this doesn't block the UI and happens after the screen is fully loaded
+        setTimeout(() => {
+          registerPushToken(authUserId).catch(err => {
+            console.log('UserContext: ⚠️ Automatic push token registration failed (non-critical):', err?.message || err);
+          });
+        }, 2000); // Increased delay to 2 seconds to ensure everything is loaded
+      } else {
+        console.log('UserContext: ✅ Push token already exists, skipping automatic registration');
+      }
+    } catch (error) {
+      console.error('UserContext: ❌ Error loading user profile:', error);
+      setUserState(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const registerPushToken = async (authUserId: string): Promise<string | null> => {
-    if (isRegisteringPush) {
-      console.log('UserContext: ⚠️ Registration already in progress, skipping...');
-      return null;
-    }
-
     setIsRegisteringPush(true);
     try {
-      console.log('👤 UserContext: ========== STARTING PUSH TOKEN REGISTRATION ==========');
-      console.log('👤 UserContext: User ID:', authUserId);
-      
+      console.log('👤 UserContext: Starting push notification token registration for user:', authUserId);
       const pushToken = await registerForPushNotificationsAsync();
       
       if (pushToken) {
@@ -53,21 +73,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
           return pushToken;
         } catch (saveError: any) {
           console.log('👤 UserContext: ⚠️ Failed to save push token to database:', saveError?.message || saveError);
-          throw new Error('שגיאה בשמירת טוקן התראות למסד הנתונים: ' + (saveError?.message || 'Unknown error'));
+          return null;
         }
       } else {
-        console.log('👤 UserContext: ℹ️ No push token obtained (returned null)');
-        console.log('👤 UserContext: ℹ️ This is expected in development/simulator or if permissions were denied');
-        throw new Error('לא התקבל טוקן התראות. ודא שהאפליקציה רצה על מכשיר פיזי ושניתנו הרשאות.');
+        console.log('👤 UserContext: ℹ️ No push token obtained (expected in development/simulator)');
+        console.log('👤 UserContext: ℹ️ Push notifications require a physical device');
+        return null;
       }
     } catch (error: any) {
       console.log('👤 UserContext: ⚠️ Push notification setup failed:', error?.message || error);
-      console.log('👤 UserContext: Full error:', JSON.stringify(error, null, 2));
-      // Re-throw the error so the UI can display it
-      throw error;
+      // This is non-critical - app continues to work without push notifications
+      return null;
     } finally {
       setIsRegisteringPush(false);
-      console.log('👤 UserContext: ========== PUSH TOKEN REGISTRATION COMPLETE ==========');
     }
   };
 
@@ -75,50 +93,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const registerPushNotifications = useCallback(async (): Promise<string | null> => {
     if (!session?.user?.id) {
       console.log('👤 UserContext: Cannot register push notifications - no session');
-      throw new Error('אין חיבור פעיל. אנא התחבר מחדש.');
+      return null;
     }
     console.log('👤 UserContext: Manual push notification registration triggered by user');
     return registerPushToken(session.user.id);
-  }, [session?.user?.id, isRegisteringPush]);
-
-  const loadUserProfile = useCallback(async (authUserId: string) => {
-    try {
-      console.log('UserContext: Loading user profile for auth user', authUserId);
-      const userData = await api.getUserByAuthId(authUserId);
-      console.log('UserContext: ✅ User profile loaded -', userData.fullName, 'hasContract:', userData.hasContract);
-      console.log('UserContext: Push token status:', userData.pushToken ? 'exists' : 'NULL');
-      setUserState(userData);
-
-      // Trigger automatic registration if no push token
-      if (!userData.pushToken && !hasAttemptedAutoRegistration.current && !isRegisteringPush) {
-        console.log('UserContext: 🔔 User has no push token, scheduling automatic registration in 3 seconds...');
-        hasAttemptedAutoRegistration.current = true;
-
-        // Clear any existing timeout
-        if (autoRegistrationTimeoutRef.current) {
-          clearTimeout(autoRegistrationTimeoutRef.current);
-        }
-
-        // Schedule automatic registration
-        autoRegistrationTimeoutRef.current = setTimeout(() => {
-          console.log('UserContext: 🔔 Executing automatic push token registration...');
-          registerPushToken(authUserId).catch(err => {
-            console.log('UserContext: ⚠️ Automatic push token registration failed (non-critical):', err?.message || err);
-            // Don't reset hasAttemptedAutoRegistration - user can manually retry from profile screen
-          });
-        }, 3000); // 3 second delay
-      } else if (userData.pushToken) {
-        console.log('UserContext: ✅ User already has push token, skipping automatic registration');
-        hasAttemptedAutoRegistration.current = false; // Reset for next login
-      }
-    } catch (error: any) {
-      console.error('UserContext: ❌ Error loading user profile:', error);
-      console.error('UserContext: Error details:', JSON.stringify(error, null, 2));
-      setUserState(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isRegisteringPush]);
+  }, [session]);
 
   useEffect(() => {
     console.log('UserContext: Initializing Supabase Auth session');
@@ -126,8 +105,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        console.error('UserContext: ❌ Error getting initial session:', error);
-        console.error('UserContext: Error details:', JSON.stringify(error, null, 2));
+        console.error('UserContext: Error getting initial session', error);
         setIsLoading(false);
         return;
       }
@@ -149,51 +127,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('UserContext: Auth state changed -', _event, session ? 'session exists' : 'no session');
       
-      if (_event === 'SIGNED_OUT') {
-        console.log('UserContext: User signed out, clearing session');
-        setSession(null);
-        setUserState(null);
-        setIsLoading(false);
-        hasAttemptedAutoRegistration.current = false;
-        
-        // Clear any pending auto-registration timeout
-        if (autoRegistrationTimeoutRef.current) {
-          clearTimeout(autoRegistrationTimeoutRef.current);
-          autoRegistrationTimeoutRef.current = null;
-        }
-        return;
-      }
-      
       if (session) {
         console.log('UserContext: New session for user:', session.user.id);
-        // Reset auto-registration flag on new login
-        hasAttemptedAutoRegistration.current = false;
-        setSession(session);
+      }
+      
+      setSession(session);
+      
+      if (session) {
         loadUserProfile(session.user.id);
       } else {
-        console.log('UserContext: Session cleared');
-        setSession(null);
+        console.log('UserContext: Session cleared, logging out user');
         setUserState(null);
         setIsLoading(false);
-        hasAttemptedAutoRegistration.current = false;
-        
-        // Clear any pending auto-registration timeout
-        if (autoRegistrationTimeoutRef.current) {
-          clearTimeout(autoRegistrationTimeoutRef.current);
-          autoRegistrationTimeoutRef.current = null;
-        }
       }
     });
 
     return () => {
       console.log('UserContext: Cleaning up auth subscription');
       subscription.unsubscribe();
-      
-      // Clear timeout on unmount
-      if (autoRegistrationTimeoutRef.current) {
-        clearTimeout(autoRegistrationTimeoutRef.current);
-        autoRegistrationTimeoutRef.current = null;
-      }
     };
   }, [loadUserProfile]);
 
@@ -214,9 +165,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('UserContext: ✅ User data refreshed, hasContract:', freshUserData.hasContract);
       console.log('UserContext: Push token status:', freshUserData.pushToken ? 'exists' : 'NULL');
       setUserState(freshUserData);
-    } catch (error: any) {
-      console.error('UserContext: ❌ Failed to refresh user data:', error);
-      console.error('UserContext: Error details:', JSON.stringify(error, null, 2));
+    } catch (error) {
+      console.error('UserContext: ❌ Failed to refresh user data', error);
     }
   };
 
