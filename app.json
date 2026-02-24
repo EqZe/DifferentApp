@@ -71,6 +71,7 @@
     },
     "updates": {
       "enabled": false
-    }
+    },
+    "owner": null
   }
 }
