@@ -110,9 +110,12 @@ export default function RegisterScreen() {
   };
 
   const handleAuth = async () => {
-    console.log('Authenticating user:', isLogin ? 'login' : 'signup');
+    console.log('RegisterScreen: ========== STARTING AUTHENTICATION ==========');
+    console.log('RegisterScreen: Mode:', isLogin ? 'LOGIN' : 'SIGNUP');
+    console.log('RegisterScreen: Email:', email);
     
     if (!email.trim() || !password.trim()) {
+      console.log('RegisterScreen: ⚠️ Email or password is empty');
       return;
     }
 
@@ -123,30 +126,46 @@ export default function RegisterScreen() {
       let userData;
       
       if (isLogin) {
-        console.log('Signing in user with email:', email);
+        console.log('RegisterScreen: 🔐 Attempting to sign in user...');
         userData = await api.signIn(email, password);
+        console.log('RegisterScreen: ✅ Sign in successful');
       } else {
-        console.log('Signing up new user');
+        console.log('RegisterScreen: 📝 Attempting to sign up new user...');
+        console.log('RegisterScreen: User details:', { fullName, city, phoneNumber });
         userData = await api.signUp(email, password, fullName, city, phoneNumber);
+        console.log('RegisterScreen: ✅ Sign up successful');
       }
       
-      console.log('Authentication successful:', userData.fullName);
-      await setUser(userData);
+      console.log('RegisterScreen: ✅ Authentication successful for:', userData.fullName);
+      console.log('RegisterScreen: User ID:', userData.id);
+      console.log('RegisterScreen: Has contract:', userData.hasContract);
       
+      await setUser(userData);
+      console.log('RegisterScreen: ✅ User set in context');
+      
+      console.log('RegisterScreen: 🚀 Navigating to home screen...');
       setTimeout(() => {
         router.replace('/(tabs)/(home)');
       }, 500);
     } catch (error: any) {
-      console.error('Authentication error:', error);
+      console.error('RegisterScreen: ❌ Authentication failed');
+      console.error('RegisterScreen: Error message:', error?.message || 'Unknown error');
+      console.error('RegisterScreen: Error details:', JSON.stringify(error, null, 2));
+      console.error('RegisterScreen: Error stack:', error?.stack);
       
-      const errorMessage = isLogin 
+      let errorMessage = isLogin 
         ? 'שגיאה בהתחברות. אנא בדוק את הפרטים ונסה שוב.'
         : 'שגיאה בהרשמה. אנא נסה שוב.';
       
+      // Add specific error details if available
+      if (error?.message) {
+        errorMessage += '\n\nפרטים טכניים: ' + error.message;
+      }
+      
       if (Platform.OS === 'web') {
-        alert(errorMessage + '\n' + (error.message || ''));
+        alert(errorMessage);
       } else {
-        Alert.alert('שגיאה', errorMessage + '\n' + (error.message || ''));
+        Alert.alert('שגיאה', errorMessage);
       }
       
       setIsLoading(false);

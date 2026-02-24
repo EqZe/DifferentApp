@@ -66,6 +66,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    flowType: 'pkce', // CRITICAL: Use PKCE flow for better security and Expo Go compatibility
   },
 });
 

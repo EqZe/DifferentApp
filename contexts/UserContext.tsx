@@ -34,13 +34,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
       // Automatically register for push notifications if not already registered
       // Only attempt if push_token is null
       if (!userData.pushToken) {
-        console.log('UserContext: 🔔 Push token is NULL, attempting automatic registration...');
+        console.log('UserContext: 🔔 Push token is NULL, will attempt automatic registration in 3 seconds...');
         // Use setTimeout to ensure this doesn't block the UI and happens after the screen is fully loaded
+        // Increased to 3 seconds to ensure all components are mounted and ready
         setTimeout(() => {
+          console.log('UserContext: 🔔 Starting automatic push notification registration...');
           registerPushToken(authUserId).catch(err => {
             console.log('UserContext: ⚠️ Automatic push token registration failed (non-critical):', err?.message || err);
+            // This is expected to fail in simulators and Expo Go without proper setup
+            // The user can manually register from the Profile screen if needed
           });
-        }, 2000); // Increased delay to 2 seconds to ensure everything is loaded
+        }, 3000); // 3 seconds delay for stability
       } else {
         console.log('UserContext: ✅ Push token already exists, skipping automatic registration');
       }
@@ -100,35 +104,54 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [session]);
 
   useEffect(() => {
-    console.log('UserContext: Initializing Supabase Auth session');
+    console.log('UserContext: ========== INITIALIZING AUTH ==========');
+    console.log('UserContext: Supabase URL:', supabase.supabaseUrl);
+    console.log('UserContext: Auth flow type: PKCE');
     
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        console.error('UserContext: Error getting initial session', error);
+        console.error('UserContext: ❌ Error getting initial session:', error.message);
+        console.error('UserContext: Error details:', JSON.stringify(error, null, 2));
         setIsLoading(false);
         return;
       }
 
-      console.log('UserContext: Initial session check', session ? 'session found' : 'no session');
+      console.log('UserContext: Initial session check', session ? '✅ session found' : 'ℹ️ no session');
       
       if (session) {
         console.log('UserContext: Session exists, user ID:', session.user.id);
         console.log('UserContext: Session expires at:', new Date(session.expires_at! * 1000).toLocaleString());
+        console.log('UserContext: Access token present:', !!session.access_token);
+        console.log('UserContext: Refresh token present:', !!session.refresh_token);
         setSession(session);
         loadUserProfile(session.user.id);
       } else {
-        console.log('UserContext: No existing session found');
+        console.log('UserContext: No existing session found - user needs to login');
         setIsLoading(false);
       }
+    }).catch((err) => {
+      console.error('UserContext: ❌ Unexpected error in getSession:', err);
+      setIsLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('UserContext: Auth state changed -', _event, session ? 'session exists' : 'no session');
+      console.log('UserContext: 🔄 Auth state changed -', _event, session ? 'session exists' : 'no session');
+      
+      if (_event === 'SIGNED_IN') {
+        console.log('UserContext: ✅ User signed in successfully');
+      } else if (_event === 'SIGNED_OUT') {
+        console.log('UserContext: 🚪 User signed out');
+      } else if (_event === 'TOKEN_REFRESHED') {
+        console.log('UserContext: 🔄 Token refreshed successfully');
+      } else if (_event === 'USER_UPDATED') {
+        console.log('UserContext: 👤 User data updated');
+      }
       
       if (session) {
         console.log('UserContext: New session for user:', session.user.id);
+        console.log('UserContext: Session expires at:', new Date(session.expires_at! * 1000).toLocaleString());
       }
       
       setSession(session);
@@ -142,8 +165,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
     });
 
+    console.log('UserContext: ✅ Auth listener registered');
+
     return () => {
-      console.log('UserContext: Cleaning up auth subscription');
+      console.log('UserContext: 🧹 Cleaning up auth subscription');
       subscription.unsubscribe();
     };
   }, [loadUserProfile]);

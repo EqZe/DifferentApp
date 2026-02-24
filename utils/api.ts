@@ -108,9 +108,15 @@ export interface ContainerFrontend {
 export const api = {
   // Auth endpoints
   signUp: async (email: string, password: string, fullName: string, city: string, phoneNumber?: string): Promise<UserFrontend> => {
-    console.log('API: Signing up user', { email, fullName, city });
+    console.log('API: ========== SIGN UP ATTEMPT ==========');
+    console.log('API: Email:', email);
+    console.log('API: Full name:', fullName);
+    console.log('API: City:', city);
+    console.log('API: Phone:', phoneNumber || 'not provided');
+    console.log('API: Password length:', password.length);
     
     try {
+      console.log('API: Calling supabase.auth.signUp...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -121,24 +127,36 @@ export const api = {
       });
 
       if (authError) {
-        console.error('API: Sign up auth error', authError);
+        console.error('API: ❌ Sign up auth error');
+        console.error('API: Error code:', authError.status);
+        console.error('API: Error message:', authError.message);
+        console.error('API: Error name:', authError.name);
+        console.error('API: Full error:', JSON.stringify(authError, null, 2));
         
         // Handle specific error cases
         if (authError.message.includes('rate limit')) {
           throw new Error('יותר מדי ניסיונות הרשמה. אנא נסה שוב בעוד מספר דקות.');
         }
-        if (authError.message.includes('already registered')) {
+        if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
           throw new Error('המייל כבר רשום במערכת. נסה להתחבר במקום.');
+        }
+        if (authError.status === 500) {
+          throw new Error('שגיאת שרת. אנא נסה שוב בעוד מספר דקות.');
         }
         
         throw new Error(authError.message || 'שגיאה בהרשמה');
       }
 
       if (!authData.user) {
+        console.error('API: ❌ No user data returned from Supabase');
         throw new Error('לא התקבל משתמש מהשרת');
       }
 
-      console.log('API: Sign up successful, creating/updating user profile in database');
+      console.log('API: ✅ Sign up successful');
+      console.log('API: User ID:', authData.user.id);
+      console.log('API: Session present:', !!authData.session);
+
+      console.log('API: Creating/updating user profile in database...');
       
       // Use upsert to handle cases where the user profile already exists (e.g., from a database trigger)
       // This prevents duplicate key errors
@@ -161,15 +179,20 @@ export const api = {
         .single();
 
       if (upsertError) {
-        console.error('API: Failed to create/update user profile', upsertError);
+        console.error('API: ❌ Failed to create/update user profile');
+        console.error('API: Error code:', upsertError.code);
+        console.error('API: Error message:', upsertError.message);
+        console.error('API: Full error:', JSON.stringify(upsertError, null, 2));
         
         // If profile creation fails, try to clean up the auth user
+        console.log('API: Attempting to clean up auth user...');
         await supabase.auth.signOut();
         
         throw new Error(upsertError.message || 'שגיאה ביצירת פרופיל משתמש');
       }
 
-      console.log('API: User profile created/updated successfully', userData);
+      console.log('API: ✅ User profile created/updated successfully');
+      console.log('API: User data:', userData);
       
       const camelData = toCamelCase(userData);
       return {
@@ -177,22 +200,30 @@ export const api = {
         id: camelData.authUserId,
       };
     } catch (error: any) {
-      console.error('API: Sign up failed with error:', error);
+      console.error('API: ❌ Sign up failed with error:', error?.message || error);
+      console.error('API: Error stack:', error?.stack);
       throw error;
     }
   },
 
   signIn: async (email: string, password: string): Promise<UserFrontend> => {
-    console.log('API: Signing in user', email);
+    console.log('API: ========== SIGN IN ATTEMPT ==========');
+    console.log('API: Email:', email);
+    console.log('API: Password length:', password.length);
     
     try {
+      console.log('API: Calling supabase.auth.signInWithPassword...');
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (authError) {
-        console.error('API: Sign in failed', authError);
+        console.error('API: ❌ Sign in auth error');
+        console.error('API: Error code:', authError.status);
+        console.error('API: Error message:', authError.message);
+        console.error('API: Error name:', authError.name);
+        console.error('API: Full error:', JSON.stringify(authError, null, 2));
         
         if (authError.message.includes('Invalid login credentials')) {
           throw new Error('אימייל או סיסמה שגויים');
@@ -200,19 +231,39 @@ export const api = {
         if (authError.message.includes('Email not confirmed')) {
           throw new Error('יש לאמת את כתובת המייל לפני התחברות');
         }
+        if (authError.message.includes('refresh_token_not_found')) {
+          throw new Error('שגיאת אימות. נסה להתנתק ולהתחבר מחדש.');
+        }
+        if (authError.status === 500) {
+          throw new Error('שגיאת שרת. אנא נסה שוב בעוד מספר דקות.');
+        }
         
         throw new Error(authError.message || 'שגיאה בהתחברות');
       }
 
       if (!authData.user) {
+        console.error('API: ❌ No user data returned from Supabase');
         throw new Error('לא התקבל משתמש מהשרת');
       }
 
-      console.log('API: Sign in successful, fetching user profile');
+      if (!authData.session) {
+        console.error('API: ❌ No session data returned from Supabase');
+        throw new Error('לא התקבלה סשן מהשרת');
+      }
+
+      console.log('API: ✅ Sign in successful');
+      console.log('API: User ID:', authData.user.id);
+      console.log('API: Session expires at:', new Date(authData.session.expires_at! * 1000).toLocaleString());
+      console.log('API: Access token present:', !!authData.session.access_token);
+      console.log('API: Refresh token present:', !!authData.session.refresh_token);
+      
+      console.log('API: Fetching user profile from database...');
       const userData = await api.getUserByAuthId(authData.user.id);
+      console.log('API: ✅ User profile fetched successfully');
       return userData;
     } catch (error: any) {
-      console.error('API: Sign in failed with error:', error);
+      console.error('API: ❌ Sign in failed with error:', error?.message || error);
+      console.error('API: Error stack:', error?.stack);
       throw error;
     }
   },
