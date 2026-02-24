@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -170,7 +171,7 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
 
-        {/* Logo — absolute, bottom-anchored, left side, same as iOS */}
+        {/* Logo — absolute, bottom-anchored, RIGHT side for RTL */}
         <Image
           source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
           style={styles.logo}
@@ -364,30 +365,30 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start', // Changed from flex-end for RTL
     marginTop: 30,
     position: 'relative',
   },
-  // Logo: same as iOS — absolute, left, bottom-anchored, 180×180
+  // Logo: RIGHT side for RTL (was left for LTR)
   logo: {
     width: 180,
     height: 180,
     position: 'absolute',
-    left: layout.screenPadding,
+    right: layout.screenPadding, // Changed from left to right for RTL
     bottom: 0,
     zIndex: 13,
   },
-  // Greeting: same as iOS — right-aligned, padded away from logo
+  // Greeting: LEFT side for RTL (was right for LTR)
   greetingContainer: {
     flex: 1,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start', // Changed from flex-end for RTL
     justifyContent: 'flex-end',
-    paddingLeft: 160,
+    paddingRight: 160, // Changed from paddingLeft for RTL
   },
   greetingText: {
     ...typography.h2,
     color: '#FFFFFF',
-    textAlign: 'right',
+    textAlign: 'left', // Changed from right for RTL
     fontWeight: '700',
     writingDirection: 'rtl',
   },
@@ -482,7 +483,7 @@ const styles = StyleSheet.create({
   categoryBadgeContainer: {
     position: 'absolute',
     top: spacing.xs,
-    right: spacing.xs,
+    left: spacing.xs, // Changed from right to left for RTL
   },
   goldBadge: {
     width: 24,

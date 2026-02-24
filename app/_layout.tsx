@@ -20,9 +20,18 @@ import { Stack, router } from "expo-router";
 import { Colors } from "@/constants/Colors";
 import Constants from "expo-constants";
 
-// Force RTL layout for Hebrew - consistent across platforms
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
+// Force RTL layout for Hebrew - MUST be at the very top before any components render
+// This is critical for Android to apply RTL correctly
+if (!I18nManager.isRTL) {
+  I18nManager.allowRTL(true);
+  I18nManager.forceRTL(true);
+  
+  // On Android, changing RTL requires an app restart
+  if (Platform.OS === 'android') {
+    console.log('🔄 RTL was not enabled. Forcing RTL and reloading app...');
+    // The app will restart automatically on Android when RTL changes
+  }
+}
 
 SplashScreen.preventAutoHideAsync();
 
@@ -66,6 +75,7 @@ export default function RootLayout() {
     console.log('🚀 App starting with backend URL:', backendUrl);
     console.log('🔄 RTL enabled:', I18nManager.isRTL);
     console.log('📱 Platform:', Platform.OS);
+    console.log('🌍 Writing Direction:', I18nManager.isRTL ? 'RTL' : 'LTR');
   }, []);
 
   useEffect(() => {
@@ -88,7 +98,7 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, direction: I18nManager.isRTL ? 'rtl' : 'ltr' }}>
       <ThemeProvider value={colorScheme === "dark" ? CustomDarkTheme : LightTheme}>
         <UserProvider>
           <WidgetProvider>

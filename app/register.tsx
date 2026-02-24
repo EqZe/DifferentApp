@@ -34,9 +34,11 @@ import Animated, {
 
 const { width, height } = Dimensions.get('window');
 
-// Ensure RTL is enabled consistently
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
+// Ensure RTL is enabled - this is a safety check
+if (!I18nManager.isRTL) {
+  I18nManager.allowRTL(true);
+  I18nManager.forceRTL(true);
+}
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -57,6 +59,7 @@ export default function RegisterScreen() {
   const progress = useSharedValue(0);
 
   console.log('RegisterScreen - RTL status:', I18nManager.isRTL, 'Platform:', Platform.OS);
+  console.log('RegisterScreen - Writing Direction:', I18nManager.isRTL ? 'RTL' : 'LTR');
 
   const progressStyle = useAnimatedStyle(() => {
     return {
@@ -204,7 +207,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background, direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]} edges={['top']}>
       <KeyboardAvoidingView
         behavior="position"
         style={styles.keyboardView}

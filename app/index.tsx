@@ -5,9 +5,11 @@ import { useRouter } from 'expo-router';
 import { useUser } from '@/contexts/UserContext';
 import { useTheme } from '@react-navigation/native';
 
-// Ensure RTL is enabled consistently
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
+// Ensure RTL is enabled - this is a safety check
+if (!I18nManager.isRTL) {
+  I18nManager.allowRTL(true);
+  I18nManager.forceRTL(true);
+}
 
 export default function IndexScreen() {
   const router = useRouter();
@@ -21,6 +23,7 @@ export default function IndexScreen() {
       console.log('Index screen - Session:', session ? 'exists' : 'null');
       console.log('Index screen - RTL status:', I18nManager.isRTL);
       console.log('Index screen - Platform:', Platform.OS);
+      console.log('Index screen - Writing Direction:', I18nManager.isRTL ? 'RTL' : 'LTR');
       
       if (user && session) {
         console.log('Index screen - User authenticated, redirecting to home');
@@ -35,7 +38,7 @@ export default function IndexScreen() {
   }, [isLoading, user, session, router]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
       <ActivityIndicator size="large" color="#2784F5" />
     </View>
   );

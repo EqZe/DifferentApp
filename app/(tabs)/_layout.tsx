@@ -7,9 +7,11 @@ import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
 import { Href } from 'expo-router';
 import { api } from '@/utils/api';
 
-// Ensure RTL is enabled consistently
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
+// Ensure RTL is enabled - this is a safety check
+if (!I18nManager.isRTL) {
+  I18nManager.allowRTL(true);
+  I18nManager.forceRTL(true);
+}
 
 export default function TabLayout() {
   const { user, isLoading } = useUser();
@@ -19,6 +21,7 @@ export default function TabLayout() {
 
   console.log('TabLayout rendering, user:', user?.fullName, 'hasContract:', user?.hasContract);
   console.log('TabLayout - RTL status:', I18nManager.isRTL, 'Platform:', Platform.OS);
+  console.log('TabLayout - Writing Direction:', I18nManager.isRTL ? 'RTL' : 'LTR');
 
   // Check if user has any containers
   useEffect(() => {
@@ -122,7 +125,7 @@ export default function TabLayout() {
   });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
       {/* This renders the actual screen content */}
       <Slot />
       
