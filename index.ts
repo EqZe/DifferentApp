@@ -1,4 +1,3 @@
-
 import 'expo-router/entry';
 import { I18nManager, Platform } from 'react-native';
 
@@ -16,6 +15,8 @@ if (Platform.OS !== 'web') {
   if (typeof document !== 'undefined') {
     document.documentElement.setAttribute('dir', 'rtl');
     document.body.setAttribute('dir', 'rtl');
+    // Also set a global flag for web RTL detection
+    (global as any).__IS_RTL__ = true;
     console.log('🔄 RTL forced for web platform via HTML dir attribute');
   }
 }

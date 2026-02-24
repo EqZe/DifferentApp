@@ -1,3 +1,4 @@
+import { I18nManager, Platform } from 'react-native';
 
 export const Colors = {
   light: {
@@ -31,6 +32,19 @@ export const Colors = {
     shadow: 'rgba(0, 0, 0, 0.3)',
   },
 };
+
+/**
+ * Utility function to check if RTL is enabled across all platforms
+ * On web, I18nManager.isRTL doesn't work, so we check the global flag set in index.ts
+ */
+export function isRTL(): boolean {
+  if (Platform.OS === 'web') {
+    // On web, check the global flag we set in index.ts
+    return (global as any).__IS_RTL__ === true;
+  }
+  // On native platforms, use I18nManager
+  return I18nManager.isRTL;
+}
 
 export const appleBlue = '#007AFF';
 export const appleRed = '#FF3B30';
