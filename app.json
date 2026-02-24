@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Natively",
+      "bundleIdentifier": "com.ilayrachkovski.different",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
@@ -29,7 +29,7 @@
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.Natively",
+      "package": "com.ilayrachkovski.different",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -68,10 +68,6 @@
       "eas": {
         "projectId": "fe404aca-e46f-42d5-ac3a-50c265d87ae7"
       }
-    },
-    "updates": {
-      "enabled": false
-    },
-    "owner": null
+    }
   }
 }
