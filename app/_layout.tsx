@@ -72,11 +72,10 @@ export default function RootLayout() {
   useEffect(() => {
     // Log backend URL and RTL status at app startup for debugging
     const backendUrl = Constants.expoConfig?.extra?.backendUrl;
-    const isRTLEnabled = Platform.OS === 'web' ? (global as any).__IS_RTL__ === true : I18nManager.isRTL;
     console.log('🚀 App starting with backend URL:', backendUrl);
-    console.log('🔄 RTL enabled:', isRTLEnabled);
+    console.log('🔄 RTL enabled:', I18nManager.isRTL);
     console.log('📱 Platform:', Platform.OS);
-    console.log('🌍 Writing Direction:', isRTLEnabled ? 'RTL' : 'LTR');
+    console.log('🌍 Writing Direction:', I18nManager.isRTL ? 'RTL' : 'LTR');
   }, []);
 
   useEffect(() => {
@@ -98,10 +97,8 @@ export default function RootLayout() {
     return null;
   }
 
-  const isRTLEnabled = Platform.OS === 'web' ? (global as any).__IS_RTL__ === true : I18nManager.isRTL;
-
   return (
-    <GestureHandlerRootView style={{ flex: 1, direction: isRTLEnabled ? 'rtl' : 'ltr' }}>
+    <GestureHandlerRootView style={{ flex: 1, direction: I18nManager.isRTL ? 'rtl' : 'ltr' }}>
       <ThemeProvider value={colorScheme === "dark" ? CustomDarkTheme : LightTheme}>
         <UserProvider>
           <WidgetProvider>

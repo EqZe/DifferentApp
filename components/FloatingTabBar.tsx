@@ -8,6 +8,7 @@ import {
   Platform,
   Dimensions,
   useColorScheme,
+  I18nManager,
 } from 'react-native';
 import { useRouter, usePathname, Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,7 +22,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { designColors, typography, spacing, radius, shadows } from '@/styles/designSystem';
-import { isRTL } from '@/constants/Colors';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -51,12 +51,11 @@ export default function FloatingTabBar({
   const isDark = colorScheme === 'dark';
   const colors = isDark ? designColors.dark : designColors.light;
   const animatedValue = useSharedValue(0);
-  const rtlEnabled = isRTL();
 
   const activeTabIndex = React.useMemo(() => {
     console.log('FloatingTabBar: Current pathname:', pathname);
-    console.log('FloatingTabBar: RTL status:', rtlEnabled, 'Platform:', Platform.OS);
-    console.log('FloatingTabBar: Writing Direction:', rtlEnabled ? 'RTL' : 'LTR');
+    console.log('FloatingTabBar: RTL status:', I18nManager.isRTL, 'Platform:', Platform.OS);
+    console.log('FloatingTabBar: Writing Direction:', I18nManager.isRTL ? 'RTL' : 'LTR');
     
     let bestMatch = -1;
     let bestMatchScore = 0;
@@ -105,7 +104,7 @@ export default function FloatingTabBar({
     
     // For RTL, we need to reverse the direction of the indicator
     // The indicator should move from right to left (opposite of LTR)
-    const translateX = rtlEnabled
+    const translateX = I18nManager.isRTL
       ? interpolate(
           animatedValue.value,
           [0, tabs.length - 1],
@@ -117,7 +116,7 @@ export default function FloatingTabBar({
           [0, tabWidth * (tabs.length - 1)]
         );
     
-    console.log('FloatingTabBar: Indicator translateX:', translateX, 'for index:', animatedValue.value, 'RTL:', rtlEnabled);
+    console.log('FloatingTabBar: Indicator translateX:', translateX, 'for index:', animatedValue.value, 'RTL:', I18nManager.isRTL);
     
     return {
       transform: [{ translateX }],
@@ -128,7 +127,7 @@ export default function FloatingTabBar({
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <View style={[
         styles.container,
-        { width: containerWidth, marginBottom: bottomMargin, direction: rtlEnabled ? 'rtl' : 'ltr' },
+        { width: containerWidth, marginBottom: bottomMargin, direction: I18nManager.isRTL ? 'rtl' : 'ltr' },
         styles.containerShadow,
       ]}>
         <BlurView
@@ -153,7 +152,7 @@ export default function FloatingTabBar({
             indicatorStyle,
           ]} />
           
-          <View style={[styles.tabsContainer, { direction: rtlEnabled ? 'rtl' : 'ltr' }]}>
+          <View style={[styles.tabsContainer, { direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
             {tabs.map((tab, index) => {
               const isActive = activeTabIndex === index;
               const iconColor = isActive ? designColors.primary : colors.textTertiary;
