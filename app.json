@@ -1,8 +1,8 @@
+
 {
   "expo": {
     "name": "Different",
     "slug": "Different",
-    "owner": "different",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/different logo.png",
@@ -70,7 +70,7 @@
       }
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "enabled": false
     }
   }
 }
