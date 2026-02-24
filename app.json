@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Different",
@@ -8,6 +9,9 @@
     "icon": "./assets/images/different logo.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "splash": {
       "image": "./assets/images/different logo.png",
       "resizeMode": "contain",
@@ -57,7 +61,7 @@
         }
       ]
     ],
-    "scheme": "Different",
+    "scheme": "different",
     "experiments": {
       "typedRoutes": true
     },
@@ -67,6 +71,9 @@
       "eas": {
         "projectId": "pgrcmurwamszgjsdbgtq"
       }
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
     }
   }
 }
