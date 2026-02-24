@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -8,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
-  Platform,
   ImageSourcePropType,
   useColorScheme,
   I18nManager,
@@ -18,7 +16,6 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { api, type CategoryWithPosts } from '@/utils/api';
@@ -36,20 +33,13 @@ function resolveImageSource(source: string | number | ImageSourcePropType | unde
   return source as ImageSourcePropType;
 }
 
-// Helper function to get time-based greeting in Hebrew
 function getTimeBasedGreeting(): string {
   const hour = new Date().getHours();
-  
-  if (hour >= 5 && hour < 12) {
-    return 'בוקר טוב';
-  } else if (hour >= 12 && hour < 18) {
-    return 'צהריים טובים';
-  } else {
-    return 'ערב טוב';
-  }
+  if (hour >= 5 && hour < 12) return 'בוקר טוב';
+  if (hour >= 12 && hour < 18) return 'צהריים טובים';
+  return 'ערב טוב';
 }
 
-// Helper to map Material icon names to SF Symbols for iOS
 function getIOSIconName(materialIconName: string): string {
   const iconMap: Record<string, string> = {
     'info': 'info.circle.fill',
@@ -71,7 +61,6 @@ function getIOSIconName(materialIconName: string): string {
     'calendar-today': 'calendar',
     'location-on': 'location.fill',
   };
-  
   return iconMap[materialIconName] || 'folder.fill';
 }
 
@@ -81,7 +70,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = isDark ? designColors.dark : designColors.light;
-  
+
   const [categories, setCategories] = useState<CategoryWithPosts[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -112,7 +101,6 @@ export default function HomeScreen() {
   useEffect(() => {
     if (user) {
       loadCategories();
-      // Update greeting when component mounts
       setGreeting(getTimeBasedGreeting());
     }
   }, [loadCategories, user]);
@@ -120,46 +108,33 @@ export default function HomeScreen() {
   const onRefresh = async () => {
     console.log('HomeScreen: Refreshing categories and user data');
     setRefreshing(true);
-    // Update greeting on refresh
     setGreeting(getTimeBasedGreeting());
-    
-    // Refresh user data from database to get latest hasContract value
     await refreshUser();
-    
-    // Then load categories
     await loadCategories();
   };
 
   const handleCategoryPress = async (categoryId: string, categoryName: string) => {
     console.log('HomeScreen: Opening category', categoryName, 'with ID', categoryId);
-    
-    // Check if category has only 1 post
+
     const category = categories.find(c => c.id === categoryId);
     if (category && category.postCount === 1) {
       console.log('HomeScreen: Category has only 1 post, navigating directly to post');
       try {
-        // Fetch the single post for this category
         const posts = await api.getPostsByCategory(categoryId);
         if (posts.length === 1) {
           console.log('HomeScreen: Navigating directly to post', posts[0].id);
-          // Navigate directly to the post with a flag to return to home
           router.push(`/post/${posts[0].id}?fromHome=true`);
           return;
         }
       } catch (error) {
         console.error('HomeScreen: Failed to fetch posts for single-post category', error);
-        // Fall back to category view on error
       }
     }
-    
-    // Use category ID for routing (more reliable than name)
+
     router.push(`/(tabs)/(home)/category/${categoryId}`);
   };
 
-  // Don't render if no user
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   if (loading) {
     return (
@@ -176,174 +151,173 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <SafeAreaView style={styles.container} edges={['top']}>
-        {/* Header with Lottie Animation Background */}
-        <View style={styles.headerWrapper}>
-          {/* Blue Gradient Background */}
-          <LinearGradient
-            colors={[designColors.primary, designColors.primaryDark]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          
-          {/* Lottie Animation Layer */}
-          <LottieView
-            source={{ uri: 'https://lottie.host/fcc59560-b2cd-4dad-85d1-02d5cf35c039/OcOTugphwV.json' }}
-            autoPlay
-            loop
-            style={styles.lottieAnimation}
-            resizeMode="cover"
-          />
-          
-          {/* Header Content - Aligned to Bottom with Gap */}
-          <View style={styles.header}>
-            <View style={styles.headerContent}>
-              {/* Company Logo */}
-              <View style={styles.logoContainer}>
-                <Image
-                  source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
-                  style={styles.logo}
-                  resizeMode="contain"
-                />
-              </View>
-              
-              {/* Dynamic Time-Based Greeting */}
-              <Text style={styles.greetingText}>{personalizedGreeting}</Text>
-            </View>
-          </View>
+      {/* ─── Header: fixed at top, same as iOS ─────────────────────────── */}
+      <View style={styles.headerWrapper}>
+        {/* Blue gradient background */}
+        <LinearGradient
+          colors={[designColors.primary, designColors.primaryDark]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
 
-          {/* Gradient Transition Overlay */}
-          <LinearGradient
-            colors={[
-              'transparent',
-              isDark ? 'rgba(18, 18, 18, 0.3)' : 'rgba(255, 255, 255, 0.3)',
-              isDark ? 'rgba(18, 18, 18, 0.7)' : 'rgba(255, 255, 255, 0.7)',
-              isDark ? designColors.dark.background : designColors.light.background,
-            ]}
-            locations={[0, 0.5, 0.8, 1]}
-            style={styles.gradientTransition}
-          />
-        </View>
+        {/* Lottie animation layer */}
+        <LottieView
+          source={{ uri: 'https://lottie.host/fcc59560-b2cd-4dad-85d1-02d5cf35c039/OcOTugphwV.json' }}
+          autoPlay
+          loop
+          style={styles.lottieAnimation}
+          resizeMode="cover"
+        />
 
-        {/* Content */}
-        <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={designColors.primary}
-            />
-          }
-        >
-          {/* Categories Grid - 2 columns */}
-          {categories.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={[styles.emptyIconContainer, { backgroundColor: colors.backgroundSecondary }]}>
-                <IconSymbol
-                  ios_icon_name="folder"
-                  android_material_icon_name="folder"
-                  size={48}
-                  color={colors.textTertiary}
-                />
-              </View>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>אין קטגוריות זמינות כרגע</Text>
-              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-                התוכן יתעדכן בקרוב
+        {/* Logo — absolute, bottom-anchored, left side, same as iOS */}
+        <Image
+          source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+
+        {/* Greeting — SafeAreaView handles status bar on Android */}
+        <SafeAreaView style={styles.header} edges={['top']}>
+          <View style={styles.headerContent}>
+            <View style={styles.greetingContainer}>
+              <Text
+                style={styles.greetingText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.5}
+              >
+                {personalizedGreeting}
               </Text>
             </View>
-          ) : (
-            <View style={styles.categoriesGrid}>
-              {categories.map((category) => {
-                const iconName = category.iconName || 'folder';
-                const iosIconName = getIOSIconName(iconName);
-                
-                console.log(`HomeScreen: Rendering category "${category.name}" (ID: ${category.id}) with icon "${iconName}" (iOS: ${iosIconName})`);
-                
-                return (
-                  <TouchableOpacity
-                    key={category.id}
-                    style={[
-                      styles.categoryCard,
-                      { backgroundColor: colors.surface },
-                      isDark && styles.categoryCardDark,
-                    ]}
-                    onPress={() => handleCategoryPress(category.id, category.name)}
-                    activeOpacity={0.7}
-                  >
-                    {/* Cover Image with Blur and Centered Icon */}
-                    <View style={styles.categoryImageContainer}>
-                      {category.coverImage ? (
-                        <>
-                          {/* Blurred Background Image - Minimized blur */}
-                          <Image
-                            source={resolveImageSource(category.coverImage)}
-                            style={styles.categoryImage}
-                            resizeMode="cover"
-                            blurRadius={1.5}
-                          />
-                          {/* Centered Icon on Blurred Image */}
-                          <View style={styles.categoryIconOverlay}>
-                            <View style={styles.categoryIconCircle}>
-                              <IconSymbol
-                                ios_icon_name={iosIconName}
-                                android_material_icon_name={iconName}
-                                size={48}
-                                color="#FFFFFF"
-                              />
-                            </View>
-                          </View>
-                        </>
-                      ) : (
-                        <View style={[styles.categoryImagePlaceholder, { backgroundColor: colors.backgroundSecondary }]}>
+          </View>
+        </SafeAreaView>
+      </View>
+
+      {/* ─── Gradient separator — matches iOS exactly ───────────────────── */}
+      <View style={styles.gradientSeparator}>
+        <LinearGradient
+          colors={[
+            '#169fde',
+            isDark ? designColors.dark.background : designColors.light.background,
+          ]}
+          locations={[0, 1]}
+          style={styles.gradientFill}
+        />
+      </View>
+
+      {/* ─── Scrollable content ─────────────────────────────────────────── */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={designColors.primary}
+          />
+        }
+      >
+        {categories.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={[styles.emptyIconContainer, { backgroundColor: colors.backgroundSecondary }]}>
+              <IconSymbol
+                ios_icon_name="folder"
+                android_material_icon_name="folder"
+                size={48}
+                color={colors.textTertiary}
+              />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>אין קטגוריות זמינות כרגע</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+              התוכן יתעדכן בקרוב
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.categoriesGrid}>
+            {categories.map((category) => {
+              const iconName = category.iconName || 'folder';
+              const iosIconName = getIOSIconName(iconName);
+
+              console.log(`HomeScreen: Rendering category "${category.name}" (ID: ${category.id}) with icon "${iconName}" (iOS: ${iosIconName})`);
+
+              return (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryCard,
+                    isDark && styles.categoryCardDark,
+                  ]}
+                  onPress={() => handleCategoryPress(category.id, category.name)}
+                  activeOpacity={0.7}
+                >
+                  {/* Cover image with blur + centered icon */}
+                  <View style={styles.categoryImageContainer}>
+                    {category.coverImage ? (
+                      <>
+                        <Image
+                          source={resolveImageSource(category.coverImage)}
+                          style={styles.categoryImage}
+                          resizeMode="cover"
+                          blurRadius={1.5}
+                        />
+                        <View style={styles.categoryIconOverlay}>
                           <View style={styles.categoryIconCircle}>
                             <IconSymbol
                               ios_icon_name={iosIconName}
                               android_material_icon_name={iconName}
                               size={48}
-                              color={colors.textTertiary}
+                              color="#FFFFFF"
                             />
                           </View>
                         </View>
-                      )}
-                      
-                      {/* Gold Badge for categories with contract_only posts */}
-                      {category.hasContractOnlyPosts && (
-                        <View style={styles.categoryBadgeContainer}>
-                          <LinearGradient
-                            colors={['#FFD700', '#FFA500']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.goldBadge}
-                          >
-                            <IconSymbol
-                              ios_icon_name="star.fill"
-                              android_material_icon_name="star"
-                              size={10}
-                              color="#FFFFFF"
-                            />
-                          </LinearGradient>
+                      </>
+                    ) : (
+                      <View style={[styles.categoryImagePlaceholder, { backgroundColor: colors.backgroundSecondary }]}>
+                        <View style={styles.categoryIconCircle}>
+                          <IconSymbol
+                            ios_icon_name={iosIconName}
+                            android_material_icon_name={iconName}
+                            size={48}
+                            color={colors.textTertiary}
+                          />
                         </View>
-                      )}
-                    </View>
+                      </View>
+                    )}
 
-                    {/* Card Content - Centered Title Only */}
-                    <View style={styles.categoryCardContent}>
-                      {/* Category Name - Centered */}
-                      <Text style={[styles.categoryTitle, { color: colors.text }]} numberOfLines={2}>
-                        {category.name}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
-        </ScrollView>
-      </SafeAreaView>
+                    {/* Gold badge */}
+                    {category.hasContractOnlyPosts && (
+                      <View style={styles.categoryBadgeContainer}>
+                        <LinearGradient
+                          colors={['#FFD700', '#FFA500']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.goldBadge}
+                        >
+                          <IconSymbol
+                            ios_icon_name="star.fill"
+                            android_material_icon_name="star"
+                            size={10}
+                            color="#FFFFFF"
+                          />
+                        </LinearGradient>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Card title */}
+                  <View style={styles.categoryCardContent}>
+                    <Text style={[styles.categoryTitle, { color: colors.text }]} numberOfLines={2}>
+                      {category.name}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -357,11 +331,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
-  // Header Wrapper with Lottie Background
+
+  // ── Header ─────────────────────────────────────────────────────────────
+  // Matches iOS: absolute, height 240, zIndex 10, overflow visible
   headerWrapper: {
-    height: 220,
-    position: 'relative',
+    height: 240,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     overflow: 'visible',
   },
   lottieAnimation: {
@@ -372,96 +351,99 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: '100%',
+    zIndex: 11,
     opacity: 0.6,
   },
   header: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? spacing.lg : spacing.sm,
-    paddingBottom: spacing.md,
     paddingHorizontal: layout.screenPadding,
     justifyContent: 'flex-end',
+    paddingBottom: spacing.sm,
+    zIndex: 12,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingBottom: spacing.md,
+    justifyContent: 'flex-end',
+    marginTop: 30,
+    position: 'relative',
   },
-  logoContainer: {
-    width: 150,
-    height: 150,
-    borderRadius: radius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xs,
-  },
+  // Logo: same as iOS — absolute, left, bottom-anchored, 180×180
   logo: {
-    width: '100%',
-    height: '100%',
+    width: 180,
+    height: 180,
+    position: 'absolute',
+    left: layout.screenPadding,
+    bottom: 0,
+    zIndex: 13,
   },
-  
-  // Dynamic Greeting - Prominent Typography
+  // Greeting: same as iOS — right-aligned, padded away from logo
+  greetingContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
+    paddingLeft: 160,
+  },
   greetingText: {
     ...typography.h2,
     color: '#FFFFFF',
     textAlign: 'right',
     fontWeight: '700',
-    flex: 1,
-    marginRight: spacing.md,
-    marginBottom: spacing.sm,
+    writingDirection: 'rtl',
   },
 
-  // Gradient Transition from Header to Content
-  gradientTransition: {
+  // ── Gradient separator ─────────────────────────────────────────────────
+  // Matches iOS: absolute, top 240, height 80, zIndex 5
+  gradientSeparator: {
     position: 'absolute',
-    bottom: -40,
+    top: 240,
     left: 0,
     right: 0,
     height: 80,
-    zIndex: 1,
+    zIndex: 5,
   },
-  
+  gradientFill: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+
+  // ── Scrollable content ─────────────────────────────────────────────────
+  // Matches iOS: marginTop 320 (240 header + 80 separator)
   content: {
     flex: 1,
-    marginTop: -40,
+    marginTop: 320,
   },
   contentContainer: {
     paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.xl + spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: 120,
   },
-  
-  // Categories Grid - 2 columns
+
+  // ── Categories grid ────────────────────────────────────────────────────
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: CARD_GAP,
   },
-  
-  // Category Card - Bolder with Enhanced Shadows
+
+  // Card: matches iOS exactly — no border, white background, same shadows
   categoryCard: {
     width: CARD_WIDTH,
     borderRadius: radius.lg,
     overflow: 'hidden',
-    // Enhanced shadow for bold appearance
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 12,
-    // Add border for more definition
-    borderWidth: 2,
-    borderColor: 'rgba(39, 159, 222, 0.1)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
   },
   categoryCardDark: {
-    borderWidth: 2,
-    borderColor: 'rgba(39, 159, 222, 0.3)',
-    shadowColor: '#279FDE',
-    shadowOpacity: 0.2,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
   categoryImageContainer: {
     width: '100%',
@@ -479,8 +461,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
-  // Icon Overlay - Centered on blurred image
   categoryIconOverlay: {
     position: 'absolute',
     top: 0,
@@ -499,14 +479,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...shadows.lg,
   },
-  
   categoryBadgeContainer: {
     position: 'absolute',
     top: spacing.xs,
     right: spacing.xs,
   },
-  
-  // GOLD BADGE for categories with contract_only posts
   goldBadge: {
     width: 24,
     height: 24,
@@ -517,8 +494,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  
-  // Card Content - Centered Title Only
   categoryCardContent: {
     padding: spacing.md,
     alignItems: 'center',
@@ -530,8 +505,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '700',
   },
-  
-  // Empty State
+
+  // ── Empty state ────────────────────────────────────────────────────────
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.xxxl,

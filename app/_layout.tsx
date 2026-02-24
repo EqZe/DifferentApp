@@ -2,7 +2,7 @@
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useFonts } from "expo-font";
 import "react-native-reanimated";
-import { useColorScheme, Alert, I18nManager } from "react-native";
+import { useColorScheme, Alert, I18nManager, Platform } from "react-native";
 import {
   DarkTheme,
   DefaultTheme,
@@ -20,11 +20,9 @@ import { Stack, router } from "expo-router";
 import { Colors } from "@/constants/Colors";
 import Constants from "expo-constants";
 
-// Force RTL layout for Hebrew
-if (!I18nManager.isRTL) {
-  I18nManager.allowRTL(true);
-  I18nManager.forceRTL(true);
-}
+// Force RTL layout for Hebrew - consistent across platforms
+I18nManager.allowRTL(true);
+I18nManager.forceRTL(true);
 
 SplashScreen.preventAutoHideAsync();
 
@@ -63,10 +61,11 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    // Log backend URL at app startup for debugging
+    // Log backend URL and RTL status at app startup for debugging
     const backendUrl = Constants.expoConfig?.extra?.backendUrl;
     console.log('🚀 App starting with backend URL:', backendUrl);
     console.log('🔄 RTL enabled:', I18nManager.isRTL);
+    console.log('📱 Platform:', Platform.OS);
   }, []);
 
   useEffect(() => {

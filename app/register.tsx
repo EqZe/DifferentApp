@@ -13,6 +13,7 @@ import {
   Alert,
   Image,
   ScrollView,
+  I18nManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@react-navigation/native';
@@ -33,6 +34,10 @@ import Animated, {
 
 const { width, height } = Dimensions.get('window');
 
+// Ensure RTL is enabled consistently
+I18nManager.allowRTL(true);
+I18nManager.forceRTL(true);
+
 export default function RegisterScreen() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -50,6 +55,8 @@ export default function RegisterScreen() {
   const inputRef = useRef<TextInput>(null);
   
   const progress = useSharedValue(0);
+
+  console.log('RegisterScreen - RTL status:', I18nManager.isRTL, 'Platform:', Platform.OS);
 
   const progressStyle = useAnimatedStyle(() => {
     return {
@@ -672,6 +679,7 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: 16,
+    textAlign: 'center',
   },
   buttonContainer: {
     paddingHorizontal: 24,

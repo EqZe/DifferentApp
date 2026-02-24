@@ -8,6 +8,7 @@ import {
   Platform,
   Dimensions,
   useColorScheme,
+  I18nManager,
 } from 'react-native';
 import { useRouter, usePathname, Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -53,6 +54,7 @@ export default function FloatingTabBar({
 
   const activeTabIndex = React.useMemo(() => {
     console.log('FloatingTabBar: Current pathname:', pathname);
+    console.log('FloatingTabBar: RTL status:', I18nManager.isRTL, 'Platform:', Platform.OS);
     
     let bestMatch = -1;
     let bestMatchScore = 0;
@@ -98,16 +100,21 @@ export default function FloatingTabBar({
 
   const indicatorStyle = useAnimatedStyle(() => {
     const tabWidth = (containerWidth - 8) / tabs.length;
+    // For RTL, we need to reverse the direction of the indicator
+    const translateX = I18nManager.isRTL
+      ? interpolate(
+          animatedValue.value,
+          [0, tabs.length - 1],
+          [tabWidth * (tabs.length - 1), 0]
+        )
+      : interpolate(
+          animatedValue.value,
+          [0, tabs.length - 1],
+          [0, tabWidth * (tabs.length - 1)]
+        );
+    
     return {
-      transform: [
-        {
-          translateX: interpolate(
-            animatedValue.value,
-            [0, tabs.length - 1],
-            [0, tabWidth * (tabs.length - 1)]
-          ),
-        },
-      ],
+      transform: [{ translateX }],
     };
   });
 
@@ -218,7 +225,7 @@ const styles = StyleSheet.create({
   indicator: {
     position: 'absolute',
     top: 4,
-    left: 4,
+    // Remove left: 4 to allow RTL animation to work properly
     bottom: 4,
     borderRadius: 24,
   },
@@ -249,6 +256,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontWeight: '500',
     fontSize: 11,
+    textAlign: 'center',
   },
   tabLabelActive: {
     fontWeight: '700',
