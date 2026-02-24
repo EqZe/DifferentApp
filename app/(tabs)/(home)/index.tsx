@@ -152,7 +152,7 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* ─── Header: fixed at top, same as iOS ─────────────────────────── */}
+      {/* ─── Header: fixed at top, MATCHES iOS EXACTLY ─────────────────────────── */}
       <View style={styles.headerWrapper}>
         {/* Blue gradient background */}
         <LinearGradient
@@ -171,7 +171,7 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
 
-        {/* Logo — absolute, bottom-anchored, RIGHT side for RTL */}
+        {/* Logo — absolute, bottom-anchored, LEFT side (same as iOS) */}
         <Image
           source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
           style={styles.logo}
@@ -365,30 +365,30 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'flex-start', // Changed from flex-end for RTL
+    justifyContent: 'flex-end',
     marginTop: 30,
     position: 'relative',
   },
-  // Logo: RIGHT side for RTL (was left for LTR)
+  // Logo: LEFT side (same as iOS)
   logo: {
     width: 180,
     height: 180,
     position: 'absolute',
-    right: layout.screenPadding, // Changed from left to right for RTL
+    left: layout.screenPadding,
     bottom: 0,
     zIndex: 13,
   },
-  // Greeting: LEFT side for RTL (was right for LTR)
+  // Greeting: RIGHT side (same as iOS)
   greetingContainer: {
     flex: 1,
-    alignItems: 'flex-start', // Changed from flex-end for RTL
+    alignItems: 'flex-end',
     justifyContent: 'flex-end',
-    paddingRight: 160, // Changed from paddingLeft for RTL
+    paddingLeft: 160, // Space for logo on left
   },
   greetingText: {
     ...typography.h2,
     color: '#FFFFFF',
-    textAlign: 'left', // Changed from right for RTL
+    textAlign: 'right',
     fontWeight: '700',
     writingDirection: 'rtl',
   },
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   categoryBadgeContainer: {
     position: 'absolute',
     top: spacing.xs,
-    left: spacing.xs, // Changed from right to left for RTL
+    right: spacing.xs,
   },
   goldBadge: {
     width: 24,
