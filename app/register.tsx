@@ -125,28 +125,36 @@ export default function RegisterScreen() {
       if (isLogin) {
         console.log('Signing in user with email:', email);
         userData = await api.signIn(email, password);
+        console.log('Sign in successful:', userData.fullName);
       } else {
         console.log('Signing up new user');
         userData = await api.signUp(email, password, fullName, city, phoneNumber);
+        console.log('Sign up successful:', userData.fullName);
       }
       
-      console.log('Authentication successful:', userData.fullName);
       await setUser(userData);
       
       setTimeout(() => {
+        console.log('Redirecting to home screen');
         router.replace('/(tabs)/(home)');
       }, 500);
     } catch (error: any) {
-      console.error('Authentication error:', error);
+      console.error('❌ Authentication error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       
-      const errorMessage = isLogin 
+      let errorMessage = isLogin 
         ? 'שגיאה בהתחברות. אנא בדוק את הפרטים ונסה שוב.'
         : 'שגיאה בהרשמה. אנא נסה שוב.';
       
+      // Add more specific error messages
+      if (error.message) {
+        errorMessage += '\n\n' + error.message;
+      }
+      
       if (Platform.OS === 'web') {
-        alert(errorMessage + '\n' + (error.message || ''));
+        alert(errorMessage);
       } else {
-        Alert.alert('שגיאה', errorMessage + '\n' + (error.message || ''));
+        Alert.alert('שגיאה', errorMessage);
       }
       
       setIsLoading(false);

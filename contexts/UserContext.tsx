@@ -111,8 +111,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
         console.log('UserContext: ✅ User already has push token, skipping automatic registration');
         hasAttemptedAutoRegistration.current = false; // Reset for next login
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('UserContext: ❌ Error loading user profile:', error);
+      console.error('UserContext: Error details:', JSON.stringify(error, null, 2));
       setUserState(null);
     } finally {
       setIsLoading(false);
@@ -125,7 +126,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        console.error('UserContext: Error getting initial session', error);
+        console.error('UserContext: ❌ Error getting initial session:', error);
+        console.error('UserContext: Error details:', JSON.stringify(error, null, 2));
         setIsLoading(false);
         return;
       }
@@ -147,18 +149,30 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('UserContext: Auth state changed -', _event, session ? 'session exists' : 'no session');
       
+      if (_event === 'SIGNED_OUT') {
+        console.log('UserContext: User signed out, clearing session');
+        setSession(null);
+        setUserState(null);
+        setIsLoading(false);
+        hasAttemptedAutoRegistration.current = false;
+        
+        // Clear any pending auto-registration timeout
+        if (autoRegistrationTimeoutRef.current) {
+          clearTimeout(autoRegistrationTimeoutRef.current);
+          autoRegistrationTimeoutRef.current = null;
+        }
+        return;
+      }
+      
       if (session) {
         console.log('UserContext: New session for user:', session.user.id);
         // Reset auto-registration flag on new login
         hasAttemptedAutoRegistration.current = false;
-      }
-      
-      setSession(session);
-      
-      if (session) {
+        setSession(session);
         loadUserProfile(session.user.id);
       } else {
-        console.log('UserContext: Session cleared, logging out user');
+        console.log('UserContext: Session cleared');
+        setSession(null);
         setUserState(null);
         setIsLoading(false);
         hasAttemptedAutoRegistration.current = false;
@@ -200,8 +214,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('UserContext: ✅ User data refreshed, hasContract:', freshUserData.hasContract);
       console.log('UserContext: Push token status:', freshUserData.pushToken ? 'exists' : 'NULL');
       setUserState(freshUserData);
-    } catch (error) {
-      console.error('UserContext: ❌ Failed to refresh user data', error);
+    } catch (error: any) {
+      console.error('UserContext: ❌ Failed to refresh user data:', error);
+      console.error('UserContext: Error details:', JSON.stringify(error, null, 2));
     }
   };
 
