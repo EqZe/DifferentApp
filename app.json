@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Different",
@@ -66,10 +67,7 @@
     },
     "extra": {
       "router": {},
-      "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev",
-      "eas": {
-        "projectId": "pgrcmurwamszgjsdbgtq"
-      }
+      "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev"
     },
     "updates": {
       "fallbackToCacheTimeout": 0
