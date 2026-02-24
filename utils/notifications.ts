@@ -380,3 +380,156 @@ export async function cancelAllNotifications(): Promise<void> {
     console.log('🔔 Notifications: ⚠️ Error cancelling notifications:', error);
   }
 }
+
+/**
+ * Send a push notification via Supabase Edge Function to specific Expo push tokens
+ */
+export async function sendPushNotificationToTokens(
+  accessToken: string,
+  tokens: string | string[],
+  title: string,
+  body: string,
+  data?: Record<string, any>,
+  options?: {
+    sound?: string;
+    badge?: number;
+    priority?: 'default' | 'normal' | 'high';
+    channelId?: string;
+  }
+): Promise<boolean> {
+  try {
+    console.log('🔔 Notifications: Sending push notification via Supabase Edge Function');
+    console.log('🔔 Notifications: Tokens:', Array.isArray(tokens) ? tokens.length : 1);
+    console.log('🔔 Notifications: Title:', title);
+    console.log('🔔 Notifications: Body:', body);
+
+    const response = await fetch(
+      'https://pgrcmurwamszgjsdbgtq.supabase.co/functions/v1/send-push-notification',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          to: tokens,
+          title,
+          body,
+          data: data || {},
+          sound: options?.sound || 'default',
+          badge: options?.badge,
+          priority: options?.priority || 'high',
+          channelId: options?.channelId || 'default',
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error('🔔 Notifications: ⚠️ Failed to send push notification:', result);
+      return false;
+    }
+
+    console.log('🔔 Notifications: ✅ Push notification sent successfully:', result);
+    return true;
+  } catch (error: any) {
+    console.error('🔔 Notifications: ⚠️ Error sending push notification:', error?.message || error);
+    return false;
+  }
+}
+
+/**
+ * Send a push notification via Supabase Edge Function to specific user IDs
+ * The Edge Function will fetch the push tokens from the database
+ */
+export async function sendPushNotificationToUsers(
+  accessToken: string,
+  userIds: string | string[],
+  title: string,
+  body: string,
+  data?: Record<string, any>,
+  options?: {
+    sound?: string;
+    badge?: number;
+    priority?: 'default' | 'normal' | 'high';
+    channelId?: string;
+  }
+): Promise<boolean> {
+  try {
+    console.log('🔔 Notifications: Sending push notification to users via Supabase Edge Function');
+    console.log('🔔 Notifications: User IDs:', Array.isArray(userIds) ? userIds.length : 1);
+    console.log('🔔 Notifications: Title:', title);
+    console.log('🔔 Notifications: Body:', body);
+
+    const response = await fetch(
+      'https://pgrcmurwamszgjsdbgtq.supabase.co/functions/v1/send-push-notification',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          type: 'send-to-users',
+          userId: userIds,
+          title,
+          body,
+          data: data || {},
+          sound: options?.sound || 'default',
+          badge: options?.badge,
+          priority: options?.priority || 'high',
+          channelId: options?.channelId || 'default',
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error('🔔 Notifications: ⚠️ Failed to send push notification to users:', result);
+      return false;
+    }
+
+    console.log('🔔 Notifications: ✅ Push notification sent to users successfully:', result);
+    return true;
+  } catch (error: any) {
+    console.error('🔔 Notifications: ⚠️ Error sending push notification to users:', error?.message || error);
+    return false;
+  }
+}
+
+/**
+ * Trigger the task reminders Edge Function to send reminders for tasks due in 7, 3, or 1 day
+ * This can be called manually or set up as a cron job
+ */
+export async function triggerTaskReminders(accessToken: string): Promise<boolean> {
+  try {
+    console.log('🔔 Notifications: Triggering task reminders via Supabase Edge Function');
+
+    const response = await fetch(
+      'https://pgrcmurwamszgjsdbgtq.supabase.co/functions/v1/send-task-reminders',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({}),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error('🔔 Notifications: ⚠️ Failed to trigger task reminders:', result);
+      return false;
+    }
+
+    console.log('🔔 Notifications: ✅ Task reminders triggered successfully:', result);
+    return true;
+  } catch (error: any) {
+    console.error('🔔 Notifications: ⚠️ Error triggering task reminders:', error?.message || error);
+    return false;
+  }
+}

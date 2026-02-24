@@ -565,12 +565,50 @@ export default function ProfileScreen() {
 
           {/* Test Notification Button (Development) */}
           {__DEV__ && (
-            <TouchableOpacity
-              style={[styles.button, styles.buttonSecondary]}
-              onPress={handleTestNotification}
-            >
-              <Text style={styles.buttonText}>שלח התראת בדיקה (פיתוח)</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={[styles.button, styles.buttonSecondary]}
+                onPress={handleTestNotification}
+                disabled={!hasPushToken}
+              >
+                <Text style={styles.buttonText}>שלח התראת בדיקה מקומית</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.button, styles.buttonSecondary, !hasPushToken && styles.buttonDisabled]}
+                onPress={async () => {
+                  if (!session?.access_token) {
+                    Alert.alert('שגיאה', 'אין חיבור פעיל');
+                    return;
+                  }
+                  if (!user?.pushToken) {
+                    Alert.alert('שגיאה', 'עליך להירשם להתראות תחילה');
+                    return;
+                  }
+                  try {
+                    const { sendPushNotificationToUsers } = await import('@/utils/notifications');
+                    const success = await sendPushNotificationToUsers(
+                      session.access_token,
+                      user.authUserId,
+                      '🎉 בדיקת Supabase',
+                      'התראה זו נשלחה דרך Supabase Edge Functions!',
+                      { test: true, timestamp: new Date().toISOString() },
+                      { priority: 'high' }
+                    );
+                    if (success) {
+                      Alert.alert('הצלחה', 'התראה נשלחה דרך Supabase!');
+                    } else {
+                      Alert.alert('שגיאה', 'לא ניתן לשלוח התראה');
+                    }
+                  } catch (error: any) {
+                    Alert.alert('שגיאה', error.message);
+                  }
+                }}
+                disabled={!hasPushToken}
+              >
+                <Text style={styles.buttonText}>שלח התראה דרך Supabase</Text>
+              </TouchableOpacity>
+            </>
           )}
         </View>
 

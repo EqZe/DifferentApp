@@ -1,5 +1,5 @@
 
-# Push Notifications System
+# Push Notifications System with Supabase
 
 This document explains the push notification system implemented in the app.
 
