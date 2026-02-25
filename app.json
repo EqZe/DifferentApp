@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Different",
-    "slug": "Different",
+    "slug": "differentapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/different logo.png",
@@ -28,7 +28,7 @@
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.ilayrachkovski.different",
+      "package": "com.differentapp.com",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -49,9 +49,6 @@
         {
           "icon": "./assets/images/final_quest_240x240.png",
           "color": "#2784F5",
-          "sounds": [
-            "default"
-          ],
           "androidMode": "default",
           "androidCollapsedTitle": "Different"
         }
