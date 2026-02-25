@@ -54,7 +54,7 @@
         }
       ]
     ],
-    "scheme": "different",
+    "scheme": "Different",
     "experiments": {
       "typedRoutes": true
     },
