@@ -25,10 +25,16 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     console.log('🔔 Notifications: ========== STARTING PUSH NOTIFICATION REGISTRATION ==========');
     console.log('🔔 Notifications: Device.isDevice =', Device.isDevice);
     console.log('🔔 Notifications: Platform.OS =', Platform.OS);
+    console.log('🔔 Notifications: Constants.appOwnership =', Constants.appOwnership);
+    console.log('🔔 Notifications: Running in Expo Go =', Constants.appOwnership === 'expo');
 
-    // Check if running on a physical device
-    if (!Device.isDevice) {
-      console.log('🔔 Notifications: ⚠️ Must use physical device for Push Notifications');
+    // Check if running on a physical device OR in Expo Go
+    // Expo Go works on physical devices but Device.isDevice returns false
+    const isExpoGo = Constants.appOwnership === 'expo';
+    const isPhysicalDevice = Device.isDevice;
+    
+    if (!isPhysicalDevice && !isExpoGo) {
+      console.log('🔔 Notifications: ⚠️ Must use physical device or Expo Go for Push Notifications');
       // Graceful handling for web where permissions might be denied or not applicable
       if (Platform.OS === 'web') {
         const permission = await Notifications.getPermissionsAsync();
@@ -39,6 +45,8 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       }
       return null;
     }
+
+    console.log('🔔 Notifications: ✅ Device check passed (Physical device or Expo Go)');
 
     // Configure notification channel for Android FIRST (before requesting permissions)
     if (Platform.OS === 'android') {
