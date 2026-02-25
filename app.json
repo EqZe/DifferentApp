@@ -69,9 +69,6 @@
     "extra": {
       "router": {},
       "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev",
-      "eas": {
-        "projectId": "fe404aca-e46f-42d5-ac3a-50c265d87ae7"
-      }
     }
   }
 }

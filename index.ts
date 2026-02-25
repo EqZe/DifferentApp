@@ -1,3 +1,6 @@
+// Initialize Natively console log capture before anything else
+import './utils/errorLogger';
+
 
 import 'expo-router/entry';
 import { I18nManager, Platform } from 'react-native';

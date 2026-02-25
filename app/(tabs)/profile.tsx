@@ -292,7 +292,7 @@ export default function ProfileScreen() {
   // Refresh user data when screen comes into focus
   useEffect(() => {
     refreshUser();
-  }, []);
+  }, [refreshUser]);
 
   const handleLogout = async () => {
     try {

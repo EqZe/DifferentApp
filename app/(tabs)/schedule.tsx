@@ -548,7 +548,7 @@ const AnimatedCalendarCell = React.memo(({
         false
       );
     }
-  }, [calendarDay.isToday]);
+  }, [calendarDay.isToday, pulseAnimation]);
   
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -694,7 +694,7 @@ const AnimatedEventCard = React.memo(({ event, index, languageFilter }: any) => 
       -1,
       false
     );
-  }, []);
+  }, [iconScale]);
   
   const animatedCardStyle = useAnimatedStyle(() => {
     return {

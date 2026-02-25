@@ -15,10 +15,11 @@ import * as SplashScreen from "expo-splash-screen";
 import { useNetworkState } from "expo-network";
 import { StatusBar } from "expo-status-bar";
 import { SystemBars } from "react-native-edge-to-edge";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Stack, router } from "expo-router";
 import { Colors, isRTL } from "@/constants/Colors";
 import Constants from "expo-constants";
+import * as Notifications from 'expo-notifications';
 
 // Force RTL layout for Hebrew - MUST be at the very top before any components render
 // This is critical for Android to apply RTL correctly
@@ -67,6 +68,8 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const { isConnected } = useNetworkState();
   const rtl = isRTL();
+  const notificationListener = useRef<Notifications.Subscription>();
+  const responseListener = useRef<Notifications.Subscription>();
 
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -95,6 +98,51 @@ export default function RootLayout() {
       );
     }
   }, [isConnected]);
+
+  // Set up notification listeners
+  useEffect(() => {
+    console.log('🔔 Setting up notification listeners');
+
+    // Listener for notifications received while app is in foreground
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log('🔔 Notification received in foreground:', notification);
+      const data = notification.request.content.data;
+      
+      // Log notification type for debugging
+      if (data?.type) {
+        console.log('🔔 Notification type:', data.type);
+      }
+    });
+
+    // Listener for when user taps on a notification
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('🔔 User tapped notification:', response);
+      const data = response.notification.request.content.data;
+      
+      // Handle different notification types
+      if (data?.type === 'container_update') {
+        console.log('🔔 Navigating to containers screen');
+        router.push('/(tabs)/containers');
+      } else if (data?.type === 'task_approved') {
+        console.log('🔔 Navigating to tasks screen');
+        router.push('/(tabs)/tasks');
+      } else if (data?.type === 'schedule_update') {
+        console.log('🔔 Navigating to schedule screen');
+        router.push('/(tabs)/schedule');
+      }
+    });
+
+    // Cleanup listeners on unmount
+    return () => {
+      console.log('🔔 Cleaning up notification listeners');
+      if (notificationListener.current) {
+        notificationListener.current.remove();
+      }
+      if (responseListener.current) {
+        responseListener.current.remove();
+      }
+    };
+  }, []);
 
   if (!loaded) {
     return null;
