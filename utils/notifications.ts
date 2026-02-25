@@ -13,8 +13,8 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Register for push notifications and return the RAW DEVICE push token
- * Uses getDevicePushTokenAsync() to bypass Expo's push proxy and avoid EXPO_TOKEN errors
+ * Register for push notifications and return the Expo push token
+ * Uses getExpoPushTokenAsync() which works with Expo Go
  * Returns null if registration fails or device is not physical
  * NOTE: This function does NOT save the token to the database
  * The caller (UserContext) is responsible for saving the token
@@ -80,23 +80,25 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       throw new Error('לא ניתנו הרשאות להתראות. אנא אפשר התראות בהגדרות המכשיר.');
     }
 
-    console.log('🔔 Notifications: ✅ Permissions granted, attempting to get raw device push token');
+    console.log('🔔 Notifications: ✅ Permissions granted, attempting to get Expo push token');
 
-    // CRITICAL CHANGE: Using getDevicePushTokenAsync to bypass Expo's push proxy
-    // This gets the raw FCM (Android) or APNs (iOS) token without needing EXPO_TOKEN
-    const token = await Notifications.getDevicePushTokenAsync();
+    // CRITICAL: Using getExpoPushTokenAsync for Expo Go compatibility
+    // This works with Expo Go and returns tokens in format: ExponentPushToken[xxxxxx]
+    const token = await Notifications.getExpoPushTokenAsync({
+      projectId: 'fe404aca-e46f-42c2-ac3a-50c265d87ae7', // Your EAS project ID from app.json
+    });
 
     if (!token || !token.data) {
-      console.log('🔔 Notifications: ❌ Failed to obtain raw device push token');
+      console.log('🔔 Notifications: ❌ Failed to obtain Expo push token');
       throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
     }
 
-    console.log('🔔 Notifications: ✅ Raw device push token obtained successfully:', token.data);
-    console.log('🔔 Notifications: Token type:', token.type); // 'ios' or 'android'
+    console.log('🔔 Notifications: ✅ Expo push token obtained successfully:', token.data);
+    console.log('🔔 Notifications: Token type:', token.type); // 'expo'
     console.log('🔔 Notifications: Token will be saved by the caller (UserContext)');
     console.log('🔔 Notifications: ========== REGISTRATION COMPLETE ==========');
 
-    return token.data; // Return the raw token data (FCM or APNs token)
+    return token.data; // Return the Expo push token (ExponentPushToken[xxxxxx])
   } catch (error: any) {
     console.log('🔔 Notifications: ⚠️ Push notification registration failed:', error?.message || error);
     console.log('🔔 Notifications: Full error details:', JSON.stringify(error, null, 2));
@@ -291,8 +293,7 @@ export async function cancelAllNotifications(): Promise<void> {
 }
 
 /**
- * Send a push notification via Supabase Edge Function to specific raw device push tokens
- * NOTE: Now expects raw FCM/APNs tokens, not Expo push tokens
+ * Send a push notification via Supabase Edge Function to specific Expo push tokens
  */
 export async function sendPushNotificationToTokens(
   accessToken: string,
