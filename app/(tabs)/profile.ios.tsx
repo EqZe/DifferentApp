@@ -271,28 +271,37 @@ export default function ProfileScreen() {
 
   const handleRegisterPushNotifications = async () => {
     console.log('ProfileScreen: User tapped register push notifications button');
+    console.log('ProfileScreen: Starting push notification registration...');
     
     try {
       const token = await registerPushNotifications();
+      console.log('ProfileScreen: Registration completed, token:', token ? 'received' : 'null');
       
       if (token) {
+        console.log('ProfileScreen: ✅ Push notifications registered successfully');
         Alert.alert(
           'הצלחה',
           'התראות Push הופעלו בהצלחה! תקבל עדכונים על משימות, מכולות ולוח זמנים.',
           [{ text: 'אישור' }]
         );
       } else {
+        console.log('ProfileScreen: ⚠️ Registration returned null - likely device/permission issue');
         Alert.alert(
           'שים לב',
-          'לא ניתן להפעיל התראות. ודא שאתה משתמש במכשיר פיזי ושהרשאות ההתראות מופעלות.',
+          'לא ניתן להפעיל התראות.\n\nאנא ודא:\n• אתה משתמש במכשיר פיזי (לא סימולטור)\n• הרשאות התראות מופעלות בהגדרות המכשיר\n• אתה מחובר לאינטרנט',
           [{ text: 'אישור' }]
         );
       }
     } catch (error: any) {
-      console.error('ProfileScreen: Push notification registration error:', error);
+      console.error('ProfileScreen: ❌ Push notification registration error:', error);
+      console.error('ProfileScreen: Error message:', error?.message);
+      console.error('ProfileScreen: Error details:', JSON.stringify(error, null, 2));
+      
+      // Show the actual error message from the registration function
+      const errorMessage = error?.message || 'לא ניתן להפעיל התראות Push';
       Alert.alert(
         'שגיאה',
-        error?.message || 'לא ניתן להפעיל התראות Push',
+        errorMessage,
         [{ text: 'אישור' }]
       );
     }

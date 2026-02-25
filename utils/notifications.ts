@@ -29,24 +29,28 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     console.log('🔔 Notifications: Running in Expo Go =', Constants.appOwnership === 'expo');
 
     // Check if running on a physical device OR in Expo Go
-    // Expo Go works on physical devices but Device.isDevice returns false
+    // CRITICAL: On iOS with Expo Go, Device.isDevice is TRUE and appOwnership is 'expo'
+    // On Android with Expo Go, Device.isDevice is TRUE and appOwnership is 'expo'
+    // We should allow registration if EITHER condition is true
     const isExpoGo = Constants.appOwnership === 'expo';
     const isPhysicalDevice = Device.isDevice;
     
-    if (!isPhysicalDevice && !isExpoGo) {
-      console.log('🔔 Notifications: ⚠️ Must use physical device or Expo Go for Push Notifications');
-      // Graceful handling for web where permissions might be denied or not applicable
-      if (Platform.OS === 'web') {
-        const permission = await Notifications.getPermissionsAsync();
-        if (permission.status !== 'granted') {
-          console.log('🔔 Notifications: ⚠️ Push notification registration failed: Web permissions denied.');
-          return null;
-        }
-      }
+    console.log('🔔 Notifications: isPhysicalDevice =', isPhysicalDevice);
+    console.log('🔔 Notifications: isExpoGo =', isExpoGo);
+    
+    // Allow registration if:
+    // 1. Running on physical device (Device.isDevice === true), OR
+    // 2. Running in Expo Go (Constants.appOwnership === 'expo'), OR
+    // 3. On web with granted permissions
+    const canRegister = isPhysicalDevice || isExpoGo || Platform.OS === 'web';
+    
+    if (!canRegister) {
+      console.log('🔔 Notifications: ❌ Cannot register - not on physical device, Expo Go, or web');
+      console.log('🔔 Notifications: This typically means running in iOS Simulator or Android Emulator');
       return null;
     }
 
-    console.log('🔔 Notifications: ✅ Device check passed (Physical device or Expo Go)');
+    console.log('🔔 Notifications: ✅ Device check passed - can register for push notifications');
 
     // Configure notification channel for Android FIRST (before requesting permissions)
     if (Platform.OS === 'android') {
@@ -70,39 +74,72 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
     // Check existing permissions
     console.log('🔔 Notifications: Checking existing permissions...');
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
+    let permissionsResult;
+    try {
+      permissionsResult = await Notifications.getPermissionsAsync();
+      console.log('🔔 Notifications: Existing permission status:', permissionsResult.status);
+      console.log('🔔 Notifications: Full permissions object:', JSON.stringify(permissionsResult, null, 2));
+    } catch (permError: any) {
+      console.log('🔔 Notifications: ❌ Error checking permissions:', permError?.message || permError);
+      throw new Error('לא ניתן לבדוק הרשאות התראות. אנא נסה שוב.');
+    }
 
-    console.log('🔔 Notifications: Existing permission status:', existingStatus);
+    let finalStatus = permissionsResult.status;
 
     // Request permissions if not already granted
-    if (existingStatus !== 'granted') {
+    if (finalStatus !== 'granted') {
       console.log('🔔 Notifications: Requesting permissions from user...');
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-      console.log('🔔 Notifications: Permission request result:', status);
+      try {
+        const requestResult = await Notifications.requestPermissionsAsync();
+        finalStatus = requestResult.status;
+        console.log('🔔 Notifications: Permission request result:', finalStatus);
+        console.log('🔔 Notifications: Full request result:', JSON.stringify(requestResult, null, 2));
+      } catch (reqError: any) {
+        console.log('🔔 Notifications: ❌ Error requesting permissions:', reqError?.message || reqError);
+        throw new Error('לא ניתן לבקש הרשאות התראות. אנא בדוק את הגדרות המכשיר.');
+      }
     }
 
     // If permission not granted, throw error
     if (finalStatus !== 'granted') {
       console.log('🔔 Notifications: ❌ Permission not granted, cannot register for push notifications');
+      console.log('🔔 Notifications: Final status:', finalStatus);
       throw new Error('לא ניתנו הרשאות להתראות. אנא אפשר התראות בהגדרות המכשיר.');
     }
 
     console.log('🔔 Notifications: ✅ Permissions granted, attempting to get Expo push token');
 
     // Get EAS project ID from app.json
-    const projectId = Constants.easConfig?.projectId || 'fe404aca-e46f-42c2-ac3a-50c265d87ae7';
-    console.log('🔔 Notifications: Using EAS Project ID:', projectId);
+    const projectId = Constants.easConfig?.projectId;
+    console.log('🔔 Notifications: EAS Project ID from Constants:', projectId);
+    
+    if (!projectId) {
+      console.log('🔔 Notifications: ⚠️ No EAS Project ID found in Constants.easConfig');
+      console.log('🔔 Notifications: Using fallback project ID: fe404aca-e46f-42c2-ac3a-50c265d87ae7');
+    }
+
+    const finalProjectId = projectId || 'fe404aca-e46f-42c2-ac3a-50c265d87ae7';
+    console.log('🔔 Notifications: Using Project ID:', finalProjectId);
 
     // CRITICAL: Using getExpoPushTokenAsync for Expo Go compatibility
     // This works with Expo Go and returns tokens in format: ExponentPushToken[xxxxxx]
-    const token = await Notifications.getExpoPushTokenAsync({
-      projectId: projectId,
-    });
+    console.log('🔔 Notifications: Calling getExpoPushTokenAsync...');
+    let token;
+    try {
+      token = await Notifications.getExpoPushTokenAsync({
+        projectId: finalProjectId,
+      });
+      console.log('🔔 Notifications: ✅ getExpoPushTokenAsync returned successfully');
+    } catch (tokenError: any) {
+      console.log('🔔 Notifications: ❌ Error getting Expo push token:', tokenError?.message || tokenError);
+      console.log('🔔 Notifications: Token error details:', JSON.stringify(tokenError, null, 2));
+      console.log('🔔 Notifications: Token error stack:', tokenError?.stack);
+      throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
+    }
 
     if (!token || !token.data) {
-      console.log('🔔 Notifications: ❌ Failed to obtain Expo push token');
+      console.log('🔔 Notifications: ❌ Token object is invalid');
+      console.log('🔔 Notifications: Token object:', JSON.stringify(token, null, 2));
       throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
     }
 
@@ -114,8 +151,11 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     return token.data; // Return the Expo push token (ExponentPushToken[xxxxxx])
   } catch (error: any) {
     console.log('🔔 Notifications: ⚠️ Push notification registration failed:', error?.message || error);
+    console.log('🔔 Notifications: Error name:', error?.name);
+    console.log('🔔 Notifications: Error code:', error?.code);
     console.log('🔔 Notifications: Full error details:', JSON.stringify(error, null, 2));
     console.log('🔔 Notifications: Error stack:', error?.stack);
+    console.log('🔔 Notifications: ========== REGISTRATION FAILED ==========');
     // Re-throw the error so the caller can handle it and show appropriate UI
     throw error;
   }

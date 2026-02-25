@@ -83,6 +83,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return null;
     }
     console.log('👤 UserContext: Manual push notification registration triggered by user');
+    console.log('👤 UserContext: Resetting hasAttemptedPushRegistration flag to allow retry');
+    hasAttemptedPushRegistration.current = false; // Allow retry
     return registerPushToken(session.user.id);
   }, [session]);
 
