@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { api, type User } from '@/utils/api';
@@ -22,6 +22,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRegisteringPush, setIsRegisteringPush] = useState(false);
+  const hasAttemptedPushRegistration = useRef(false);
 
   const loadUserProfile = useCallback(async (authUserId: string) => {
     try {
@@ -30,24 +31,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('UserContext: ✅ User profile loaded -', userData.fullName, 'hasContract:', userData.hasContract);
       console.log('UserContext: Push token status:', userData.pushToken ? 'exists' : 'NULL');
       setUserState(userData);
-
-      // Automatically register for push notifications if not already registered
-      // Only attempt if push_token is null
-      if (!userData.pushToken) {
-        console.log('UserContext: 🔔 Push token is NULL, will attempt automatic registration in 3 seconds...');
-        // Use setTimeout to ensure this doesn't block the UI and happens after the screen is fully loaded
-        // Increased to 3 seconds to ensure all components are mounted and ready
-        setTimeout(() => {
-          console.log('UserContext: 🔔 Starting automatic push notification registration...');
-          registerPushToken(authUserId).catch(err => {
-            console.log('UserContext: ⚠️ Automatic push token registration failed (non-critical):', err?.message || err);
-            // This is expected to fail in simulators and Expo Go without proper setup
-            // The user can manually register from the Profile screen if needed
-          });
-        }, 3000); // 3 seconds delay for stability
-      } else {
-        console.log('UserContext: ✅ Push token already exists, skipping automatic registration');
-      }
     } catch (error) {
       console.error('UserContext: ❌ Error loading user profile:', error);
       setUserState(null);
@@ -103,6 +86,42 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return registerPushToken(session.user.id);
   }, [session]);
 
+  // Separate effect for automatic push notification registration
+  // This runs once when user data is loaded and push token is missing
+  useEffect(() => {
+    if (!user || !session?.user?.id) {
+      return;
+    }
+
+    // Only attempt once per session
+    if (hasAttemptedPushRegistration.current) {
+      console.log('UserContext: 🔔 Push registration already attempted this session, skipping');
+      return;
+    }
+
+    // Check if push token is missing
+    if (!user.pushToken || user.pushToken === '') {
+      console.log('UserContext: 🔔 Push token is NULL/empty, will attempt automatic registration in 2 seconds...');
+      hasAttemptedPushRegistration.current = true;
+      
+      const timeoutId = setTimeout(() => {
+        console.log('UserContext: 🔔 Starting automatic push notification registration...');
+        registerPushToken(session.user.id).catch(err => {
+          console.log('UserContext: ⚠️ Automatic push token registration failed (non-critical):', err?.message || err);
+          // This is expected to fail in simulators and Expo Go without proper setup
+          // The user can manually register from the Profile screen if needed
+        });
+      }, 2000);
+
+      return () => {
+        console.log('UserContext: 🧹 Cleaning up push registration timeout');
+        clearTimeout(timeoutId);
+      };
+    } else {
+      console.log('UserContext: ✅ Push token already exists, skipping automatic registration');
+    }
+  }, [user, session]);
+
   useEffect(() => {
     console.log('UserContext: ========== INITIALIZING AUTH ==========');
     console.log('UserContext: Supabase URL:', supabase.supabaseUrl);
@@ -141,8 +160,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
       
       if (_event === 'SIGNED_IN') {
         console.log('UserContext: ✅ User signed in successfully');
+        // Reset the registration attempt flag on new sign-in
+        hasAttemptedPushRegistration.current = false;
       } else if (_event === 'SIGNED_OUT') {
         console.log('UserContext: 🚪 User signed out');
+        // Reset the registration attempt flag on sign-out
+        hasAttemptedPushRegistration.current = false;
       } else if (_event === 'TOKEN_REFRESHED') {
         console.log('UserContext: 🔄 Token refreshed successfully');
       } else if (_event === 'USER_UPDATED') {
