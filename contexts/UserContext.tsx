@@ -23,6 +23,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isRegisteringPush, setIsRegisteringPush] = useState(false);
   const hasAttemptedPushRegistration = useRef(false);
+  const registrationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const loadUserProfile = useCallback(async (authUserId: string) => {
     try {
@@ -42,46 +43,67 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const registerPushToken = async (authUserId: string): Promise<string | null> => {
     setIsRegisteringPush(true);
     try {
-      console.log('👤 UserContext: Starting push notification token registration for user:', authUserId);
+      console.log('👤 UserContext: ========== STARTING PUSH TOKEN REGISTRATION ==========');
+      console.log('👤 UserContext: User ID:', authUserId);
+      console.log('👤 UserContext: Calling registerForPushNotificationsAsync()...');
+      
       const pushToken = await registerForPushNotificationsAsync();
       
+      console.log('👤 UserContext: registerForPushNotificationsAsync() returned');
+      console.log('👤 UserContext: Token received:', pushToken ? `YES (${pushToken.substring(0, 30)}...)` : 'NULL');
+      
       if (pushToken && pushToken.trim() !== '') {
-        console.log('👤 UserContext: ✅ Push token obtained:', pushToken);
+        console.log('👤 UserContext: ✅ Valid push token obtained, length:', pushToken.length);
         
         try {
-          console.log('👤 UserContext: Saving push token to database...');
+          console.log('👤 UserContext: 💾 Calling api.savePushToken()...');
           await api.savePushToken(authUserId, pushToken);
-          console.log('👤 UserContext: ✅ Push token saved to database successfully');
+          console.log('👤 UserContext: ✅ api.savePushToken() completed successfully');
           
           // Refresh user data to update the push_token in state
-          console.log('👤 UserContext: Refreshing user data to confirm token save...');
+          console.log('👤 UserContext: 🔄 Refreshing user data to confirm token save...');
           const freshUserData = await api.getUserByAuthId(authUserId);
+          console.log('👤 UserContext: ✅ User data refreshed');
+          console.log('👤 UserContext: Fresh push_token value:', freshUserData.pushToken ? `exists (${freshUserData.pushToken.substring(0, 30)}...)` : 'NULL or empty');
+          
           setUserState(freshUserData);
-          console.log('👤 UserContext: ✅ User data refreshed, push_token now:', freshUserData.pushToken ? `exists (${freshUserData.pushToken.substring(0, 20)}...)` : 'NULL or empty');
           
           // Mark as successfully registered
           hasAttemptedPushRegistration.current = true;
+          console.log('👤 UserContext: ✅ hasAttemptedPushRegistration set to TRUE');
+          console.log('👤 UserContext: ========== PUSH TOKEN REGISTRATION COMPLETE ==========');
           return pushToken;
         } catch (saveError: any) {
-          console.log('👤 UserContext: ⚠️ Failed to save push token to database:', saveError?.message || saveError);
+          console.log('👤 UserContext: ❌ Failed to save push token to database');
+          console.log('👤 UserContext: Save error:', saveError?.message || saveError);
+          console.log('👤 UserContext: Save error stack:', saveError?.stack);
           // Don't mark as attempted if save failed - allow retry
           hasAttemptedPushRegistration.current = false;
+          console.log('👤 UserContext: ⚠️ hasAttemptedPushRegistration set to FALSE (save failed)');
+          console.log('👤 UserContext: ========== PUSH TOKEN REGISTRATION FAILED (SAVE) ==========');
           return null;
         }
       } else {
         console.log('👤 UserContext: ℹ️ No push token obtained or token is empty');
-        console.log('👤 UserContext: ℹ️ Push notifications require a physical device');
+        console.log('👤 UserContext: ℹ️ This is expected on simulators or if permissions were denied');
         // Don't mark as attempted if no token - allow retry
         hasAttemptedPushRegistration.current = false;
+        console.log('👤 UserContext: ⚠️ hasAttemptedPushRegistration set to FALSE (no token)');
+        console.log('👤 UserContext: ========== PUSH TOKEN REGISTRATION FAILED (NO TOKEN) ==========');
         return null;
       }
     } catch (error: any) {
-      console.log('👤 UserContext: ⚠️ Push notification setup failed:', error?.message || error);
+      console.log('👤 UserContext: ❌ Push notification setup failed with exception');
+      console.log('👤 UserContext: Error:', error?.message || error);
+      console.log('👤 UserContext: Error stack:', error?.stack);
       // Don't mark as attempted if error - allow retry
       hasAttemptedPushRegistration.current = false;
+      console.log('👤 UserContext: ⚠️ hasAttemptedPushRegistration set to FALSE (exception)');
+      console.log('👤 UserContext: ========== PUSH TOKEN REGISTRATION FAILED (EXCEPTION) ==========');
       return null;
     } finally {
       setIsRegisteringPush(false);
+      console.log('👤 UserContext: isRegisteringPush set to FALSE');
     }
   };
 
@@ -91,7 +113,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('👤 UserContext: Cannot register push notifications - no session');
       return null;
     }
-    console.log('👤 UserContext: Manual push notification registration triggered by user');
+    console.log('👤 UserContext: 🔘 Manual push notification registration triggered by user');
     console.log('👤 UserContext: Resetting hasAttemptedPushRegistration flag to allow retry');
     hasAttemptedPushRegistration.current = false; // Allow retry
     return registerPushToken(session.user.id);
@@ -100,7 +122,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Separate effect for automatic push notification registration
   // This runs once when user data is loaded and push token is missing
   useEffect(() => {
+    console.log('UserContext: 🔔 Push registration effect triggered');
+    console.log('UserContext: 🔔 user exists:', !!user);
+    console.log('UserContext: 🔔 session exists:', !!session);
+    console.log('UserContext: 🔔 hasAttemptedPushRegistration:', hasAttemptedPushRegistration.current);
+    
     if (!user || !session?.user?.id) {
+      console.log('UserContext: 🔔 Skipping push registration - no user or session');
       return;
     }
 
@@ -113,14 +141,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
     // Check if push token is missing or empty
     const tokenIsMissing = !user.pushToken || user.pushToken.trim() === '';
     
+    console.log('UserContext: 🔔 Token is missing:', tokenIsMissing);
+    console.log('UserContext: 🔔 Current push_token value:', user.pushToken === null ? 'null' : user.pushToken === '' ? 'empty string' : `"${user.pushToken}"`);
+    
     if (tokenIsMissing) {
       console.log('UserContext: 🔔 Push token is NULL/empty, will attempt automatic registration in 2 seconds...');
-      console.log('UserContext: 🔔 Current push_token value:', user.pushToken === null ? 'null' : user.pushToken === '' ? 'empty string' : `"${user.pushToken}"`);
       
-      const timeoutId = setTimeout(() => {
-        console.log('UserContext: 🔔 Starting automatic push notification registration...');
-        registerPushToken(session.user.id).catch(err => {
-          console.log('UserContext: ⚠️ Automatic push token registration failed (non-critical):', err?.message || err);
+      registrationTimeoutRef.current = setTimeout(() => {
+        console.log('UserContext: 🔔 ⏰ 2 seconds elapsed, starting automatic push notification registration NOW...');
+        registerPushToken(session.user.id).then((token) => {
+          if (token) {
+            console.log('UserContext: 🔔 ✅ Automatic registration succeeded, token:', token.substring(0, 30) + '...');
+          } else {
+            console.log('UserContext: 🔔 ⚠️ Automatic registration returned null (expected on simulators)');
+          }
+        }).catch(err => {
+          console.log('UserContext: 🔔 ⚠️ Automatic push token registration failed (non-critical):', err?.message || err);
           // This is expected to fail in simulators and Expo Go without proper setup
           // The user can manually register from the Profile screen if needed
         });
@@ -128,13 +164,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       return () => {
         console.log('UserContext: 🧹 Cleaning up push registration timeout');
-        clearTimeout(timeoutId);
+        if (registrationTimeoutRef.current) {
+          clearTimeout(registrationTimeoutRef.current);
+          registrationTimeoutRef.current = null;
+        }
       };
     } else {
       console.log('UserContext: ✅ Push token already exists, skipping automatic registration');
       console.log('UserContext: ✅ Token preview:', user.pushToken.substring(0, 20) + '...');
     }
-  }, [user, session]);
+  }, [user?.id, user?.pushToken, session?.user?.id]);
 
   useEffect(() => {
     console.log('UserContext: ========== INITIALIZING AUTH ==========');
