@@ -2,6 +2,7 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 // Configure how notifications are handled when the app is in the foreground
 Notifications.setNotificationHandler({
@@ -82,10 +83,14 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
     console.log('🔔 Notifications: ✅ Permissions granted, attempting to get Expo push token');
 
+    // Get EAS project ID from app.json
+    const projectId = Constants.easConfig?.projectId || 'fe404aca-e46f-42c2-ac3a-50c265d87ae7';
+    console.log('🔔 Notifications: Using EAS Project ID:', projectId);
+
     // CRITICAL: Using getExpoPushTokenAsync for Expo Go compatibility
     // This works with Expo Go and returns tokens in format: ExponentPushToken[xxxxxx]
     const token = await Notifications.getExpoPushTokenAsync({
-      projectId: 'fe404aca-e46f-42c2-ac3a-50c265d87ae7', // Your EAS project ID from app.json
+      projectId: projectId,
     });
 
     if (!token || !token.data) {
