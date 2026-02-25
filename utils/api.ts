@@ -347,8 +347,18 @@ export const api = {
 
   savePushToken: async (authUserId: string, pushToken: string): Promise<void> => {
     try {
-      console.log('API: Saving push token for user', authUserId);
+      console.log('API: ========== SAVING PUSH TOKEN ==========');
+      console.log('API: User ID:', authUserId);
+      console.log('API: Token to save:', pushToken);
+      console.log('API: Token length:', pushToken.length);
+      console.log('API: Token preview:', pushToken.substring(0, 30) + '...');
       
+      // Validate token before saving
+      if (!pushToken || pushToken.trim() === '') {
+        console.log('API: ❌ Cannot save empty or null push token');
+        throw new Error('Push token is empty or null');
+      }
+
       const { data, error } = await supabase
         .from('users')
         .update({ push_token: pushToken })
@@ -356,13 +366,24 @@ export const api = {
         .select();
 
       if (error) {
-        console.log('API: ⚠️ Save push token failed:', error.message);
+        console.log('API: ❌ Save push token failed:', error.message);
+        console.log('API: Error code:', error.code);
+        console.log('API: Error details:', JSON.stringify(error, null, 2));
         throw new Error(error.message || 'שגיאה בשמירת טוקן התראות');
       }
 
+      if (!data || data.length === 0) {
+        console.log('API: ⚠️ No rows updated - user not found?');
+        throw new Error('User not found when saving push token');
+      }
+
       console.log('API: ✅ Push token saved successfully');
+      console.log('API: Updated user data:', data[0]);
+      console.log('API: Saved token preview:', data[0].push_token ? data[0].push_token.substring(0, 30) + '...' : 'NULL');
+      console.log('API: ========== PUSH TOKEN SAVE COMPLETE ==========');
     } catch (error: any) {
       console.log('API: ⚠️ Push token save error:', error?.message || error);
+      console.log('API: Error stack:', error?.stack);
       throw error;
     }
   },

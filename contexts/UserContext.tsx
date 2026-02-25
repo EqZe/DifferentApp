@@ -29,7 +29,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('UserContext: Loading user profile for auth user', authUserId);
       const userData = await api.getUserByAuthId(authUserId);
       console.log('UserContext: ✅ User profile loaded -', userData.fullName, 'hasContract:', userData.hasContract);
-      console.log('UserContext: Push token status:', userData.pushToken ? 'exists' : 'NULL');
+      console.log('UserContext: Push token status:', userData.pushToken ? `exists (${userData.pushToken.substring(0, 20)}...)` : 'NULL or empty');
       setUserState(userData);
     } catch (error) {
       console.error('UserContext: ❌ Error loading user profile:', error);
@@ -45,31 +45,40 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('👤 UserContext: Starting push notification token registration for user:', authUserId);
       const pushToken = await registerForPushNotificationsAsync();
       
-      if (pushToken) {
+      if (pushToken && pushToken.trim() !== '') {
         console.log('👤 UserContext: ✅ Push token obtained:', pushToken);
         
         try {
+          console.log('👤 UserContext: Saving push token to database...');
           await api.savePushToken(authUserId, pushToken);
           console.log('👤 UserContext: ✅ Push token saved to database successfully');
           
           // Refresh user data to update the push_token in state
+          console.log('👤 UserContext: Refreshing user data to confirm token save...');
           const freshUserData = await api.getUserByAuthId(authUserId);
           setUserState(freshUserData);
-          console.log('👤 UserContext: ✅ User data refreshed, push_token now:', freshUserData.pushToken ? 'exists' : 'NULL');
+          console.log('👤 UserContext: ✅ User data refreshed, push_token now:', freshUserData.pushToken ? `exists (${freshUserData.pushToken.substring(0, 20)}...)` : 'NULL or empty');
           
+          // Mark as successfully registered
+          hasAttemptedPushRegistration.current = true;
           return pushToken;
         } catch (saveError: any) {
           console.log('👤 UserContext: ⚠️ Failed to save push token to database:', saveError?.message || saveError);
+          // Don't mark as attempted if save failed - allow retry
+          hasAttemptedPushRegistration.current = false;
           return null;
         }
       } else {
-        console.log('👤 UserContext: ℹ️ No push token obtained (expected in development/simulator)');
+        console.log('👤 UserContext: ℹ️ No push token obtained or token is empty');
         console.log('👤 UserContext: ℹ️ Push notifications require a physical device');
+        // Don't mark as attempted if no token - allow retry
+        hasAttemptedPushRegistration.current = false;
         return null;
       }
     } catch (error: any) {
       console.log('👤 UserContext: ⚠️ Push notification setup failed:', error?.message || error);
-      // This is non-critical - app continues to work without push notifications
+      // Don't mark as attempted if error - allow retry
+      hasAttemptedPushRegistration.current = false;
       return null;
     } finally {
       setIsRegisteringPush(false);
@@ -95,16 +104,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Only attempt once per session
+    // Only attempt once per session (and only if previous attempt succeeded)
     if (hasAttemptedPushRegistration.current) {
-      console.log('UserContext: 🔔 Push registration already attempted this session, skipping');
+      console.log('UserContext: 🔔 Push registration already attempted successfully this session, skipping');
       return;
     }
 
-    // Check if push token is missing
-    if (!user.pushToken || user.pushToken === '') {
+    // Check if push token is missing or empty
+    const tokenIsMissing = !user.pushToken || user.pushToken.trim() === '';
+    
+    if (tokenIsMissing) {
       console.log('UserContext: 🔔 Push token is NULL/empty, will attempt automatic registration in 2 seconds...');
-      hasAttemptedPushRegistration.current = true;
+      console.log('UserContext: 🔔 Current push_token value:', user.pushToken === null ? 'null' : user.pushToken === '' ? 'empty string' : `"${user.pushToken}"`);
       
       const timeoutId = setTimeout(() => {
         console.log('UserContext: 🔔 Starting automatic push notification registration...');
@@ -121,6 +132,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       };
     } else {
       console.log('UserContext: ✅ Push token already exists, skipping automatic registration');
+      console.log('UserContext: ✅ Token preview:', user.pushToken.substring(0, 20) + '...');
     }
   }, [user, session]);
 
@@ -213,7 +225,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.log('UserContext: Refreshing user data from database');
       const freshUserData = await api.getUserByAuthId(session.user.id);
       console.log('UserContext: ✅ User data refreshed, hasContract:', freshUserData.hasContract);
-      console.log('UserContext: Push token status:', freshUserData.pushToken ? 'exists' : 'NULL');
+      console.log('UserContext: Push token status:', freshUserData.pushToken ? `exists (${freshUserData.pushToken.substring(0, 20)}...)` : 'NULL or empty');
       setUserState(freshUserData);
     } catch (error) {
       console.error('UserContext: ❌ Failed to refresh user data', error);
