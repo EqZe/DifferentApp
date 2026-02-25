@@ -1,14 +1,5 @@
 
-import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
-import { useUser } from '@/contexts/UserContext';
-import LottieView from 'lottie-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { api } from '@/utils/api';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
 import React, { useState, useEffect } from 'react';
-import { sendTestTaskReminders, registerForPushNotificationsAsync } from '@/utils/notifications';
-import { IconSymbol } from '@/components/IconSymbol';
 import {
   View,
   Text,
@@ -22,6 +13,15 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { useUser } from '@/contexts/UserContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { api } from '@/utils/api';
+import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
+import { IconSymbol } from '@/components/IconSymbol';
+import { sendTestTaskReminders, registerForPushNotificationsAsync } from '@/utils/notifications';
+import LottieView from 'lottie-react-native';
+import { useRouter } from 'expo-router';
 
 const styles = StyleSheet.create({
   container: {
@@ -271,12 +271,17 @@ export default function ProfileScreen() {
   };
 
   const handleRegisterPushNotifications = async () => {
-    console.log('ProfileScreen: User tapped register push notifications button');
-    console.log('ProfileScreen: Starting push notification registration...');
+    console.log('ProfileScreen: ========== USER TAPPED REGISTER PUSH BUTTON ==========');
+    console.log('ProfileScreen: Button handler called');
+    console.log('ProfileScreen: isRegisteringPush:', isRegisteringPush);
+    console.log('ProfileScreen: user exists:', !!user);
+    console.log('ProfileScreen: session exists:', !!session);
     
     try {
+      console.log('ProfileScreen: About to call registerPushNotifications from context...');
       const token = await registerPushNotifications();
-      console.log('ProfileScreen: Registration completed, token:', token ? 'received' : 'null');
+      console.log('ProfileScreen: registerPushNotifications returned');
+      console.log('ProfileScreen: Token received:', token ? `YES (${token.substring(0, 30)}...)` : 'NULL');
       
       if (token) {
         console.log('ProfileScreen: ✅ Push notifications registered successfully');
@@ -296,7 +301,10 @@ export default function ProfileScreen() {
     } catch (error: any) {
       console.error('ProfileScreen: ❌ Push notification registration error:', error);
       console.error('ProfileScreen: Error message:', error?.message);
+      console.error('ProfileScreen: Error name:', error?.name);
+      console.error('ProfileScreen: Error code:', error?.code);
       console.error('ProfileScreen: Error details:', JSON.stringify(error, null, 2));
+      console.error('ProfileScreen: Error stack:', error?.stack);
       
       // Show the actual error message from the registration function
       const errorMessage = error?.message || 'לא ניתן להפעיל התראות Push';

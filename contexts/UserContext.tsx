@@ -41,22 +41,25 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const registerPushToken = async (authUserId: string): Promise<string | null> => {
+    console.log('👤 UserContext: ========== registerPushToken CALLED ==========');
+    console.log('👤 UserContext: Setting isRegisteringPush to TRUE');
     setIsRegisteringPush(true);
+    
     try {
       console.log('👤 UserContext: ========== STARTING PUSH TOKEN REGISTRATION ==========');
       console.log('👤 UserContext: User ID:', authUserId);
-      console.log('👤 UserContext: Calling registerForPushNotificationsAsync()...');
+      console.log('👤 UserContext: About to call registerForPushNotificationsAsync()...');
       
       const pushToken = await registerForPushNotificationsAsync();
       
-      console.log('👤 UserContext: registerForPushNotificationsAsync() returned');
+      console.log('👤 UserContext: registerForPushNotificationsAsync() COMPLETED');
       console.log('👤 UserContext: Token received:', pushToken ? `YES (${pushToken.substring(0, 30)}...)` : 'NULL');
       
       if (pushToken && pushToken.trim() !== '') {
         console.log('👤 UserContext: ✅ Valid push token obtained, length:', pushToken.length);
         
         try {
-          console.log('👤 UserContext: 💾 Calling api.savePushToken()...');
+          console.log('👤 UserContext: 💾 About to call api.savePushToken()...');
           await api.savePushToken(authUserId, pushToken);
           console.log('👤 UserContext: ✅ api.savePushToken() completed successfully');
           
@@ -81,7 +84,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           hasAttemptedPushRegistration.current = false;
           console.log('👤 UserContext: ⚠️ hasAttemptedPushRegistration set to FALSE (save failed)');
           console.log('👤 UserContext: ========== PUSH TOKEN REGISTRATION FAILED (SAVE) ==========');
-          return null;
+          throw saveError; // Re-throw so ProfileScreen can catch it
         }
       } else {
         console.log('👤 UserContext: ℹ️ No push token obtained or token is empty');
@@ -100,22 +103,29 @@ export function UserProvider({ children }: { children: ReactNode }) {
       hasAttemptedPushRegistration.current = false;
       console.log('👤 UserContext: ⚠️ hasAttemptedPushRegistration set to FALSE (exception)');
       console.log('👤 UserContext: ========== PUSH TOKEN REGISTRATION FAILED (EXCEPTION) ==========');
-      return null;
+      throw error; // Re-throw so ProfileScreen can catch it
     } finally {
+      console.log('👤 UserContext: Setting isRegisteringPush to FALSE');
       setIsRegisteringPush(false);
-      console.log('👤 UserContext: isRegisteringPush set to FALSE');
     }
   };
 
   // Expose registerPushNotifications so it can be called manually from UI
   const registerPushNotifications = useCallback(async (): Promise<string | null> => {
+    console.log('👤 UserContext: ========== registerPushNotifications CALLED FROM UI ==========');
+    console.log('👤 UserContext: session exists:', !!session);
+    console.log('👤 UserContext: session.user.id:', session?.user?.id || 'NULL');
+    
     if (!session?.user?.id) {
-      console.log('👤 UserContext: Cannot register push notifications - no session');
-      return null;
+      console.log('👤 UserContext: ❌ Cannot register push notifications - no session');
+      throw new Error('אין חיבור פעיל. אנא התחבר מחדש.');
     }
+    
     console.log('👤 UserContext: 🔘 Manual push notification registration triggered by user');
     console.log('👤 UserContext: Resetting hasAttemptedPushRegistration flag to allow retry');
     hasAttemptedPushRegistration.current = false; // Allow retry
+    
+    console.log('👤 UserContext: Calling registerPushToken with user ID:', session.user.id);
     return registerPushToken(session.user.id);
   }, [session]);
 
