@@ -1,28 +1,69 @@
 
 const { withAndroidStyles, withAppBuildGradle } = require('@expo/config-plugins');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Expo Config Plugin to fix Material Theme issues on Android
  * 
  * This plugin performs two fixes:
- * 1. Replaces Theme.Material3Expressive with Theme.Material3 in styles.xml
+ * 1. Adds theme aliases for MaterialComponents and Material3Expressive themes
  * 2. Injects the Material library dependency into android/app/build.gradle
  */
 
-// Fix 1: Replace Theme.Material3Expressive with Theme.Material3 in styles.xml
-const withMaterialThemeFix = (config) => {
+// Fix 1: Add theme aliases to styles.xml
+const withMaterialThemeAliases = (config) => {
   return withAndroidStyles(config, (config) => {
     const styles = config.modResults;
     
-    // Convert styles XML to string for manipulation
-    let stylesString = JSON.stringify(styles);
+    // Define the theme aliases we need to add
+    const aliasesToAdd = [
+      // MaterialComponents aliases
+      { name: 'Theme.MaterialComponents.DayNight.NoActionBar', parent: 'Theme.Material3.DayNight.NoActionBar' },
+      { name: 'Theme.MaterialComponents.Light.NoActionBar', parent: 'Theme.Material3.Light.NoActionBar' },
+      // Material3Expressive aliases
+      { name: 'Theme.Material3Expressive.DayNight.NoActionBar', parent: 'Theme.Material3.DayNight.NoActionBar' },
+      { name: 'Theme.Material3Expressive.DynamicColors.DayNight.NoActionBar', parent: 'Theme.Material3.DynamicColors.DayNight.NoActionBar' },
+      { name: 'Theme.Material3Expressive.DynamicColors.Light.NoActionBar', parent: 'Theme.Material3.DynamicColors.Light.NoActionBar' },
+      { name: 'Theme.Material3Expressive.Light.NoActionBar', parent: 'Theme.Material3.Light.NoActionBar' },
+    ];
     
-    // Replace all occurrences of Theme.Material3Expressive with Theme.Material3
-    stylesString = stylesString.replace(/Theme\.Material3Expressive/g, 'Theme.Material3');
+    // Ensure resources object exists
+    if (!styles.resources) {
+      styles.resources = {};
+    }
     
-    // Convert back to object
-    config.modResults = JSON.parse(stylesString);
+    // Ensure style array exists
+    if (!styles.resources.style) {
+      styles.resources.style = [];
+    }
     
+    // Convert to array if it's not already
+    if (!Array.isArray(styles.resources.style)) {
+      styles.resources.style = [styles.resources.style];
+    }
+    
+    // Get existing style names to avoid duplicates
+    const existingStyleNames = styles.resources.style
+      .filter(style => style && style.$)
+      .map(style => style.$.name);
+    
+    // Add each alias if it doesn't already exist
+    aliasesToAdd.forEach(alias => {
+      if (!existingStyleNames.includes(alias.name)) {
+        styles.resources.style.push({
+          $: {
+            name: alias.name,
+            parent: alias.parent
+          }
+        });
+        console.log(`✅ Added theme alias: ${alias.name} -> ${alias.parent}`);
+      } else {
+        console.log(`⏭️  Theme alias already exists: ${alias.name}`);
+      }
+    });
+    
+    config.modResults = styles;
     return config;
   });
 };
@@ -66,7 +107,7 @@ module.exports = (config) => {
   console.log('🔧 Applying Material Theme fixes...');
   
   // Apply both fixes
-  config = withMaterialThemeFix(config);
+  config = withMaterialThemeAliases(config);
   config = withMaterialDependency(config);
   
   console.log('✅ Material Theme fixes applied successfully');
