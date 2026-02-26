@@ -21,11 +21,13 @@ function applyStylesMod(stylesContent) {
   // Ensure stylesContent is a valid string
   if (!stylesContent || typeof stylesContent !== 'string' || stylesContent.trim() === '') {
     console.log('⚠️ styles.xml content is empty or undefined, using default structure');
-    stylesContent = DEFAULT_STYLES_XML;
+    return DEFAULT_STYLES_XML;
   }
 
+  let content = stylesContent;
+
   // Replace Material3Expressive with standard Material3
-  stylesContent = stylesContent.replace(/Theme\.Material3Expressive/g, 'Theme.Material3');
+  content = content.replace(/Theme\.Material3Expressive/g, 'Theme.Material3');
 
   // Add theme aliases if not present
   const aliases = [
@@ -46,35 +48,60 @@ function applyStylesMod(stylesContent) {
 
   aliases.forEach(({ from, to }) => {
     const aliasTag = `<style name="${from}" parent="${to}" />`;
-    if (!stylesContent.includes(aliasTag)) {
+    if (!content.includes(aliasTag)) {
       // Find the closing </resources> tag and insert before it
-      if (stylesContent.includes('</resources>')) {
-        stylesContent = stylesContent.replace('</resources>', `  ${aliasTag}\n</resources>`);
+      if (content.includes('</resources>')) {
+        content = content.replace('</resources>', `  ${aliasTag}\n</resources>`);
       } else {
         console.warn(`⚠️ Could not find </resources> tag in styles.xml, appending alias`);
-        stylesContent += `\n  ${aliasTag}`;
+        content += `\n  ${aliasTag}`;
       }
     }
   });
 
-  return stylesContent;
+  return content;
 }
 
 // Fix 1: Add theme aliases to styles.xml
 const withMaterialThemeStyles = (config) => {
   return withAndroidStyles(config, (configMod) => {
     try {
-      // Use configMod.modResults.contents directly - this is the correct way
+      // Check if modResults exists and has contents
+      if (!configMod.modResults) {
+        console.warn('⚠️ modResults is undefined, initializing with default structure');
+        configMod.modResults = {
+          contents: DEFAULT_STYLES_XML,
+          path: ''
+        };
+        return configMod;
+      }
+
+      // Get the current content, defaulting to DEFAULT_STYLES_XML if undefined
       let stylesContent = configMod.modResults.contents;
       
       console.log('📝 Applying Material Theme fixes to styles.xml');
-      stylesContent = applyStylesMod(stylesContent);
-      configMod.modResults.contents = stylesContent; // Update the content
+      
+      // Apply modifications
+      const modifiedContent = applyStylesMod(stylesContent);
+      
+      // Update the content
+      configMod.modResults.contents = modifiedContent;
+      
       return configMod;
     } catch (error) {
       console.error('❌ Error applying Material Theme styles:', error.message);
-      // Return default content on error
-      configMod.modResults.contents = DEFAULT_STYLES_XML;
+      console.error('Stack trace:', error.stack);
+      
+      // Ensure we return valid content even on error
+      if (!configMod.modResults) {
+        configMod.modResults = {
+          contents: DEFAULT_STYLES_XML,
+          path: ''
+        };
+      } else {
+        configMod.modResults.contents = DEFAULT_STYLES_XML;
+      }
+      
       return configMod;
     }
   });
@@ -84,6 +111,12 @@ const withMaterialThemeStyles = (config) => {
 const withMaterialDependency = (config) => {
   return withAppBuildGradle(config, (configMod) => {
     try {
+      // Check if modResults exists
+      if (!configMod.modResults || !configMod.modResults.contents) {
+        console.warn('⚠️ build.gradle modResults is undefined, skipping Material dependency injection');
+        return configMod;
+      }
+
       if (configMod.modResults.language === 'groovy') {
         const dependency = "implementation 'com.google.android.material:material:1.12.0'";
         if (!configMod.modResults.contents.includes(dependency)) {
@@ -100,6 +133,7 @@ const withMaterialDependency = (config) => {
       }
     } catch (error) {
       console.error('❌ Error injecting Material dependency:', error.message);
+      console.error('Stack trace:', error.stack);
     }
     return configMod;
   });
@@ -108,9 +142,16 @@ const withMaterialDependency = (config) => {
 // Main plugin combining all fixes
 const withMaterialThemeFixPlugin = (config) => {
   console.log('🔧 Applying Material Theme fixes...');
-  config = withMaterialThemeStyles(config);
-  config = withMaterialDependency(config);
-  console.log('✅ Material Theme fixes applied successfully');
+  
+  try {
+    config = withMaterialThemeStyles(config);
+    config = withMaterialDependency(config);
+    console.log('✅ Material Theme fixes applied successfully');
+  } catch (error) {
+    console.error('❌ Error in Material Theme Fix Plugin:', error.message);
+    console.error('Stack trace:', error.stack);
+  }
+  
   return config;
 };
 

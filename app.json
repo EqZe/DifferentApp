@@ -1,7 +1,8 @@
+
 {
   "expo": {
     "name": "Different",
-    "slug": "differentapp",
+    "slug": "Different",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/different logo.png",
@@ -27,7 +28,6 @@
         "foregroundImage": "./assets/images/different logo.png",
         "backgroundColor": "#000000"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.differentapp.com",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
@@ -55,7 +55,7 @@
       ],
       "./plugins/fix-material-theme.js"
     ],
-    "scheme": "Different",
+    "scheme": "different",
     "experiments": {
       "typedRoutes": true
     },
