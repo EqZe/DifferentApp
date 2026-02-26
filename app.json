@@ -1,7 +1,8 @@
+
 {
   "expo": {
     "name": "Different",
-    "slug": "differentapp",
+    "slug": "Different",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/different logo.png",
@@ -52,9 +53,10 @@
           "androidMode": "default",
           "androidCollapsedTitle": "Different"
         }
-      ]
+      ],
+      "./plugins/fix-material-theme.js"
     ],
-    "scheme": "Different",
+    "scheme": "different",
     "experiments": {
       "typedRoutes": true
     },
@@ -65,9 +67,6 @@
     "extra": {
       "router": {},
       "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev"
-    },
-    "eas": {
-      "projectId": "fe404aca-e46f-42c2-ac3a-50c265d87ae7"
     }
   }
 }
