@@ -18,13 +18,21 @@ const DEFAULT_STYLES_XML = `<?xml version="1.0" encoding="utf-8"?>
 
 // Helper to apply theme modifications to styles.xml content
 function applyStylesMod(stylesContent) {
-  // Ensure stylesContent is a valid string
+  // Ensure stylesContent is a valid string - this is the critical fix
   if (!stylesContent || typeof stylesContent !== 'string' || stylesContent.trim() === '') {
     console.log('⚠️ styles.xml content is empty or undefined, using default structure');
     return DEFAULT_STYLES_XML;
   }
 
   let content = stylesContent;
+
+  // Ensure XML declaration is present and clean
+  if (!content.startsWith('<?xml')) {
+    content = `<?xml version="1.0" encoding="utf-8"?>\n${content}`;
+  }
+
+  // Remove unused xmlns:tools attribute that can confuse the merger
+  content = content.replace(/xmlns:tools="[^"]*"/g, '');
 
   // Replace Material3Expressive with standard Material3
   content = content.replace(/Theme\.Material3Expressive/g, 'Theme.Material3');
@@ -76,8 +84,14 @@ const withMaterialThemeStyles = (config) => {
         return configMod;
       }
 
-      // Get the current content, defaulting to DEFAULT_STYLES_XML if undefined
+      // Get the current content, defaulting to DEFAULT_STYLES_XML if undefined or empty
       let stylesContent = configMod.modResults.contents;
+      
+      // CRITICAL FIX: Ensure stylesContent is a string before passing to applyStylesMod
+      if (!stylesContent || typeof stylesContent !== 'string') {
+        console.warn('⚠️ styles.xml content is not a valid string, using default');
+        stylesContent = DEFAULT_STYLES_XML;
+      }
       
       console.log('📝 Applying Material Theme fixes to styles.xml');
       
@@ -98,7 +112,7 @@ const withMaterialThemeStyles = (config) => {
           contents: DEFAULT_STYLES_XML,
           path: ''
         };
-      } else {
+      } else if (!configMod.modResults.contents || typeof configMod.modResults.contents !== 'string') {
         configMod.modResults.contents = DEFAULT_STYLES_XML;
       }
       
