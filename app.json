@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Different",
-    "slug": "Different",
+    "slug": "differentapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/different logo.png",
