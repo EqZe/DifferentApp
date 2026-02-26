@@ -9,8 +9,21 @@ const { withAndroidStyles, withAppBuildGradle, createRunOncePlugin } = require('
  * 2. Injects the Material library dependency into android/app/build.gradle
  */
 
+// Default styles.xml content if file doesn't exist
+const DEFAULT_STYLES_XML = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar" />
+</resources>`;
+
 // Helper to apply theme modifications to styles.xml content
 function applyStylesMod(stylesContent) {
+  // Ensure stylesContent is a valid string
+  if (!stylesContent || typeof stylesContent !== 'string' || stylesContent.trim() === '') {
+    console.log('⚠️ styles.xml content is empty or undefined, using default structure');
+    stylesContent = DEFAULT_STYLES_XML;
+  }
+
   // Replace Material3Expressive with standard Material3
   stylesContent = stylesContent.replace(/Theme\.Material3Expressive/g, 'Theme.Material3');
 
@@ -35,7 +48,12 @@ function applyStylesMod(stylesContent) {
     const aliasTag = `<style name="${from}" parent="${to}" />`;
     if (!stylesContent.includes(aliasTag)) {
       // Find the closing </resources> tag and insert before it
-      stylesContent = stylesContent.replace('</resources>', `  ${aliasTag}\n</resources>`);
+      if (stylesContent.includes('</resources>')) {
+        stylesContent = stylesContent.replace('</resources>', `  ${aliasTag}\n</resources>`);
+      } else {
+        console.warn(`⚠️ Could not find </resources> tag in styles.xml, appending alias`);
+        stylesContent += `\n  ${aliasTag}`;
+      }
     }
   });
 
@@ -45,32 +63,43 @@ function applyStylesMod(stylesContent) {
 // Fix 1: Add theme aliases to styles.xml
 const withMaterialThemeStyles = (config) => {
   return withAndroidStyles(config, (configMod) => {
-    // Use configMod.modResults.contents directly - this is the correct way
-    let stylesContent = configMod.modResults.contents;
-    
-    console.log('📝 Applying Material Theme fixes to styles.xml');
-    stylesContent = applyStylesMod(stylesContent);
-    configMod.modResults.contents = stylesContent; // Update the content
-    return configMod;
+    try {
+      // Use configMod.modResults.contents directly - this is the correct way
+      let stylesContent = configMod.modResults.contents;
+      
+      console.log('📝 Applying Material Theme fixes to styles.xml');
+      stylesContent = applyStylesMod(stylesContent);
+      configMod.modResults.contents = stylesContent; // Update the content
+      return configMod;
+    } catch (error) {
+      console.error('❌ Error applying Material Theme styles:', error.message);
+      // Return default content on error
+      configMod.modResults.contents = DEFAULT_STYLES_XML;
+      return configMod;
+    }
   });
 };
 
 // Fix 2: Inject Material library dependency into android/app/build.gradle
 const withMaterialDependency = (config) => {
   return withAppBuildGradle(config, (configMod) => {
-    if (configMod.modResults.language === 'groovy') {
-      const dependency = "implementation 'com.google.android.material:material:1.12.0'";
-      if (!configMod.modResults.contents.includes(dependency)) {
-        configMod.modResults.contents = configMod.modResults.contents.replace(
-          /dependencies\s*{/,
-          `dependencies {\n    ${dependency}`
-        );
-        console.log('✅ Injected Material Design library dependency into app/build.gradle');
+    try {
+      if (configMod.modResults.language === 'groovy') {
+        const dependency = "implementation 'com.google.android.material:material:1.12.0'";
+        if (!configMod.modResults.contents.includes(dependency)) {
+          configMod.modResults.contents = configMod.modResults.contents.replace(
+            /dependencies\s*{/,
+            `dependencies {\n    ${dependency}`
+          );
+          console.log('✅ Injected Material Design library dependency into app/build.gradle');
+        } else {
+          console.log('ℹ️ Material Design library dependency already exists in app/build.gradle');
+        }
       } else {
-        console.log('ℹ️ Material Design library dependency already exists in app/build.gradle');
+        console.warn('Skipping Material dependency injection: app/build.gradle is not Groovy.');
       }
-    } else {
-      console.warn('Skipping Material dependency injection: app/build.gradle is not Groovy.');
+    } catch (error) {
+      console.error('❌ Error injecting Material dependency:', error.message);
     }
     return configMod;
   });
