@@ -54,7 +54,7 @@
       ],
       "./plugins/fix-material-theme.js"
     ],
-    "scheme": "different",
+    "scheme": "Different",
     "experiments": {
       "typedRoutes": true
     },

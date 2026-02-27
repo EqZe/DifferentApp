@@ -1,4 +1,4 @@
-const { withDangerousMod, withAppBuildGradle, createRunOncePlugin } = require('@expo/config-plugins');
+const { withDangerousMod, withAppBuildGradle, withProjectBuildGradle, createRunOncePlugin } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
@@ -39,11 +39,9 @@ const withMaterialThemeStyles = (config) => {
           'app', 'src', 'main', 'res', 'values'
         );
         const stylesPath = path.join(stylesDir, 'styles.xml');
-
         if (!fs.existsSync(stylesDir)) {
           fs.mkdirSync(stylesDir, { recursive: true });
         }
-
         fs.writeFileSync(stylesPath, STYLES_XML_CONTENT, 'utf8');
         console.log('✅ styles.xml written successfully');
       } catch (error) {
@@ -75,10 +73,51 @@ const withMaterialDependency = (config) => {
   });
 };
 
+// KEY FIX: Patch the edge-to-edge library's build.gradle directly
+const withEdgeToEdgeMaterialDependency = (config) => {
+  return withDangerousMod(config, [
+    'android',
+    (configMod) => {
+      try {
+        const edgeToEdgeBuildGradle = path.join(
+          configMod.modRequest.platformProjectRoot,
+          '..',
+          'node_modules',
+          'react-native-edge-to-edge',
+          'android',
+          'build.gradle'
+        );
+
+        if (fs.existsSync(edgeToEdgeBuildGradle)) {
+          let contents = fs.readFileSync(edgeToEdgeBuildGradle, 'utf8');
+          const dependency = "implementation 'com.google.android.material:material:1.12.0'";
+
+          if (!contents.includes('com.google.android.material:material')) {
+            contents = contents.replace(
+              /dependencies\s*{/,
+              `dependencies {\n    ${dependency}`
+            );
+            fs.writeFileSync(edgeToEdgeBuildGradle, contents, 'utf8');
+            console.log('✅ Injected Material dependency into react-native-edge-to-edge/android/build.gradle');
+          } else {
+            console.log('ℹ️ Material dependency already present in react-native-edge-to-edge');
+          }
+        } else {
+          console.warn('⚠️ react-native-edge-to-edge build.gradle not found at:', edgeToEdgeBuildGradle);
+        }
+      } catch (error) {
+        console.error('❌ Error patching edge-to-edge build.gradle:', error.message);
+      }
+      return configMod;
+    },
+  ]);
+};
+
 const withMaterialThemeFixPlugin = (config) => {
   console.log('🔧 Applying Material Theme fixes...');
   config = withMaterialThemeStyles(config);
   config = withMaterialDependency(config);
+  config = withEdgeToEdgeMaterialDependency(config);
   console.log('✅ Material Theme fixes applied successfully');
   return config;
 };
