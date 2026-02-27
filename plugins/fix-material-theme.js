@@ -56,7 +56,7 @@ const withMaterialThemeStyles = (config) => {
 const withMaterialDependency = (config) => {
   return withAppBuildGradle(config, (configMod) => {
     try {
-      const dependency = "implementation 'com.google.android.material:material:1.12.0'";
+      const dependency = "implementation 'com.google.android.material:material:1.13.0-beta01'";
       if (
         configMod.modResults.language === 'groovy' &&
         !configMod.modResults.contents.includes('com.google.android.material:material')
@@ -156,7 +156,7 @@ const withEdgeToEdgeMaterialDependency = (config) => {
           contents = contents.replace(/\ndependencies\s*\{\s*\}\n/g, '\n');
 
           // Append a fresh dependencies block at the end
-          contents += `\ndependencies {\n    api 'com.google.android.material:material:1.12.0'\n}\n`;
+          contents += `\ndependencies {\n    api 'com.google.android.material:material:1.13.0-beta01'\n}\n`;
 
           fs.writeFileSync(edgeToEdgeBuildGradle, contents, 'utf8');
           console.log('✅ Injected Material dependency into react-native-edge-to-edge/android/build.gradle');
