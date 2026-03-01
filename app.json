@@ -44,7 +44,9 @@
         "onesignal-expo-plugin",
         {
           "mode": "production",
-          "onesignalAppId": "b732b467-6886-4c7b-b3d9-5010de1199d6"
+          "onesignalAppId": "b732b467-6886-4c7b-b3d9-5010de1199d6",
+          "appIdentifier": "com.ilayrachkovski.different",
+          "androidPackage": "com.differentapp.co.il"
         }
       ],
       "./plugins/fix-material-theme.js"
