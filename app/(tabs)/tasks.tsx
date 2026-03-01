@@ -19,7 +19,6 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { api, type Task } from '@/utils/api';
 import ConfettiCannon from 'react-native-confetti-cannon';
-import { ConfirmModal } from '@/components/ConfirmModal';
 
 const styles = StyleSheet.create({
   container: {
@@ -155,10 +154,6 @@ const styles = StyleSheet.create({
   actionButtonPending: {
     backgroundColor: '#F5AD27',
   },
-  actionButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-    opacity: 0.6,
-  },
   actionButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
@@ -175,20 +170,6 @@ const styles = StyleSheet.create({
   },
   completedBadgeText: {
     color: '#2E7D32',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  pendingBadge: {
-    backgroundColor: '#FEF3E2',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  pendingBadgeText: {
-    color: '#F5AD27',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -244,16 +225,13 @@ function TaskCard({
   const isYet = task.status === 'YET';
   const dueDateText = formatDate(task.dueDate);
   
-  // Determine if button should be disabled (pending tasks cannot be completed)
-  const isDisabled = isPending;
-  
   // Determine button text based on status and requirements
   let buttonText = 'התחל';
   if (task.requiresPending) {
     if (task.status === 'YET') {
       buttonText = 'התחל';
     } else if (task.status === 'PENDING') {
-      buttonText = 'בתהליך';
+      buttonText = 'סיימתי';
     }
   } else {
     buttonText = 'סיימתי';
@@ -342,28 +320,13 @@ function TaskCard({
             />
             <Text style={styles.completedBadgeText}>הושלם</Text>
           </View>
-        ) : isPending ? (
-          <View style={styles.pendingBadge}>
-            <IconSymbol
-              ios_icon_name="clock"
-              android_material_icon_name="schedule"
-              size={16}
-              color="#F5AD27"
-            />
-            <Text style={styles.pendingBadgeText}>בתהליך</Text>
-          </View>
         ) : (
           <TouchableOpacity
             style={[
               styles.actionButton,
-              isDisabled && styles.actionButtonDisabled,
+              isPending && styles.actionButtonPending,
             ]}
-            onPress={() => {
-              if (!isDisabled) {
-                onComplete(task.id, task.requiresPending, task.status);
-              }
-            }}
-            disabled={isDisabled}
+            onPress={() => onComplete(task.id, task.requiresPending, task.status)}
           >
             <Text style={styles.actionButtonText}>{buttonText}</Text>
           </TouchableOpacity>
@@ -379,12 +342,6 @@ export default function TasksScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showCompleted, setShowCompleted] = useState(true);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingTaskAction, setPendingTaskAction] = useState<{
-    taskId: string;
-    requiresPending: boolean;
-    currentStatus: string;
-  } | null>(null);
   const { colors } = useTheme();
   const confettiRef = useRef<any>(null);
 
@@ -417,45 +374,23 @@ export default function TasksScreen() {
   };
 
   const handleCompleteTask = useCallback((taskId: string, requiresPending: boolean, currentStatus: string) => {
-    console.log('🎯 Task button pressed - showing confirmation modal', taskId);
+    console.log('🎯 INSTANT CLICK - Task button pressed', taskId);
     
-    // Prevent completing pending tasks
-    if (currentStatus === 'PENDING') {
-      console.log('⚠️ Cannot complete pending task', taskId);
-      return;
-    }
-    
-    // Store the pending action and show confirmation modal
-    setPendingTaskAction({ taskId, requiresPending, currentStatus });
-    setShowConfirmModal(true);
-  }, []);
-
-  const handleConfirmComplete = useCallback(() => {
-    if (!pendingTaskAction) return;
-    
-    const { taskId, requiresPending, currentStatus } = pendingTaskAction;
-    
-    console.log('✅ User confirmed - INSTANT confetti and UI update', taskId);
-    
-    // 🎉 FIRE CONFETTI IMMEDIATELY - No waiting for anything!
-    if (confettiRef.current) {
-      console.log('🎉 CONFETTI FIRED INSTANTLY on confirmation');
-      confettiRef.current.start();
-    }
-    
-    // Calculate new status
+    // Calculate new status ONCE upfront
     const newStatus: 'YET' | 'PENDING' | 'DONE' = 
       requiresPending 
         ? (currentStatus === 'YET' ? 'PENDING' : 'DONE')
         : 'DONE';
     
-    // 🚀 UPDATE UI INSTANTLY - Optimistic update
+    // 🎉 INSTANT CONFETTI - Fire IMMEDIATELY if completing to DONE
+    if (newStatus === 'DONE' && confettiRef.current) {
+      confettiRef.current.start();
+      console.log('🎉 CONFETTI FIRED INSTANTLY');
+    }
+    
+    // 🚀 INSTANT UI UPDATE - Optimistic update happens NOW
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     console.log('🚀 UI UPDATED INSTANTLY to status:', newStatus);
-    
-    // Close modal
-    setShowConfirmModal(false);
-    setPendingTaskAction(null);
     
     // 📡 BACKGROUND API CALL - Fire and forget (non-blocking)
     api.completeTask(taskId, requiresPending)
@@ -469,13 +404,7 @@ export default function TasksScreen() {
         // Revert on error
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: currentStatus } : t));
       });
-  }, [pendingTaskAction, confettiRef]);
-
-  const handleCancelComplete = useCallback(() => {
-    console.log('❌ User cancelled task completion');
-    setShowConfirmModal(false);
-    setPendingTaskAction(null);
-  }, []);
+  }, [confettiRef]);
 
   if (loading) {
     return (
@@ -560,17 +489,6 @@ export default function TasksScreen() {
             colors={['#2784F5', '#F5AD27', '#4CAF50', '#FF6B6B', '#FFD93D', '#6BCF7F']}
           />
         </View>
-
-        {/* Confirmation Modal */}
-        <ConfirmModal
-          visible={showConfirmModal}
-          title="אישור משימה"
-          message="האם אתה בטוח שברצונך לסמן את המשימה כהושלמה?"
-          confirmText="אישור"
-          cancelText="ביטול"
-          onConfirm={handleConfirmComplete}
-          onCancel={handleCancelComplete}
-        />
       </SafeAreaView>
     </LinearGradient>
   );

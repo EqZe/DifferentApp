@@ -198,27 +198,20 @@ export default function HomeScreen() {
           resizeMode="cover"
         />
         
-        {/* Company Logo - Aligned to bottom of section */}
-        <Image
-          source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        
         {/* Header Content - Aligned to Bottom with Gap */}
         <SafeAreaView style={styles.header} edges={['top']}>
           <View style={styles.headerContent}>
-            {/* Dynamic Time-Based Greeting - Single line with dynamic sizing */}
-            <View style={styles.greetingContainer}>
-              <Text 
-                style={styles.greetingText} 
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.5}
-              >
-                {personalizedGreeting}
-              </Text>
+            {/* Company Logo - Bigger size */}
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('@/assets/images/864198af-83b6-4cbd-bb45-8f2196a4449e.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
             </View>
+            
+            {/* Dynamic Time-Based Greeting */}
+            <Text style={styles.greetingText}>{personalizedGreeting}</Text>
           </View>
         </SafeAreaView>
 
@@ -397,34 +390,30 @@ const styles = StyleSheet.create({
   headerContent: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    justifyContent: 'flex-end',
-    marginTop: 30,
-    position: 're`lative',
+    justifyContent: 'space-between',
   },
-  // Logo - Aligned to bottom of section (0px from bottom)
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xs,
+  },
   logo: {
-    width: 180,
-    height: 180,
-    position: 'absolute',
-    left: layout.screenPadding,
-    bottom: 0,
-    zIndex: 13,
+    width: '100%',
+    height: '100%',
   },
   
-  // Greeting Container - Full width, aligned to right
-  greetingContainer: {
-    flex: 1,
-    alignItems: 'flex-end',
-    justifyContent: 'flex-end',
-    paddingLeft: 160, // Space for the logo
-  },
-  
-  // Dynamic Greeting - Prominent Typography - RTL Aligned, single line
+  // Dynamic Greeting - Prominent Typography - RTL Aligned
   greetingText: {
     ...typography.h2,
     color: '#FFFFFF',
     textAlign: 'right',
     fontWeight: '700',
+    marginLeft: spacing.md,
+    alignSelf: 'flex-end',
     writingDirection: 'rtl',
   },
 

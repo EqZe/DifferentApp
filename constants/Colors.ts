@@ -1,20 +1,4 @@
 
-import { I18nManager, Platform } from 'react-native';
-
-// Global flag for web, set in index.ts
-declare global {
-  var __IS_RTL__: boolean | undefined;
-}
-
-export const isRTL = (): boolean => {
-  if (Platform.OS === 'web') {
-    // On web, check the global flag set in index.ts
-    return !!global.__IS_RTL__;
-  }
-  // On native platforms, use I18nManager
-  return I18nManager.isRTL;
-};
-
 export const Colors = {
   light: {
     background: '#FFFFFF',
