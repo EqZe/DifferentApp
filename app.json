@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Different",
@@ -44,17 +45,14 @@
       "expo-router",
       "expo-web-browser",
       [
-        "expo-notifications",
+        "onesignal-expo-plugin",
         {
-          "icon": "./assets/images/final_quest_240x240.png",
-          "color": "#2784F5",
-          "androidMode": "default",
-          "androidCollapsedTitle": "Different"
+          "mode": "development"
         }
       ],
       "./plugins/fix-material-theme.js"
     ],
-    "scheme": "Different",
+    "scheme": "different",
     "experiments": {
       "typedRoutes": true
     },

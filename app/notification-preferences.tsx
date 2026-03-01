@@ -16,8 +16,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
+import { useOneSignal } from '@/contexts/OneSignalContext';
 import { designColors, typography, spacing, radius, shadows } from '@/styles/designSystem';
-import { supabase } from '@/lib/supabase';
+import OneSignal from 'react-native-onesignal';
 
 interface NotificationPreferences {
   taskReminders: boolean;
@@ -28,9 +29,9 @@ interface NotificationPreferences {
 
 export default function NotificationPreferencesScreen() {
   const { user } = useUser();
+  const { hasPermission, requestPermission } = useOneSignal();
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     taskReminders: true,
     containerUpdates: true,
@@ -40,61 +41,45 @@ export default function NotificationPreferencesScreen() {
 
   useEffect(() => {
     loadPreferences();
-  }, [user]);
+  }, []);
 
   const loadPreferences = async () => {
-    if (!user) return;
-
     try {
-      console.log('NotificationPreferences: Loading preferences for user', user.id);
+      console.log('NotificationPreferences: Loading OneSignal tags');
       
-      const { data, error } = await supabase
-        .from('users')
-        .select('notification_preferences')
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        console.error('NotificationPreferences: Error loading preferences:', error);
-        return;
-      }
-
-      if (data?.notification_preferences) {
-        console.log('NotificationPreferences: Loaded preferences:', data.notification_preferences);
-        setPreferences(data.notification_preferences);
-      }
+      // Get current tags from OneSignal
+      const tags = await OneSignal.User.getTags();
+      console.log('NotificationPreferences: Current tags:', tags);
+      
+      // Map tags to preferences
+      setPreferences({
+        taskReminders: tags.task_reminders !== 'false',
+        containerUpdates: tags.container_updates !== 'false',
+        scheduleChanges: tags.schedule_changes !== 'false',
+        generalAnnouncements: tags.general_announcements !== 'false',
+      });
     } catch (error) {
-      console.error('NotificationPreferences: Unexpected error:', error);
-    } finally {
-      setLoading(false);
+      console.error('NotificationPreferences: Error loading preferences:', error);
     }
   };
 
   const savePreferences = async (newPreferences: NotificationPreferences) => {
-    if (!user) return;
-
-    setSaving(true);
     try {
       console.log('NotificationPreferences: Saving preferences:', newPreferences);
-
-      const { error } = await supabase
-        .from('users')
-        .update({ notification_preferences: newPreferences })
-        .eq('id', user.id);
-
-      if (error) {
-        console.error('NotificationPreferences: Error saving preferences:', error);
-        Alert.alert('שגיאה', 'לא ניתן לשמור את ההעדפות. אנא נסה שוב.');
-        return;
-      }
-
+      
+      // Update OneSignal tags
+      await OneSignal.User.addTags({
+        task_reminders: newPreferences.taskReminders ? 'true' : 'false',
+        container_updates: newPreferences.containerUpdates ? 'true' : 'false',
+        schedule_changes: newPreferences.scheduleChanges ? 'true' : 'false',
+        general_announcements: newPreferences.generalAnnouncements ? 'true' : 'false',
+      });
+      
       console.log('NotificationPreferences: ✅ Preferences saved successfully');
       setPreferences(newPreferences);
     } catch (error) {
-      console.error('NotificationPreferences: Unexpected error:', error);
-      Alert.alert('שגיאה', 'אירעה שגיאה בשמירת ההעדפות.');
-    } finally {
-      setSaving(false);
+      console.error('NotificationPreferences: Error saving preferences:', error);
+      Alert.alert('שגיאה', 'לא ניתן לשמור את ההעדפות. אנא נסה שוב.');
     }
   };
 
@@ -106,28 +91,38 @@ export default function NotificationPreferencesScreen() {
     savePreferences(newPreferences);
   };
 
+  const handleEnableNotifications = async () => {
+    console.log('NotificationPreferences: User tapped enable notifications');
+    setLoading(true);
+    
+    try {
+      const granted = await requestPermission();
+      
+      if (granted) {
+        Alert.alert(
+          'הצלחה',
+          'התראות הופעלו בהצלחה! תקבל עדכונים על משימות, מכולות ולוח זמנים.',
+          [{ text: 'אישור' }]
+        );
+      } else {
+        Alert.alert(
+          'שים לב',
+          'לא ניתן להפעיל התראות. אנא אפשר התראות בהגדרות המכשיר.',
+          [{ text: 'אישור' }]
+        );
+      }
+    } catch (error) {
+      console.error('NotificationPreferences: Error enabling notifications:', error);
+      Alert.alert('שגיאה', 'אירעה שגיאה בהפעלת ההתראות.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleBackPress = () => {
     console.log('NotificationPreferences: User tapped back button');
     router.back();
   };
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            title: 'הגדרות התראות',
-            headerBackTitle: 'חזור',
-          }}
-        />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={designColors.primary} />
-          <Text style={styles.loadingText}>טוען הגדרות...</Text>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -187,8 +182,8 @@ export default function NotificationPreferencesScreen() {
           </View>
         )}
 
-        {/* Push Token Status */}
-        {!user?.pushToken && Platform.OS !== 'web' && (
+        {/* Permission Status */}
+        {Platform.OS !== 'web' && !hasPermission && (
           <View style={styles.infoCard}>
             <IconSymbol
               ios_icon_name="info.circle.fill"
@@ -196,124 +191,135 @@ export default function NotificationPreferencesScreen() {
               size={24}
               color="#0C5460"
             />
-            <Text style={styles.infoText}>
-              התראות Push לא מופעלות. כדי לקבל התראות, עבור לפרופיל ולחץ על "הירשם להתראות".
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.infoText}>
+                התראות Push לא מופעלות. כדי לקבל התראות, לחץ על הכפתור למטה.
+              </Text>
+              <TouchableOpacity
+                style={styles.enableButton}
+                onPress={handleEnableNotifications}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.enableButtonText}>הפעל התראות</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
         {/* Preferences Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>סוגי התראות</Text>
+        {hasPermission && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>סוגי התראות</Text>
 
-          {/* Task Reminders */}
-          <View style={styles.preferenceCard}>
-            <View style={styles.preferenceHeader}>
-              <View style={styles.preferenceIconContainer}>
-                <IconSymbol
-                  ios_icon_name="checkmark.circle.fill"
-                  android_material_icon_name="check-circle"
-                  size={32}
-                  color={designColors.primary}
+            {/* Task Reminders */}
+            <View style={styles.preferenceCard}>
+              <View style={styles.preferenceHeader}>
+                <View style={styles.preferenceIconContainer}>
+                  <IconSymbol
+                    ios_icon_name="checkmark.circle.fill"
+                    android_material_icon_name="check-circle"
+                    size={32}
+                    color={designColors.primary}
+                  />
+                </View>
+                <View style={styles.preferenceContent}>
+                  <Text style={styles.preferenceTitle}>תזכורות משימות</Text>
+                  <Text style={styles.preferenceDescription}>
+                    קבל תזכורות 7, 3 ויום אחד לפני תאריך יעד של משימה
+                  </Text>
+                </View>
+                <Switch
+                  value={preferences.taskReminders}
+                  onValueChange={() => togglePreference('taskReminders')}
+                  trackColor={{ false: '#D1D5DB', true: designColors.primary }}
+                  thumbColor="#FFFFFF"
                 />
               </View>
-              <View style={styles.preferenceContent}>
-                <Text style={styles.preferenceTitle}>תזכורות משימות</Text>
-                <Text style={styles.preferenceDescription}>
-                  קבל תזכורות 7, 3 ויום אחד לפני תאריך יעד של משימה
-                </Text>
-              </View>
-              <Switch
-                value={preferences.taskReminders}
-                onValueChange={() => togglePreference('taskReminders')}
-                trackColor={{ false: '#D1D5DB', true: designColors.primary }}
-                thumbColor="#FFFFFF"
-                disabled={saving}
-              />
             </View>
-          </View>
 
-          {/* Container Updates */}
-          <View style={styles.preferenceCard}>
-            <View style={styles.preferenceHeader}>
-              <View style={styles.preferenceIconContainer}>
-                <IconSymbol
-                  ios_icon_name="shippingbox.fill"
-                  android_material_icon_name="local-shipping"
-                  size={32}
-                  color={designColors.secondary}
+            {/* Container Updates */}
+            <View style={styles.preferenceCard}>
+              <View style={styles.preferenceHeader}>
+                <View style={styles.preferenceIconContainer}>
+                  <IconSymbol
+                    ios_icon_name="shippingbox.fill"
+                    android_material_icon_name="local-shipping"
+                    size={32}
+                    color={designColors.secondary}
+                  />
+                </View>
+                <View style={styles.preferenceContent}>
+                  <Text style={styles.preferenceTitle}>עדכוני מכולות</Text>
+                  <Text style={styles.preferenceDescription}>
+                    קבל עדכונים על שינויים בסטטוס המכולות שלך
+                  </Text>
+                </View>
+                <Switch
+                  value={preferences.containerUpdates}
+                  onValueChange={() => togglePreference('containerUpdates')}
+                  trackColor={{ false: '#D1D5DB', true: designColors.primary }}
+                  thumbColor="#FFFFFF"
                 />
               </View>
-              <View style={styles.preferenceContent}>
-                <Text style={styles.preferenceTitle}>עדכוני מכולות</Text>
-                <Text style={styles.preferenceDescription}>
-                  קבל עדכונים על שינויים בסטטוס המכולות שלך
-                </Text>
-              </View>
-              <Switch
-                value={preferences.containerUpdates}
-                onValueChange={() => togglePreference('containerUpdates')}
-                trackColor={{ false: '#D1D5DB', true: designColors.primary }}
-                thumbColor="#FFFFFF"
-                disabled={saving}
-              />
             </View>
-          </View>
 
-          {/* Schedule Changes */}
-          <View style={styles.preferenceCard}>
-            <View style={styles.preferenceHeader}>
-              <View style={styles.preferenceIconContainer}>
-                <IconSymbol
-                  ios_icon_name="calendar"
-                  android_material_icon_name="calendar-today"
-                  size={32}
-                  color="#10B981"
+            {/* Schedule Changes */}
+            <View style={styles.preferenceCard}>
+              <View style={styles.preferenceHeader}>
+                <View style={styles.preferenceIconContainer}>
+                  <IconSymbol
+                    ios_icon_name="calendar"
+                    android_material_icon_name="calendar-today"
+                    size={32}
+                    color="#10B981"
+                  />
+                </View>
+                <View style={styles.preferenceContent}>
+                  <Text style={styles.preferenceTitle}>שינויים בלוח זמנים</Text>
+                  <Text style={styles.preferenceDescription}>
+                    קבל התראות על שינויים בלוח הזמנים של הנסיעה
+                  </Text>
+                </View>
+                <Switch
+                  value={preferences.scheduleChanges}
+                  onValueChange={() => togglePreference('scheduleChanges')}
+                  trackColor={{ false: '#D1D5DB', true: designColors.primary }}
+                  thumbColor="#FFFFFF"
                 />
               </View>
-              <View style={styles.preferenceContent}>
-                <Text style={styles.preferenceTitle}>שינויים בלוח זמנים</Text>
-                <Text style={styles.preferenceDescription}>
-                  קבל התראות על שינויים בלוח הזמנים של הנסיעה
-                </Text>
-              </View>
-              <Switch
-                value={preferences.scheduleChanges}
-                onValueChange={() => togglePreference('scheduleChanges')}
-                trackColor={{ false: '#D1D5DB', true: designColors.primary }}
-                thumbColor="#FFFFFF"
-                disabled={saving}
-              />
             </View>
-          </View>
 
-          {/* General Announcements */}
-          <View style={styles.preferenceCard}>
-            <View style={styles.preferenceHeader}>
-              <View style={styles.preferenceIconContainer}>
-                <IconSymbol
-                  ios_icon_name="megaphone.fill"
-                  android_material_icon_name="campaign"
-                  size={32}
-                  color="#8B5CF6"
+            {/* General Announcements */}
+            <View style={styles.preferenceCard}>
+              <View style={styles.preferenceHeader}>
+                <View style={styles.preferenceIconContainer}>
+                  <IconSymbol
+                    ios_icon_name="megaphone.fill"
+                    android_material_icon_name="campaign"
+                    size={32}
+                    color="#8B5CF6"
+                  />
+                </View>
+                <View style={styles.preferenceContent}>
+                  <Text style={styles.preferenceTitle}>הודעות כלליות</Text>
+                  <Text style={styles.preferenceDescription}>
+                    קבל הודעות חשובות ועדכונים כלליים מהמערכת
+                  </Text>
+                </View>
+                <Switch
+                  value={preferences.generalAnnouncements}
+                  onValueChange={() => togglePreference('generalAnnouncements')}
+                  trackColor={{ false: '#D1D5DB', true: designColors.primary }}
+                  thumbColor="#FFFFFF"
                 />
               </View>
-              <View style={styles.preferenceContent}>
-                <Text style={styles.preferenceTitle}>הודעות כלליות</Text>
-                <Text style={styles.preferenceDescription}>
-                  קבל הודעות חשובות ועדכונים כלליים מהמערכת
-                </Text>
-              </View>
-              <Switch
-                value={preferences.generalAnnouncements}
-                onValueChange={() => togglePreference('generalAnnouncements')}
-                trackColor={{ false: '#D1D5DB', true: designColors.primary }}
-                thumbColor="#FFFFFF"
-                disabled={saving}
-              />
             </View>
           </View>
-        </View>
+        )}
 
         {/* Info Section */}
         <View style={styles.section}>
@@ -329,14 +335,6 @@ export default function NotificationPreferencesScreen() {
             </Text>
           </View>
         </View>
-
-        {/* Saving Indicator */}
-        {saving && (
-          <View style={styles.savingIndicator}>
-            <ActivityIndicator size="small" color={designColors.primary} />
-            <Text style={styles.savingText}>שומר...</Text>
-          </View>
-        )}
       </ScrollView>
     </View>
   );
@@ -346,16 +344,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: designColors.light.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    fontSize: typography.body.fontSize,
-    color: designColors.textSecondary,
   },
   scrollView: {
     flex: 1,
@@ -413,10 +401,22 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   infoText: {
-    flex: 1,
     fontSize: typography.small.fontSize,
     color: '#0C5460',
     lineHeight: 20,
+    marginBottom: spacing.sm,
+  },
+  enableButton: {
+    backgroundColor: designColors.primary,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  enableButtonText: {
+    color: '#FFFFFF',
+    fontSize: typography.body.fontSize,
+    fontWeight: '600',
   },
   section: {
     marginTop: spacing.md,
@@ -475,16 +475,5 @@ const styles = StyleSheet.create({
     fontSize: typography.small.fontSize,
     color: designColors.textSecondary,
     lineHeight: 20,
-  },
-  savingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-  },
-  savingText: {
-    fontSize: typography.small.fontSize,
-    color: designColors.textSecondary,
   },
 });

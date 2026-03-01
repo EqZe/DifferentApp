@@ -1,5 +1,11 @@
 
+import LottieView from 'lottie-react-native';
+import { api, type CategoryWithPosts } from '@/utils/api';
 import React, { useState, useEffect, useCallback } from 'react';
+import { IconSymbol } from '@/components/IconSymbol';
+import { NotificationBell } from '@/components/NotificationBell';
+import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View,
   Text,
@@ -14,14 +20,9 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
-import { api, type CategoryWithPosts } from '@/utils/api';
 import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
-import LottieView from 'lottie-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_PADDING = layout.screenPadding;
@@ -191,6 +192,8 @@ export default function HomeScreen() {
                 {personalizedGreeting}
               </Text>
             </View>
+            {/* Notification Bell */}
+            <NotificationBell />
           </View>
         </SafeAreaView>
       </View>
