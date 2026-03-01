@@ -1,6 +1,6 @@
 
 import { supabase } from '@/lib/supabase';
-import type { User, Post, PostBlock, Task } from '@/lib/supabase';
+import type { User, Post, PostBlock, Task, UserContainer } from '@/lib/supabase';
 
 // Helper function to convert snake_case to camelCase for frontend compatibility
 function toCamelCase<T extends Record<string, any>>(obj: T): any {
@@ -91,12 +91,32 @@ export interface TaskFrontend {
   updatedAt: string;
 }
 
+export interface ContainerFrontend {
+  id: string;
+  userId: string; // This is auth_user_id
+  containerIdPerUser: string;
+  itemsReady: string | null;
+  itemsPaid: string | null;
+  itemsInGarage: string | null;
+  itemsOnContainer: string | null;
+  containerSent: string | null;
+  containerArrive: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const api = {
   // Auth endpoints
   signUp: async (email: string, password: string, fullName: string, city: string, phoneNumber?: string): Promise<UserFrontend> => {
-    console.log('API: Signing up user', { email, fullName, city });
+    console.log('API: ========== SIGN UP ATTEMPT ==========');
+    console.log('API: Email:', email);
+    console.log('API: Full name:', fullName);
+    console.log('API: City:', city);
+    console.log('API: Phone:', phoneNumber || 'not provided');
+    console.log('API: Password length:', password.length);
     
     try {
+      console.log('API: Calling supabase.auth.signUp...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -107,24 +127,36 @@ export const api = {
       });
 
       if (authError) {
-        console.error('API: Sign up auth error', authError);
+        console.error('API: ❌ Sign up auth error');
+        console.error('API: Error code:', authError.status);
+        console.error('API: Error message:', authError.message);
+        console.error('API: Error name:', authError.name);
+        console.error('API: Full error:', JSON.stringify(authError, null, 2));
         
         // Handle specific error cases
         if (authError.message.includes('rate limit')) {
           throw new Error('יותר מדי ניסיונות הרשמה. אנא נסה שוב בעוד מספר דקות.');
         }
-        if (authError.message.includes('already registered')) {
+        if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
           throw new Error('המייל כבר רשום במערכת. נסה להתחבר במקום.');
+        }
+        if (authError.status === 500) {
+          throw new Error('שגיאת שרת. אנא נסה שוב בעוד מספר דקות.');
         }
         
         throw new Error(authError.message || 'שגיאה בהרשמה');
       }
 
       if (!authData.user) {
+        console.error('API: ❌ No user data returned from Supabase');
         throw new Error('לא התקבל משתמש מהשרת');
       }
 
-      console.log('API: Sign up successful, creating/updating user profile in database');
+      console.log('API: ✅ Sign up successful');
+      console.log('API: User ID:', authData.user.id);
+      console.log('API: Session present:', !!authData.session);
+
+      console.log('API: Creating/updating user profile in database...');
       
       // Use upsert to handle cases where the user profile already exists (e.g., from a database trigger)
       // This prevents duplicate key errors
@@ -147,15 +179,20 @@ export const api = {
         .single();
 
       if (upsertError) {
-        console.error('API: Failed to create/update user profile', upsertError);
+        console.error('API: ❌ Failed to create/update user profile');
+        console.error('API: Error code:', upsertError.code);
+        console.error('API: Error message:', upsertError.message);
+        console.error('API: Full error:', JSON.stringify(upsertError, null, 2));
         
         // If profile creation fails, try to clean up the auth user
+        console.log('API: Attempting to clean up auth user...');
         await supabase.auth.signOut();
         
         throw new Error(upsertError.message || 'שגיאה ביצירת פרופיל משתמש');
       }
 
-      console.log('API: User profile created/updated successfully', userData);
+      console.log('API: ✅ User profile created/updated successfully');
+      console.log('API: User data:', userData);
       
       const camelData = toCamelCase(userData);
       return {
@@ -163,22 +200,30 @@ export const api = {
         id: camelData.authUserId,
       };
     } catch (error: any) {
-      console.error('API: Sign up failed with error:', error);
+      console.error('API: ❌ Sign up failed with error:', error?.message || error);
+      console.error('API: Error stack:', error?.stack);
       throw error;
     }
   },
 
   signIn: async (email: string, password: string): Promise<UserFrontend> => {
-    console.log('API: Signing in user', email);
+    console.log('API: ========== SIGN IN ATTEMPT ==========');
+    console.log('API: Email:', email);
+    console.log('API: Password length:', password.length);
     
     try {
+      console.log('API: Calling supabase.auth.signInWithPassword...');
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (authError) {
-        console.error('API: Sign in failed', authError);
+        console.error('API: ❌ Sign in auth error');
+        console.error('API: Error code:', authError.status);
+        console.error('API: Error message:', authError.message);
+        console.error('API: Error name:', authError.name);
+        console.error('API: Full error:', JSON.stringify(authError, null, 2));
         
         if (authError.message.includes('Invalid login credentials')) {
           throw new Error('אימייל או סיסמה שגויים');
@@ -186,19 +231,39 @@ export const api = {
         if (authError.message.includes('Email not confirmed')) {
           throw new Error('יש לאמת את כתובת המייל לפני התחברות');
         }
+        if (authError.message.includes('refresh_token_not_found')) {
+          throw new Error('שגיאת אימות. נסה להתנתק ולהתחבר מחדש.');
+        }
+        if (authError.status === 500) {
+          throw new Error('שגיאת שרת. אנא נסה שוב בעוד מספר דקות.');
+        }
         
         throw new Error(authError.message || 'שגיאה בהתחברות');
       }
 
       if (!authData.user) {
+        console.error('API: ❌ No user data returned from Supabase');
         throw new Error('לא התקבל משתמש מהשרת');
       }
 
-      console.log('API: Sign in successful, fetching user profile');
+      if (!authData.session) {
+        console.error('API: ❌ No session data returned from Supabase');
+        throw new Error('לא התקבלה סשן מהשרת');
+      }
+
+      console.log('API: ✅ Sign in successful');
+      console.log('API: User ID:', authData.user.id);
+      console.log('API: Session expires at:', new Date(authData.session.expires_at! * 1000).toLocaleString());
+      console.log('API: Access token present:', !!authData.session.access_token);
+      console.log('API: Refresh token present:', !!authData.session.refresh_token);
+      
+      console.log('API: Fetching user profile from database...');
       const userData = await api.getUserByAuthId(authData.user.id);
+      console.log('API: ✅ User profile fetched successfully');
       return userData;
     } catch (error: any) {
-      console.error('API: Sign in failed with error:', error);
+      console.error('API: ❌ Sign in failed with error:', error?.message || error);
+      console.error('API: Error stack:', error?.stack);
       throw error;
     }
   },
@@ -282,8 +347,18 @@ export const api = {
 
   savePushToken: async (authUserId: string, pushToken: string): Promise<void> => {
     try {
-      console.log('API: Saving push token for user', authUserId);
+      console.log('API: ========== SAVING PUSH TOKEN ==========');
+      console.log('API: User ID:', authUserId);
+      console.log('API: Token to save:', pushToken);
+      console.log('API: Token length:', pushToken.length);
+      console.log('API: Token preview:', pushToken.substring(0, 30) + '...');
       
+      // Validate token before saving
+      if (!pushToken || pushToken.trim() === '') {
+        console.log('API: ❌ Cannot save empty or null push token');
+        throw new Error('Push token is empty or null');
+      }
+
       const { data, error } = await supabase
         .from('users')
         .update({ push_token: pushToken })
@@ -291,13 +366,24 @@ export const api = {
         .select();
 
       if (error) {
-        console.log('API: ⚠️ Save push token failed:', error.message);
+        console.log('API: ❌ Save push token failed:', error.message);
+        console.log('API: Error code:', error.code);
+        console.log('API: Error details:', JSON.stringify(error, null, 2));
         throw new Error(error.message || 'שגיאה בשמירת טוקן התראות');
       }
 
+      if (!data || data.length === 0) {
+        console.log('API: ⚠️ No rows updated - user not found?');
+        throw new Error('User not found when saving push token');
+      }
+
       console.log('API: ✅ Push token saved successfully');
+      console.log('API: Updated user data:', data[0]);
+      console.log('API: Saved token preview:', data[0].push_token ? data[0].push_token.substring(0, 30) + '...' : 'NULL');
+      console.log('API: ========== PUSH TOKEN SAVE COMPLETE ==========');
     } catch (error: any) {
       console.log('API: ⚠️ Push token save error:', error?.message || error);
+      console.log('API: Error stack:', error?.stack);
       throw error;
     }
   },
@@ -713,6 +799,129 @@ export const api = {
 
     console.log('API: Task deleted');
   },
+
+  // Containers endpoints
+  getContainers: async (authUserId: string): Promise<ContainerFrontend[]> => {
+    console.log('API: Getting containers for user', authUserId);
+    
+    const { data, error } = await supabase
+      .from('user_containers')
+      .select('*')
+      .eq('auth_user_id', authUserId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('API: Get containers failed', error);
+      throw new Error(error.message || 'שגיאה בטעינת מכולות');
+    }
+
+    console.log('API: Containers retrieved', data?.length || 0);
+    
+    return data?.map((container: any) => {
+      const camelData = toCamelCase(container);
+      return {
+        ...camelData,
+        userId: camelData.authUserId,
+      };
+    }) || [];
+  },
+
+  createContainer: async (
+    authUserId: string,
+    containerIdPerUser: string
+  ): Promise<ContainerFrontend> => {
+    console.log('API: Creating container', { authUserId, containerIdPerUser });
+    
+    const { data, error } = await supabase
+      .from('user_containers')
+      .insert({
+        auth_user_id: authUserId,
+        container_id_per_user: containerIdPerUser,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('API: Create container failed', error);
+      throw new Error(error.message || 'שגיאה ביצירת מכולה');
+    }
+
+    console.log('API: Container created', data);
+    const camelData = toCamelCase(data);
+    return {
+      ...camelData,
+      userId: camelData.authUserId,
+    };
+  },
+
+  updateContainer: async (
+    containerId: string,
+    updates: {
+      itemsReady?: string | null;
+      itemsPaid?: string | null;
+      itemsInGarage?: string | null;
+      itemsOnContainer?: string | null;
+      containerSent?: string | null;
+      containerArrive?: string | null;
+    }
+  ): Promise<ContainerFrontend> => {
+    console.log('API: Updating container', { containerId, updates });
+    
+    const updateData: any = {};
+    if (updates.itemsReady !== undefined) {
+      updateData.items_ready = updates.itemsReady;
+    }
+    if (updates.itemsPaid !== undefined) {
+      updateData.items_paid = updates.itemsPaid;
+    }
+    if (updates.itemsInGarage !== undefined) {
+      updateData.items_in_garage = updates.itemsInGarage;
+    }
+    if (updates.itemsOnContainer !== undefined) {
+      updateData.items_on_container = updates.itemsOnContainer;
+    }
+    if (updates.containerSent !== undefined) {
+      updateData.container_sent = updates.containerSent;
+    }
+    if (updates.containerArrive !== undefined) {
+      updateData.container_arrive = updates.containerArrive;
+    }
+
+    const { data, error } = await supabase
+      .from('user_containers')
+      .update(updateData)
+      .eq('id', containerId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('API: Update container failed', error);
+      throw new Error(error.message || 'שגיאה בעדכון מכולה');
+    }
+
+    console.log('API: Container updated', data);
+    const camelData = toCamelCase(data);
+    return {
+      ...camelData,
+      userId: camelData.authUserId,
+    };
+  },
+
+  deleteContainer: async (containerId: string): Promise<void> => {
+    console.log('API: Deleting container', containerId);
+    
+    const { error } = await supabase
+      .from('user_containers')
+      .delete()
+      .eq('id', containerId);
+
+    if (error) {
+      console.error('API: Delete container failed', error);
+      throw new Error(error.message || 'שגיאה במחיקת מכולה');
+    }
+
+    console.log('API: Container deleted');
+  },
 };
 
 // Export types for use in components
@@ -721,6 +930,7 @@ export type {
   PostFrontend as Post, 
   PostBlockFrontend as PostBlock,
   TaskFrontend as Task,
+  ContainerFrontend as Container,
   Category,
   CategoryWithPosts 
 };
