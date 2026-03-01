@@ -1,7 +1,8 @@
+
 {
   "expo": {
     "name": "Different",
-    "slug": "Different",
+    "slug": "differentapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/different logo.png",
@@ -27,7 +28,7 @@
         "foregroundImage": "./assets/images/different logo.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.differentapp.com",
+      "package": "com.differentapp.co.il",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -46,13 +47,15 @@
       [
         "onesignal-expo-plugin",
         {
-          "mode": "development",
-          "appId": "b732b467-6886-4c7b-b3d9-5010de1199d6"
+          "mode": "production",
+          "appId": "b732b467-6886-4c7b-b3d9-5010de1199d6",
+          "appIdentifier": "com.ilayrachkovski.different",
+          "androidPackage": "com.differentapp.co.il"
         }
       ],
       "./plugins/fix-material-theme.js"
     ],
-    "scheme": "Different",
+    "scheme": "different",
     "experiments": {
       "typedRoutes": true
     },
