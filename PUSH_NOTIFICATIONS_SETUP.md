@@ -19,66 +19,34 @@ Your app needs an EAS project ID to send push notifications. To get it:
 2. The project ID should be visible in your EAS dashboard at https://expo.dev
 3. Or you can find it by looking at your project settings
 
-**Current Configuration**: The app.json already includes a project ID: `fe404aca-e46f-42c2-ac3a-50c265d87ae7`
+### Step 2: Add EAS Project ID to app.json
 
-### Step 2: Verify EAS Project ID in app.json
-
-The `app.json` now includes the EAS project ID:
+Open `app.json` and replace `YOUR_EAS_PROJECT_ID_HERE` with your actual EAS project ID:
 
 ```json
 {
   "expo": {
     "extra": {
       "eas": {
-        "projectId": "fe404aca-e46f-42c2-ac3a-50c265d87ae7"
+        "projectId": "your-actual-eas-project-id-here"
       }
     }
   }
 }
 ```
 
-**✅ This is already configured in your app.json!**
-
-### 🚨 Testing on Android APK
-
-When testing push notifications on Android APK (not Expo Go), the EAS project ID is **critical**. If you get the error:
-
-**"לא ניתן לקבל טוקן הרשאות. אנא צור קשר עם התמיכה."**
-(Cannot obtain authorization token. Please contact support.)
-
-This means the APK cannot get a push token. Here's how to fix it:
-
-#### Option 1: Verify Your EAS Project ID
-1. Check if `fe404aca-e46f-42c2-ac3a-50c265d87ae7` is your actual EAS project ID
-2. If not, update it in `app.json` under `extra.eas.projectId`
-3. Rebuild the APK with the correct project ID
-
-#### Option 2: Check APK Build Configuration
-Make sure you built the APK with EAS Build:
-```bash
-# For preview/testing APK
-eas build --platform android --profile preview
-
-# For production
-eas build --platform android --profile production
+**Example:**
+```json
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      }
+    }
+  }
+}
 ```
-
-**Do NOT use `expo build:android`** - it's deprecated and won't include the EAS project ID.
-
-#### Debugging APK Issues
-The app now includes detailed logging. When you click "הירשם להתראות" (Register for notifications) on your Android device:
-
-1. Connect your device via USB
-2. Run `adb logcat | grep "Notifications:"` to see the logs
-3. Look for:
-   - `🔔 Notifications: EAS Project ID from Constants:` - Shows if the project ID is being read
-   - `🔔 Notifications: Token options:` - Shows what's being passed to the API
-   - Any error messages with specific details
-
-Common APK errors:
-- **"Project ID error"**: The APK was built without a valid EAS project ID
-- **"Experience/manifest error"**: APK configuration issue - rebuild with EAS
-- **"Network error"**: Check internet connection on the device
 
 ### Step 3: Database Schema (Already Set Up ✅)
 

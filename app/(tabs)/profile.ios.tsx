@@ -11,7 +11,6 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
-  Platform,
 } from 'react-native';
 import { useUser } from '@/contexts/UserContext';
 import LottieView from 'lottie-react-native';
@@ -186,25 +185,6 @@ const styles = StyleSheet.create({
     color: '#856404',
     lineHeight: 20,
   },
-  infoCard: {
-    backgroundColor: '#D1ECF1',
-    borderLeftWidth: 4,
-    borderLeftColor: '#17A2B8',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  infoTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold as any,
-    color: '#0C5460',
-    marginBottom: spacing.xs,
-  },
-  infoText: {
-    fontSize: typography.sizes.sm,
-    color: '#0C5460',
-    lineHeight: 20,
-  },
 });
 
 function formatDate(dateString: string | null | undefined): string {
@@ -366,22 +346,8 @@ export default function ProfileScreen() {
           <Text style={styles.subtitle}>ניהול הפרופיל שלך</Text>
         </View>
 
-        {/* Web Platform Info Card */}
-        {Platform.OS === 'web' && (
-          <View style={styles.section}>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>ℹ️ התראות Push במכשיר נייד בלבד</Text>
-              <Text style={styles.infoText}>
-                התראות Push זמינות רק באפליקציה במכשיר נייד (Android/iOS).
-                {'\n\n'}
-                כדי להפעיל התראות, אנא פתח את האפליקציה במכשיר הנייד שלך.
-              </Text>
-            </View>
-          </View>
-        )}
-
         {/* Warning Card for Token Update */}
-        {needsTokenUpdate && Platform.OS !== 'web' && (
+        {needsTokenUpdate && (
           <View style={styles.section}>
             <View style={styles.warningCard}>
               <Text style={styles.warningTitle}>⚠️ נדרש עדכון התראות</Text>
@@ -516,32 +482,28 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>פעולות</Text>
           
-          {/* Register/Re-register Push Notifications Button - Only show on native platforms */}
-          {Platform.OS !== 'web' && (
-            <TouchableOpacity
-              style={[styles.button, styles.buttonSecondary]}
-              onPress={handleRegisterPushNotifications}
-              disabled={isRegisteringPush}
-            >
-              {isRegisteringPush ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.buttonText}>
-                  {needsTokenUpdate ? 'רישום מחדש להתראות Push' : user.pushToken ? 'רישום מחדש להתראות Push' : 'הירשם להתראות'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
+          {/* Register/Re-register Push Notifications Button */}
+          <TouchableOpacity
+            style={[styles.button, styles.buttonSecondary]}
+            onPress={handleRegisterPushNotifications}
+            disabled={isRegisteringPush}
+          >
+            {isRegisteringPush ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>
+                {needsTokenUpdate ? 'רישום מחדש להתראות Push' : user.pushToken ? 'רישום מחדש להתראות Push' : 'הפעל התראות Push'}
+              </Text>
+            )}
+          </TouchableOpacity>
 
-          {/* Test Notification Button - Only show on native platforms */}
-          {Platform.OS !== 'web' && (
-            <TouchableOpacity
-              style={[styles.button, styles.buttonPrimary]}
-              onPress={handleTestNotification}
-            >
-              <Text style={styles.buttonText}>שלח התראת בדיקה</Text>
-            </TouchableOpacity>
-          )}
+          {/* Test Notification Button */}
+          <TouchableOpacity
+            style={[styles.button, styles.buttonPrimary]}
+            onPress={handleTestNotification}
+          >
+            <Text style={styles.buttonText}>שלח התראת בדיקה</Text>
+          </TouchableOpacity>
 
           {/* Logout Button */}
           <TouchableOpacity

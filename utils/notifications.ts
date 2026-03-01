@@ -28,14 +28,6 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     console.log('🔔 Notifications: Constants.appOwnership =', Constants.appOwnership);
     console.log('🔔 Notifications: Running in Expo Go =', Constants.appOwnership === 'expo');
 
-    // CRITICAL: Web platform requires different handling
-    if (Platform.OS === 'web') {
-      console.log('🔔 Notifications: ⚠️ Running on web platform');
-      console.log('🔔 Notifications: Web push notifications require service worker setup');
-      console.log('🔔 Notifications: This is not supported in the current configuration');
-      throw new Error('התראות Push אינן נתמכות בגרסת הדפדפן. אנא השתמש באפליקציה במכשיר נייד.');
-    }
-
     // Check if running on a physical device OR in Expo Go
     // CRITICAL: On iOS with Expo Go, Device.isDevice is TRUE and appOwnership is 'expo'
     // On Android with Expo Go, Device.isDevice is TRUE and appOwnership is 'expo'
@@ -48,13 +40,14 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     
     // Allow registration if:
     // 1. Running on physical device (Device.isDevice === true), OR
-    // 2. Running in Expo Go (Constants.appOwnership === 'expo')
-    const canRegister = isPhysicalDevice || isExpoGo;
+    // 2. Running in Expo Go (Constants.appOwnership === 'expo'), OR
+    // 3. On web with granted permissions
+    const canRegister = isPhysicalDevice || isExpoGo || Platform.OS === 'web';
     
     if (!canRegister) {
-      console.log('🔔 Notifications: ❌ Cannot register - not on physical device or Expo Go');
+      console.log('🔔 Notifications: ❌ Cannot register - not on physical device, Expo Go, or web');
       console.log('🔔 Notifications: This typically means running in iOS Simulator or Android Emulator');
-      throw new Error('התראות Push זמינות רק במכשירים פיזיים. אנא נסה במכשיר אמיתי (לא סימולטור).');
+      return null;
     }
 
     console.log('🔔 Notifications: ✅ Device check passed - can register for push notifications');
@@ -88,7 +81,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       console.log('🔔 Notifications: Full permissions object:', JSON.stringify(permissionsResult, null, 2));
     } catch (permError: any) {
       console.log('🔔 Notifications: ❌ Error checking permissions:', permError?.message || permError);
-      throw new Error('לא ניתן לבדוק הרשאות התראות. אנא בדוק את הגדרות המכשיר.');
+      throw new Error('לא ניתן לבדוק הרשאות התראות. אנא נסה שוב.');
     }
 
     let finalStatus = permissionsResult.status;
@@ -103,7 +96,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
         console.log('🔔 Notifications: Full request result:', JSON.stringify(requestResult, null, 2));
       } catch (reqError: any) {
         console.log('🔔 Notifications: ❌ Error requesting permissions:', reqError?.message || reqError);
-        throw new Error('לא ניתן לבקש הרשאות התראות. אנא אפשר התראות בהגדרות המכשיר.');
+        throw new Error('לא ניתן לבקש הרשאות התראות. אנא בדוק את הגדרות המכשיר.');
       }
     }
 
@@ -111,7 +104,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     if (finalStatus !== 'granted') {
       console.log('🔔 Notifications: ❌ Permission not granted, cannot register for push notifications');
       console.log('🔔 Notifications: Final status:', finalStatus);
-      throw new Error('לא ניתנו הרשאות להתראות. אנא אפשר התראות בהגדרות המכשיר ונסה שוב.');
+      throw new Error('לא ניתנו הרשאות להתראות. אנא אפשר התראות בהגדרות המכשיר.');
     }
 
     console.log('🔔 Notifications: ✅ Permissions granted, attempting to get Expo push token');
@@ -119,60 +112,35 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     // Get EAS project ID from app.json
     const projectId = Constants.easConfig?.projectId;
     console.log('🔔 Notifications: EAS Project ID from Constants:', projectId);
-    console.log('🔔 Notifications: Constants.expoConfig?.extra?.eas?.projectId:', Constants.expoConfig?.extra?.eas?.projectId);
-    console.log('🔔 Notifications: App ownership:', Constants.appOwnership);
     
     if (!projectId) {
       console.log('🔔 Notifications: ⚠️ No EAS Project ID found in Constants.easConfig');
-      console.log('🔔 Notifications: ⚠️ This is expected in development/Expo Go');
-      console.log('🔔 Notifications: ⚠️ For production APK builds, you need to configure EAS project ID in app.json');
+      console.log('🔔 Notifications: Using fallback project ID: fe404aca-e46f-42c2-ac3a-50c265d87ae7');
     }
+
+    const finalProjectId = projectId || 'fe404aca-e46f-42c2-ac3a-50c265d87ae7';
+    console.log('🔔 Notifications: Using Project ID:', finalProjectId);
 
     // CRITICAL: Using getExpoPushTokenAsync for Expo Go compatibility
     // This works with Expo Go and returns tokens in format: ExponentPushToken[xxxxxx]
-    // For standalone builds (APK/IPA), it requires a valid EAS project ID
     console.log('🔔 Notifications: Calling getExpoPushTokenAsync...');
     let token;
     try {
-      // If we have a project ID, use it. Otherwise, let getExpoPushTokenAsync try without it
-      // (this will work in Expo Go but may fail in standalone builds)
-      const tokenOptions = projectId ? { projectId } : {};
-      console.log('🔔 Notifications: Token options:', JSON.stringify(tokenOptions, null, 2));
-      
-      token = await Notifications.getExpoPushTokenAsync(tokenOptions);
+      token = await Notifications.getExpoPushTokenAsync({
+        projectId: finalProjectId,
+      });
       console.log('🔔 Notifications: ✅ getExpoPushTokenAsync returned successfully');
     } catch (tokenError: any) {
       console.log('🔔 Notifications: ❌ Error getting Expo push token:', tokenError?.message || tokenError);
       console.log('🔔 Notifications: Token error details:', JSON.stringify(tokenError, null, 2));
       console.log('🔔 Notifications: Token error stack:', tokenError?.stack);
-      console.log('🔔 Notifications: Token error code:', tokenError?.code);
-      console.log('🔔 Notifications: Token error name:', tokenError?.name);
-      
-      // Provide more specific error messages based on the error
-      const errorMessage = tokenError?.message?.toLowerCase() || '';
-      const errorCode = tokenError?.code?.toLowerCase() || '';
-      
-      if (errorMessage.includes('network') || errorCode.includes('network')) {
-        throw new Error('בעיית רשת. אנא בדוק את החיבור לאינטרנט ונסה שוב.');
-      } else if (errorMessage.includes('project') || errorCode.includes('project') || errorMessage.includes('projectid')) {
-        console.log('🔔 Notifications: ⚠️ Project ID error - this APK may not be configured correctly');
-        console.log('🔔 Notifications: ⚠️ To fix: Add "extra": { "eas": { "projectId": "YOUR_PROJECT_ID" } } to app.json');
-        throw new Error('האפליקציה לא מוגדרת כראוי להתראות. אנא צור קשר עם התמיכה.');
-      } else if (errorMessage.includes('experience') || errorMessage.includes('manifest')) {
-        console.log('🔔 Notifications: ⚠️ Experience/manifest error - APK configuration issue');
-        throw new Error('שגיאת תצורה באפליקציה. אנא צור קשר עם התמיכה.');
-      } else if (errorMessage.includes('timeout')) {
-        throw new Error('פג תוקף הבקשה. אנא נסה שוב.');
-      } else {
-        console.log('🔔 Notifications: ⚠️ Unknown error type');
-        throw new Error(`לא ניתן לקבל טוקן התראות: ${tokenError?.message || 'שגיאה לא ידועה'}. אנא נסה שוב או צור קשר עם התמיכה.`);
-      }
+      throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
     }
 
     if (!token || !token.data) {
       console.log('🔔 Notifications: ❌ Token object is invalid');
       console.log('🔔 Notifications: Token object:', JSON.stringify(token, null, 2));
-      throw new Error('לא ניתן לקבל טוקן התראות. אנא נסה שוב מאוחר יותר.');
+      throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
     }
 
     console.log('🔔 Notifications: ✅ Expo push token obtained successfully:', token.data);
