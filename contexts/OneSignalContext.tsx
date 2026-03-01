@@ -28,17 +28,15 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     console.log('🔔 OneSignal: Initializing OneSignal SDK');
     
-    // Initialize OneSignal
-    // NOTE: The OneSignal App ID should be configured in app.json
-    // For now, we'll initialize without an app ID and it will be picked up from config
+    // Initialize OneSignal with App ID
     try {
-      // Remove this method to use the app.json configuration
-      // OneSignal.setAppId('YOUR_ONESIGNAL_APP_ID');
+      // Set the OneSignal App ID
+      OneSignal.initialize('b732b467-6886-4c7b-b3d9-5010de1199d6');
       
       // Set log level for debugging
       OneSignal.Debug.setLogLevel(6);
       
-      console.log('🔔 OneSignal: SDK initialized');
+      console.log('🔔 OneSignal: SDK initialized with App ID: b732b467-6886-4c7b-b3d9-5010de1199d6');
       setIsInitialized(true);
       
       // Check current permission status
