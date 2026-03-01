@@ -15,7 +15,7 @@ Notifications.setNotificationHandler({
 
 /**
  * Register for push notifications and return the Expo push token
- * Uses getExpoPushTokenAsync() which works with Expo Go
+ * Uses getExpoPushTokenAsync() which works with both Expo Go and standalone builds
  * Returns null if registration fails or device is not physical
  * NOTE: This function does NOT save the token to the database
  * The caller (UserContext) is responsible for saving the token
@@ -47,7 +47,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     if (!canRegister) {
       console.log('🔔 Notifications: ❌ Cannot register - not on physical device, Expo Go, or web');
       console.log('🔔 Notifications: This typically means running in iOS Simulator or Android Emulator');
-      return null;
+      throw new Error('התראות זמינות רק במכשירים פיזיים. אנא התקן את האפליקציה על מכשיר אמיתי.');
     }
 
     console.log('🔔 Notifications: ✅ Device check passed - can register for push notifications');
@@ -110,37 +110,64 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     console.log('🔔 Notifications: ✅ Permissions granted, attempting to get Expo push token');
 
     // Get EAS project ID from app.json
-    const projectId = Constants.easConfig?.projectId;
-    console.log('🔔 Notifications: EAS Project ID from Constants:', projectId);
+    // Try multiple sources for the project ID
+    let projectId = Constants.expoConfig?.extra?.eas?.projectId;
     
     if (!projectId) {
-      console.log('🔔 Notifications: ⚠️ No EAS Project ID found in Constants.easConfig');
-      console.log('🔔 Notifications: Using fallback project ID: fe404aca-e46f-42c2-ac3a-50c265d87ae7');
+      // Fallback to easConfig (used in standalone builds)
+      projectId = Constants.easConfig?.projectId;
+    }
+    
+    console.log('🔔 Notifications: EAS Project ID from Constants.expoConfig:', Constants.expoConfig?.extra?.eas?.projectId);
+    console.log('🔔 Notifications: EAS Project ID from Constants.easConfig:', Constants.easConfig?.projectId);
+    console.log('🔔 Notifications: Final Project ID to use:', projectId);
+    
+    if (!projectId) {
+      console.log('🔔 Notifications: ⚠️ No EAS Project ID found in app.json');
+      console.log('🔔 Notifications: This is required for standalone APK builds');
+      console.log('🔔 Notifications: For Expo Go, we can try without projectId');
+      
+      // For Expo Go, we can try without projectId
+      if (isExpoGo) {
+        console.log('🔔 Notifications: Running in Expo Go, attempting without projectId');
+      } else {
+        throw new Error('האפליקציה לא מוגדרת כראוי. חסר מזהה פרויקט EAS. אנא צור קשר עם התמיכה.');
+      }
     }
 
-    const finalProjectId = projectId || 'fe404aca-e46f-42c2-ac3a-50c265d87ae7';
-    console.log('🔔 Notifications: Using Project ID:', finalProjectId);
-
-    // CRITICAL: Using getExpoPushTokenAsync for Expo Go compatibility
+    // CRITICAL: Using getExpoPushTokenAsync for both Expo Go and standalone builds
     // This works with Expo Go and returns tokens in format: ExponentPushToken[xxxxxx]
     console.log('🔔 Notifications: Calling getExpoPushTokenAsync...');
     let token;
     try {
-      token = await Notifications.getExpoPushTokenAsync({
-        projectId: finalProjectId,
-      });
+      // Only pass projectId if we have one (required for standalone, optional for Expo Go)
+      const tokenOptions = projectId ? { projectId } : undefined;
+      console.log('🔔 Notifications: Token options:', tokenOptions);
+      
+      token = await Notifications.getExpoPushTokenAsync(tokenOptions);
       console.log('🔔 Notifications: ✅ getExpoPushTokenAsync returned successfully');
     } catch (tokenError: any) {
       console.log('🔔 Notifications: ❌ Error getting Expo push token:', tokenError?.message || tokenError);
+      console.log('🔔 Notifications: Token error code:', tokenError?.code);
       console.log('🔔 Notifications: Token error details:', JSON.stringify(tokenError, null, 2));
       console.log('🔔 Notifications: Token error stack:', tokenError?.stack);
-      throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
+      
+      // Provide specific error messages based on error type
+      if (tokenError?.message?.includes('network') || tokenError?.message?.includes('Network')) {
+        throw new Error('בעיית רשת. אנא בדוק את חיבור האינטרנט שלך ונסה שוב.');
+      } else if (tokenError?.message?.includes('projectId') || tokenError?.message?.includes('Project ID')) {
+        throw new Error('האפליקציה לא מוגדרת כראוי. חסר מזהה פרויקט EAS. אנא צור קשר עם התמיכה.');
+      } else if (tokenError?.code === 'E_REGISTRATION_FAILED') {
+        throw new Error('הרשמה להתראות נכשלה. אנא ודא שהאפליקציה מותקנת כראוי ונסה שוב.');
+      } else {
+        throw new Error(`לא ניתן לקבל טוקן הרשאות: ${tokenError?.message || 'שגיאה לא ידועה'}. אנא צור קשר עם התמיכה.`);
+      }
     }
 
     if (!token || !token.data) {
       console.log('🔔 Notifications: ❌ Token object is invalid');
       console.log('🔔 Notifications: Token object:', JSON.stringify(token, null, 2));
-      throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
+      throw new Error('לא ניתן לקבל טוקן הרשאות. הטוקן שהתקבל אינו תקין. אנא צור קשר עם התמיכה.');
     }
 
     console.log('🔔 Notifications: ✅ Expo push token obtained successfully:', token.data);
