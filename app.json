@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Different",
-    "slug": "Different",
+    "slug": "differentapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/different logo.png",
@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/images/different logo.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.differentapp.com",
+      "package": "com.defferentapp.co.il",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -51,8 +51,7 @@
           "androidMode": "default",
           "androidCollapsedTitle": "Different"
         }
-      ],
-      "./plugins/fix-material-theme.js"
+      ]
     ],
     "scheme": "Different",
     "experiments": {
