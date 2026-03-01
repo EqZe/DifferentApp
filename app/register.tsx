@@ -21,7 +21,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@/contexts/UserContext';
 import { IconSymbol } from '@/components/IconSymbol';
 import { api } from '@/utils/api';
-import { isRTL } from '@/constants/Colors';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -38,7 +37,6 @@ export default function RegisterScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { setUser } = useUser();
-  const rtl = isRTL();
   
   const [step, setStep] = useState(1);
   const [fullName, setFullName] = useState('');
@@ -52,9 +50,6 @@ export default function RegisterScreen() {
   const inputRef = useRef<TextInput>(null);
   
   const progress = useSharedValue(0);
-
-  console.log('RegisterScreen - RTL status:', rtl, 'Platform:', Platform.OS);
-  console.log('RegisterScreen - Writing Direction:', rtl ? 'RTL' : 'LTR');
 
   const progressStyle = useAnimatedStyle(() => {
     return {
@@ -115,12 +110,9 @@ export default function RegisterScreen() {
   };
 
   const handleAuth = async () => {
-    console.log('RegisterScreen: ========== STARTING AUTHENTICATION ==========');
-    console.log('RegisterScreen: Mode:', isLogin ? 'LOGIN' : 'SIGNUP');
-    console.log('RegisterScreen: Email:', email);
+    console.log('Authenticating user:', isLogin ? 'login' : 'signup');
     
     if (!email.trim() || !password.trim()) {
-      console.log('RegisterScreen: ⚠️ Email or password is empty');
       return;
     }
 
@@ -131,46 +123,30 @@ export default function RegisterScreen() {
       let userData;
       
       if (isLogin) {
-        console.log('RegisterScreen: 🔐 Attempting to sign in user...');
+        console.log('Signing in user with email:', email);
         userData = await api.signIn(email, password);
-        console.log('RegisterScreen: ✅ Sign in successful');
       } else {
-        console.log('RegisterScreen: 📝 Attempting to sign up new user...');
-        console.log('RegisterScreen: User details:', { fullName, city, phoneNumber });
+        console.log('Signing up new user');
         userData = await api.signUp(email, password, fullName, city, phoneNumber);
-        console.log('RegisterScreen: ✅ Sign up successful');
       }
       
-      console.log('RegisterScreen: ✅ Authentication successful for:', userData.fullName);
-      console.log('RegisterScreen: User ID:', userData.id);
-      console.log('RegisterScreen: Has contract:', userData.hasContract);
-      
+      console.log('Authentication successful:', userData.fullName);
       await setUser(userData);
-      console.log('RegisterScreen: ✅ User set in context');
       
-      console.log('RegisterScreen: 🚀 Navigating to home screen...');
       setTimeout(() => {
         router.replace('/(tabs)/(home)');
       }, 500);
     } catch (error: any) {
-      console.error('RegisterScreen: ❌ Authentication failed');
-      console.error('RegisterScreen: Error message:', error?.message || 'Unknown error');
-      console.error('RegisterScreen: Error details:', JSON.stringify(error, null, 2));
-      console.error('RegisterScreen: Error stack:', error?.stack);
+      console.error('Authentication error:', error);
       
-      let errorMessage = isLogin 
+      const errorMessage = isLogin 
         ? 'שגיאה בהתחברות. אנא בדוק את הפרטים ונסה שוב.'
         : 'שגיאה בהרשמה. אנא נסה שוב.';
       
-      // Add specific error details if available
-      if (error?.message) {
-        errorMessage += '\n\nפרטים טכניים: ' + error.message;
-      }
-      
       if (Platform.OS === 'web') {
-        alert(errorMessage);
+        alert(errorMessage + '\n' + (error.message || ''));
       } else {
-        Alert.alert('שגיאה', errorMessage);
+        Alert.alert('שגיאה', errorMessage + '\n' + (error.message || ''));
       }
       
       setIsLoading(false);
@@ -202,7 +178,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background, direction: rtl ? 'rtl' : 'ltr' }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <KeyboardAvoidingView
         behavior="position"
         style={styles.keyboardView}
@@ -677,7 +653,6 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: 16,
-    textAlign: 'center',
   },
   buttonContainer: {
     paddingHorizontal: 24,

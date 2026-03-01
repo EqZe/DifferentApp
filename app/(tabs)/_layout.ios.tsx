@@ -1,48 +1,16 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Slot, useRouter } from 'expo-router';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useUser } from '@/contexts/UserContext';
 import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
 import { Href } from 'expo-router';
-import { api } from '@/utils/api';
-import { isRTL } from '@/constants/Colors';
 
 export default function TabLayout() {
   const { user, isLoading } = useUser();
   const router = useRouter();
-  const [hasContainers, setHasContainers] = useState(false);
-  const [checkingContainers, setCheckingContainers] = useState(true);
-  const rtl = isRTL();
 
   console.log('TabLayout (iOS) rendering, user:', user?.fullName, 'hasContract:', user?.hasContract);
-  console.log('TabLayout (iOS) - RTL status:', rtl, 'Platform:', Platform.OS);
-
-  // Check if user has any containers
-  useEffect(() => {
-    async function checkUserContainers() {
-      if (!user?.id) {
-        setHasContainers(false);
-        setCheckingContainers(false);
-        return;
-      }
-
-      try {
-        console.log('TabLayout (iOS): Checking if user has containers');
-        const containers = await api.getContainers(user.id);
-        const hasRecords = containers.length > 0;
-        console.log('TabLayout (iOS): User has', containers.length, 'containers, showing tab:', hasRecords);
-        setHasContainers(hasRecords);
-      } catch (error) {
-        console.error('TabLayout (iOS): Error checking containers', error);
-        setHasContainers(false);
-      } finally {
-        setCheckingContainers(false);
-      }
-    }
-
-    checkUserContainers();
-  }, [user?.id]);
 
   // Redirect to register if user is null
   useEffect(() => {
@@ -100,17 +68,6 @@ export default function TabLayout() {
     });
   }
 
-  // Add containers tab ONLY if user has container records
-  if (user && hasContainers) {
-    console.log('Adding containers tab (iOS) - user has container records');
-    tabs.push({
-      name: 'containers',
-      route: '/(tabs)/containers' as Href,
-      icon: 'inventory',
-      label: 'מכולות',
-    });
-  }
-
   // Profile tab is always last
   tabs.push({
     name: 'profile',
@@ -120,7 +77,7 @@ export default function TabLayout() {
   });
 
   return (
-    <View style={[styles.container, { direction: rtl ? 'rtl' : 'ltr' }]}>
+    <View style={styles.container}>
       {/* This renders the actual screen content */}
       <Slot />
       

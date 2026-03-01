@@ -1,21 +1,21 @@
-
 {
   "expo": {
     "name": "Different",
     "slug": "Different",
+    "owner": "different",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/different logo.png",
+    "icon": "./assets/images/natively-dark.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/different logo.png",
+      "image": "./assets/images/natively-dark.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ilayrachkovski.different",
+      "bundleIdentifier": "com.anonymous.Natively",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
@@ -25,17 +25,16 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/different logo.png",
+        "foregroundImage": "./assets/images/natively-dark.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.differentapp.com",
+      "edgeToEdgeEnabled": true,
+      "package": "com.anonymous.Natively",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "WAKE_LOCK",
-        "POST_NOTIFICATIONS"
-      ],
-      "googleServicesFile": "./google-services.json"
+        "WAKE_LOCK"
+      ]
     },
     "web": {
       "favicon": "./assets/images/final_quest_240x240.png",
@@ -50,26 +49,21 @@
         {
           "icon": "./assets/images/final_quest_240x240.png",
           "color": "#2784F5",
+          "sounds": [
+            "default"
+          ],
           "androidMode": "default",
           "androidCollapsedTitle": "Different"
         }
-      ],
-      "./plugins/fix-material-theme.js"
+      ]
     ],
-    "scheme": "different",
+    "scheme": "Different",
     "experiments": {
       "typedRoutes": true
     },
-    "runtimeVersion": "1.0.0",
-    "updates": {
-      "enabled": false
-    },
     "extra": {
       "router": {},
-      "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev",
-      "eas": {
-        "projectId": "fe404aca-e46f-42c2-ac3a-50c265d87ae7"
-      }
+      "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev"
     }
   }
 }
