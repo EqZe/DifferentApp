@@ -119,36 +119,53 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     // Get EAS project ID from app.json
     const projectId = Constants.easConfig?.projectId;
     console.log('🔔 Notifications: EAS Project ID from Constants:', projectId);
+    console.log('🔔 Notifications: Constants.expoConfig?.extra?.eas?.projectId:', Constants.expoConfig?.extra?.eas?.projectId);
+    console.log('🔔 Notifications: App ownership:', Constants.appOwnership);
     
     if (!projectId) {
       console.log('🔔 Notifications: ⚠️ No EAS Project ID found in Constants.easConfig');
-      console.log('🔔 Notifications: Using fallback project ID: fe404aca-e46f-42c2-ac3a-50c265d87ae7');
+      console.log('🔔 Notifications: ⚠️ This is expected in development/Expo Go');
+      console.log('🔔 Notifications: ⚠️ For production APK builds, you need to configure EAS project ID in app.json');
     }
-
-    const finalProjectId = projectId || 'fe404aca-e46f-42c2-ac3a-50c265d87ae7';
-    console.log('🔔 Notifications: Using Project ID:', finalProjectId);
 
     // CRITICAL: Using getExpoPushTokenAsync for Expo Go compatibility
     // This works with Expo Go and returns tokens in format: ExponentPushToken[xxxxxx]
+    // For standalone builds (APK/IPA), it requires a valid EAS project ID
     console.log('🔔 Notifications: Calling getExpoPushTokenAsync...');
     let token;
     try {
-      token = await Notifications.getExpoPushTokenAsync({
-        projectId: finalProjectId,
-      });
+      // If we have a project ID, use it. Otherwise, let getExpoPushTokenAsync try without it
+      // (this will work in Expo Go but may fail in standalone builds)
+      const tokenOptions = projectId ? { projectId } : {};
+      console.log('🔔 Notifications: Token options:', JSON.stringify(tokenOptions, null, 2));
+      
+      token = await Notifications.getExpoPushTokenAsync(tokenOptions);
       console.log('🔔 Notifications: ✅ getExpoPushTokenAsync returned successfully');
     } catch (tokenError: any) {
       console.log('🔔 Notifications: ❌ Error getting Expo push token:', tokenError?.message || tokenError);
       console.log('🔔 Notifications: Token error details:', JSON.stringify(tokenError, null, 2));
       console.log('🔔 Notifications: Token error stack:', tokenError?.stack);
+      console.log('🔔 Notifications: Token error code:', tokenError?.code);
+      console.log('🔔 Notifications: Token error name:', tokenError?.name);
       
       // Provide more specific error messages based on the error
-      if (tokenError?.message?.includes('network')) {
+      const errorMessage = tokenError?.message?.toLowerCase() || '';
+      const errorCode = tokenError?.code?.toLowerCase() || '';
+      
+      if (errorMessage.includes('network') || errorCode.includes('network')) {
         throw new Error('בעיית רשת. אנא בדוק את החיבור לאינטרנט ונסה שוב.');
-      } else if (tokenError?.message?.includes('project')) {
-        throw new Error('שגיאת תצורה. אנא צור קשר עם התמיכה.');
+      } else if (errorMessage.includes('project') || errorCode.includes('project') || errorMessage.includes('projectid')) {
+        console.log('🔔 Notifications: ⚠️ Project ID error - this APK may not be configured correctly');
+        console.log('🔔 Notifications: ⚠️ To fix: Add "extra": { "eas": { "projectId": "YOUR_PROJECT_ID" } } to app.json');
+        throw new Error('האפליקציה לא מוגדרת כראוי להתראות. אנא צור קשר עם התמיכה.');
+      } else if (errorMessage.includes('experience') || errorMessage.includes('manifest')) {
+        console.log('🔔 Notifications: ⚠️ Experience/manifest error - APK configuration issue');
+        throw new Error('שגיאת תצורה באפליקציה. אנא צור קשר עם התמיכה.');
+      } else if (errorMessage.includes('timeout')) {
+        throw new Error('פג תוקף הבקשה. אנא נסה שוב.');
       } else {
-        throw new Error('לא ניתן לקבל טוקן התראות. אנא ודא שאתה משתמש במכשיר פיזי ונסה שוב.');
+        console.log('🔔 Notifications: ⚠️ Unknown error type');
+        throw new Error(`לא ניתן לקבל טוקן התראות: ${tokenError?.message || 'שגיאה לא ידועה'}. אנא נסה שוב או צור קשר עם התמיכה.`);
       }
     }
 
