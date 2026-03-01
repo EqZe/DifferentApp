@@ -28,6 +28,14 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     console.log('🔔 Notifications: Constants.appOwnership =', Constants.appOwnership);
     console.log('🔔 Notifications: Running in Expo Go =', Constants.appOwnership === 'expo');
 
+    // CRITICAL: Web platform requires different handling
+    if (Platform.OS === 'web') {
+      console.log('🔔 Notifications: ⚠️ Running on web platform');
+      console.log('🔔 Notifications: Web push notifications require service worker setup');
+      console.log('🔔 Notifications: This is not supported in the current configuration');
+      throw new Error('התראות Push אינן נתמכות בגרסת הדפדפן. אנא השתמש באפליקציה במכשיר נייד.');
+    }
+
     // Check if running on a physical device OR in Expo Go
     // CRITICAL: On iOS with Expo Go, Device.isDevice is TRUE and appOwnership is 'expo'
     // On Android with Expo Go, Device.isDevice is TRUE and appOwnership is 'expo'
@@ -40,14 +48,13 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     
     // Allow registration if:
     // 1. Running on physical device (Device.isDevice === true), OR
-    // 2. Running in Expo Go (Constants.appOwnership === 'expo'), OR
-    // 3. On web with granted permissions
-    const canRegister = isPhysicalDevice || isExpoGo || Platform.OS === 'web';
+    // 2. Running in Expo Go (Constants.appOwnership === 'expo')
+    const canRegister = isPhysicalDevice || isExpoGo;
     
     if (!canRegister) {
-      console.log('🔔 Notifications: ❌ Cannot register - not on physical device, Expo Go, or web');
+      console.log('🔔 Notifications: ❌ Cannot register - not on physical device or Expo Go');
       console.log('🔔 Notifications: This typically means running in iOS Simulator or Android Emulator');
-      return null;
+      throw new Error('התראות Push זמינות רק במכשירים פיזיים. אנא נסה במכשיר אמיתי (לא סימולטור).');
     }
 
     console.log('🔔 Notifications: ✅ Device check passed - can register for push notifications');
@@ -81,7 +88,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       console.log('🔔 Notifications: Full permissions object:', JSON.stringify(permissionsResult, null, 2));
     } catch (permError: any) {
       console.log('🔔 Notifications: ❌ Error checking permissions:', permError?.message || permError);
-      throw new Error('לא ניתן לבדוק הרשאות התראות. אנא נסה שוב.');
+      throw new Error('לא ניתן לבדוק הרשאות התראות. אנא בדוק את הגדרות המכשיר.');
     }
 
     let finalStatus = permissionsResult.status;
@@ -96,7 +103,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
         console.log('🔔 Notifications: Full request result:', JSON.stringify(requestResult, null, 2));
       } catch (reqError: any) {
         console.log('🔔 Notifications: ❌ Error requesting permissions:', reqError?.message || reqError);
-        throw new Error('לא ניתן לבקש הרשאות התראות. אנא בדוק את הגדרות המכשיר.');
+        throw new Error('לא ניתן לבקש הרשאות התראות. אנא אפשר התראות בהגדרות המכשיר.');
       }
     }
 
@@ -104,7 +111,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     if (finalStatus !== 'granted') {
       console.log('🔔 Notifications: ❌ Permission not granted, cannot register for push notifications');
       console.log('🔔 Notifications: Final status:', finalStatus);
-      throw new Error('לא ניתנו הרשאות להתראות. אנא אפשר התראות בהגדרות המכשיר.');
+      throw new Error('לא ניתנו הרשאות להתראות. אנא אפשר התראות בהגדרות המכשיר ונסה שוב.');
     }
 
     console.log('🔔 Notifications: ✅ Permissions granted, attempting to get Expo push token');
@@ -134,13 +141,21 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
       console.log('🔔 Notifications: ❌ Error getting Expo push token:', tokenError?.message || tokenError);
       console.log('🔔 Notifications: Token error details:', JSON.stringify(tokenError, null, 2));
       console.log('🔔 Notifications: Token error stack:', tokenError?.stack);
-      throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
+      
+      // Provide more specific error messages based on the error
+      if (tokenError?.message?.includes('network')) {
+        throw new Error('בעיית רשת. אנא בדוק את החיבור לאינטרנט ונסה שוב.');
+      } else if (tokenError?.message?.includes('project')) {
+        throw new Error('שגיאת תצורה. אנא צור קשר עם התמיכה.');
+      } else {
+        throw new Error('לא ניתן לקבל טוקן התראות. אנא ודא שאתה משתמש במכשיר פיזי ונסה שוב.');
+      }
     }
 
     if (!token || !token.data) {
       console.log('🔔 Notifications: ❌ Token object is invalid');
       console.log('🔔 Notifications: Token object:', JSON.stringify(token, null, 2));
-      throw new Error('לא ניתן לקבל טוקן התראות. אנא צור קשר עם התמיכה.');
+      throw new Error('לא ניתן לקבל טוקן התראות. אנא נסה שוב מאוחר יותר.');
     }
 
     console.log('🔔 Notifications: ✅ Expo push token obtained successfully:', token.data);
