@@ -2,7 +2,7 @@
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useFonts } from "expo-font";
 import "react-native-reanimated";
-import { useColorScheme, Alert } from "react-native";
+import { useColorScheme, Alert, I18nManager, Platform } from "react-native";
 import {
   DarkTheme,
   DefaultTheme,
@@ -15,10 +15,26 @@ import * as SplashScreen from "expo-splash-screen";
 import { useNetworkState } from "expo-network";
 import { StatusBar } from "expo-status-bar";
 import { SystemBars } from "react-native-edge-to-edge";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Stack, router } from "expo-router";
-import { Colors } from "@/constants/Colors";
+import { Colors, isRTL } from "@/constants/Colors";
 import Constants from "expo-constants";
+import * as Notifications from 'expo-notifications';
+
+// Force RTL layout for Hebrew - MUST be at the very top before any components render
+// This is critical for Android to apply RTL correctly
+if (Platform.OS !== 'web') {
+  if (!I18nManager.isRTL) {
+    I18nManager.allowRTL(true);
+    I18nManager.forceRTL(true);
+    
+    // On Android, changing RTL requires an app restart
+    if (Platform.OS === 'android') {
+      console.log('🔄 RTL was not enabled. Forcing RTL and reloading app...');
+      // The app will restart automatically on Android when RTL changes
+    }
+  }
+}
 
 SplashScreen.preventAutoHideAsync();
 
@@ -51,16 +67,22 @@ const CustomDarkTheme: Theme = {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const { isConnected } = useNetworkState();
+  const rtl = isRTL();
+  const notificationListener = useRef<Notifications.Subscription>();
+  const responseListener = useRef<Notifications.Subscription>();
 
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
 
   useEffect(() => {
-    // Log backend URL at app startup for debugging
+    // Log backend URL and RTL status at app startup for debugging
     const backendUrl = Constants.expoConfig?.extra?.backendUrl;
     console.log('🚀 App starting with backend URL:', backendUrl);
-  }, []);
+    console.log('🔄 RTL enabled:', rtl);
+    console.log('📱 Platform:', Platform.OS);
+    console.log('🌍 Writing Direction:', rtl ? 'RTL' : 'LTR');
+  }, [rtl]);
 
   useEffect(() => {
     if (loaded) {
@@ -77,12 +99,57 @@ export default function RootLayout() {
     }
   }, [isConnected]);
 
+  // Set up notification listeners
+  useEffect(() => {
+    console.log('🔔 Setting up notification listeners');
+
+    // Listener for notifications received while app is in foreground
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log('🔔 Notification received in foreground:', notification);
+      const data = notification.request.content.data;
+      
+      // Log notification type for debugging
+      if (data?.type) {
+        console.log('🔔 Notification type:', data.type);
+      }
+    });
+
+    // Listener for when user taps on a notification
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('🔔 User tapped notification:', response);
+      const data = response.notification.request.content.data;
+      
+      // Handle different notification types
+      if (data?.type === 'container_update') {
+        console.log('🔔 Navigating to containers screen');
+        router.push('/(tabs)/containers');
+      } else if (data?.type === 'task_approved') {
+        console.log('🔔 Navigating to tasks screen');
+        router.push('/(tabs)/tasks');
+      } else if (data?.type === 'schedule_update') {
+        console.log('🔔 Navigating to schedule screen');
+        router.push('/(tabs)/schedule');
+      }
+    });
+
+    // Cleanup listeners on unmount
+    return () => {
+      console.log('🔔 Cleaning up notification listeners');
+      if (notificationListener.current) {
+        notificationListener.current.remove();
+      }
+      if (responseListener.current) {
+        responseListener.current.remove();
+      }
+    };
+  }, []);
+
   if (!loaded) {
     return null;
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, direction: rtl ? 'rtl' : 'ltr' }}>
       <ThemeProvider value={colorScheme === "dark" ? CustomDarkTheme : LightTheme}>
         <UserProvider>
           <WidgetProvider>

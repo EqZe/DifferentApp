@@ -66,6 +66,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    flowType: 'pkce', // CRITICAL: Use PKCE flow for better security and Expo Go compatibility
   },
 });
 
@@ -135,6 +136,20 @@ export interface TaskMetadata {
   requires_pending: boolean;
   display_order: number;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserContainer {
+  id: string;
+  auth_user_id: string;
+  container_id_per_user: string;
+  items_ready: string | null;
+  items_paid: string | null;
+  items_in_garage: string | null;
+  items_on_container: string | null;
+  container_sent: string | null;
+  container_arrive: string | null;
   created_at: string;
   updated_at: string;
 }

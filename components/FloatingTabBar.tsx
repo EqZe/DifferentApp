@@ -21,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { designColors, typography, spacing, radius, shadows } from '@/styles/designSystem';
+import { isRTL } from '@/constants/Colors';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -50,9 +51,12 @@ export default function FloatingTabBar({
   const isDark = colorScheme === 'dark';
   const colors = isDark ? designColors.dark : designColors.light;
   const animatedValue = useSharedValue(0);
+  const rtl = isRTL();
 
   const activeTabIndex = React.useMemo(() => {
     console.log('FloatingTabBar: Current pathname:', pathname);
+    console.log('FloatingTabBar: RTL status:', rtl, 'Platform:', Platform.OS);
+    console.log('FloatingTabBar: Writing Direction:', rtl ? 'RTL' : 'LTR');
     
     let bestMatch = -1;
     let bestMatchScore = 0;
@@ -77,7 +81,7 @@ export default function FloatingTabBar({
     const finalIndex = bestMatch >= 0 ? bestMatch : 0;
     console.log('FloatingTabBar: Active tab index:', finalIndex, 'for tab:', tabs[finalIndex]?.name);
     return finalIndex;
-  }, [pathname, tabs]);
+  }, [pathname, tabs, rtl]);
 
   React.useEffect(() => {
     if (activeTabIndex >= 0) {
@@ -98,16 +102,25 @@ export default function FloatingTabBar({
 
   const indicatorStyle = useAnimatedStyle(() => {
     const tabWidth = (containerWidth - 8) / tabs.length;
+    
+    // For RTL, we need to reverse the direction of the indicator
+    // The indicator should move from right to left (opposite of LTR)
+    const translateX = rtl
+      ? interpolate(
+          animatedValue.value,
+          [0, tabs.length - 1],
+          [tabWidth * (tabs.length - 1), 0]
+        )
+      : interpolate(
+          animatedValue.value,
+          [0, tabs.length - 1],
+          [0, tabWidth * (tabs.length - 1)]
+        );
+    
+    console.log('FloatingTabBar: Indicator translateX:', translateX, 'for index:', animatedValue.value, 'RTL:', rtl);
+    
     return {
-      transform: [
-        {
-          translateX: interpolate(
-            animatedValue.value,
-            [0, tabs.length - 1],
-            [0, tabWidth * (tabs.length - 1)]
-          ),
-        },
-      ],
+      transform: [{ translateX }],
     };
   });
 
@@ -115,7 +128,7 @@ export default function FloatingTabBar({
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <View style={[
         styles.container,
-        { width: containerWidth, marginBottom: bottomMargin },
+        { width: containerWidth, marginBottom: bottomMargin, direction: rtl ? 'rtl' : 'ltr' },
         styles.containerShadow,
       ]}>
         <BlurView
@@ -140,7 +153,7 @@ export default function FloatingTabBar({
             indicatorStyle,
           ]} />
           
-          <View style={styles.tabsContainer}>
+          <View style={[styles.tabsContainer, { direction: rtl ? 'rtl' : 'ltr' }]}>
             {tabs.map((tab, index) => {
               const isActive = activeTabIndex === index;
               const iconColor = isActive ? designColors.primary : colors.textTertiary;
@@ -218,7 +231,7 @@ const styles = StyleSheet.create({
   indicator: {
     position: 'absolute',
     top: 4,
-    left: 4,
+    // Remove left: 4 to allow RTL animation to work properly
     bottom: 4,
     borderRadius: 24,
   },
@@ -249,6 +262,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontWeight: '500',
     fontSize: 11,
+    textAlign: 'center',
   },
   tabLabelActive: {
     fontWeight: '700',

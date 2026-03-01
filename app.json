@@ -2,20 +2,19 @@
   "expo": {
     "name": "Different",
     "slug": "Different",
-    "owner": "different",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/natively-dark.png",
+    "icon": "./assets/images/different logo.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/natively-dark.png",
+      "image": "./assets/images/different logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Natively",
+      "bundleIdentifier": "com.ilayrachkovski.different",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
@@ -25,15 +24,15 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/natively-dark.png",
+        "foregroundImage": "./assets/images/different logo.png",
         "backgroundColor": "#000000"
       },
-      "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.Natively",
+      "package": "com.differentapp.com",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "WAKE_LOCK"
+        "WAKE_LOCK",
+        "POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -49,21 +48,26 @@
         {
           "icon": "./assets/images/final_quest_240x240.png",
           "color": "#2784F5",
-          "sounds": [
-            "default"
-          ],
           "androidMode": "default",
           "androidCollapsedTitle": "Different"
         }
-      ]
+      ],
+      "./plugins/fix-material-theme.js"
     ],
     "scheme": "Different",
     "experiments": {
       "typedRoutes": true
     },
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "enabled": false
+    },
     "extra": {
       "router": {},
-      "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev"
+      "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev",
+      "eas": {
+        "projectId": "fe404aca-e46f-42c2-ac3a-50c265d87ae7"
+      }
     }
   }
 }
