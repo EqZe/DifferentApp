@@ -2,7 +2,7 @@
 {
   "expo": {
     "name": "Different",
-    "slug": "different",
+    "slug": "differentapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/different logo.png",
@@ -44,7 +44,7 @@
         "onesignal-expo-plugin",
         {
           "mode": "production",
-          "onesignalAppId": "b732b467-6886-4c7b-b3d9-5010de1199d6"
+          "appId": "b732b467-6886-4c7b-b3d9-5010de1199d6"
         }
       ],
       "./plugins/fix-material-theme.js"
