@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/IconSymbol';
 import { designColors, spacing, radius, shadows } from '@/styles/designSystem';
@@ -10,6 +10,12 @@ export function NotificationBell() {
   const router = useRouter();
   const { hasPermission } = useOneSignal();
   const [unreadCount, setUnreadCount] = useState(0);
+  const colorScheme = useColorScheme();
+  
+  // Get the correct text color based on theme
+  const textSecondaryColor = colorScheme === 'dark' 
+    ? designColors.dark.textSecondary 
+    : designColors.light.textSecondary;
 
   const handlePress = () => {
     console.log('NotificationBell: User tapped notification bell');
@@ -34,7 +40,7 @@ export function NotificationBell() {
           ios_icon_name="bell.fill"
           android_material_icon_name="notifications"
           size={24}
-          color={hasPermission ? designColors.primary : designColors.textSecondary}
+          color={hasPermission ? designColors.primary : textSecondaryColor}
         />
         {!hasPermission && (
           <View style={styles.warningBadge}>

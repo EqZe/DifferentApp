@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  useColorScheme,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,6 +32,7 @@ export default function NotificationPreferencesScreen() {
   const { user } = useUser();
   const { hasPermission, requestPermission } = useOneSignal();
   const router = useRouter();
+  const colorScheme = useColorScheme();
   const [loading, setLoading] = useState(false);
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     taskReminders: true,
@@ -38,6 +40,11 @@ export default function NotificationPreferencesScreen() {
     scheduleChanges: true,
     generalAnnouncements: true,
   });
+  
+  // Get theme-aware colors
+  const themeColors = colorScheme === 'dark' ? designColors.dark : designColors.light;
+  const textColor = themeColors.text;
+  const textSecondaryColor = themeColors.textSecondary;
 
   useEffect(() => {
     loadPreferences();
@@ -328,9 +335,9 @@ export default function NotificationPreferencesScreen() {
               ios_icon_name="info.circle"
               android_material_icon_name="info"
               size={20}
-              color={designColors.textSecondary}
+              color={textSecondaryColor}
             />
-            <Text style={styles.infoSectionText}>
+            <Text style={[styles.infoSectionText, { color: textSecondaryColor }]}>
               ניתן לשנות את ההעדפות בכל עת. השינויים ייכנסו לתוקף מיידית.
             </Text>
           </View>
@@ -384,7 +391,7 @@ const styles = StyleSheet.create({
   },
   warningText: {
     flex: 1,
-    fontSize: typography.small.fontSize,
+    fontSize: typography.bodySmall.fontSize,
     color: '#856404',
     lineHeight: 20,
   },
@@ -401,7 +408,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   infoText: {
-    fontSize: typography.small.fontSize,
+    fontSize: typography.bodySmall.fontSize,
     color: '#0C5460',
     lineHeight: 20,
     marginBottom: spacing.sm,
@@ -425,7 +432,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.h4.fontSize,
     fontWeight: '700',
-    color: designColors.text,
+    color: designColors.light.text,
     marginBottom: spacing.md,
   },
   preferenceCard: {
@@ -454,12 +461,12 @@ const styles = StyleSheet.create({
   preferenceTitle: {
     fontSize: typography.body.fontSize,
     fontWeight: '600',
-    color: designColors.text,
+    color: designColors.light.text,
     marginBottom: spacing.xs,
   },
   preferenceDescription: {
-    fontSize: typography.small.fontSize,
-    color: designColors.textSecondary,
+    fontSize: typography.bodySmall.fontSize,
+    color: designColors.light.textSecondary,
     lineHeight: 18,
   },
   infoSection: {
@@ -472,8 +479,7 @@ const styles = StyleSheet.create({
   },
   infoSectionText: {
     flex: 1,
-    fontSize: typography.small.fontSize,
-    color: designColors.textSecondary,
+    fontSize: typography.bodySmall.fontSize,
     lineHeight: 20,
   },
 });
