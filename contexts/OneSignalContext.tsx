@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { Platform } from 'react-native';
 import OneSignal from 'react-native-onesignal';
 import { useUser } from './UserContext';
@@ -24,42 +24,61 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   const userContext = useUser();
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
+  const isMounted = useRef(false);
 
   useEffect(() => {
+    isMounted.current = true;
     console.log('🔔 OneSignal: Initializing OneSignal SDK');
     
     // Initialize OneSignal with App ID
-    try {
-      // Set the OneSignal App ID
-      OneSignal.initialize('b732b467-6886-4c7b-b3d9-5010de1199d6');
-      
-      // Set log level for debugging
-      OneSignal.Debug.setLogLevel(6);
-      
-      console.log('🔔 OneSignal: SDK initialized with App ID: b732b467-6886-4c7b-b3d9-5010de1199d6');
-      setIsInitialized(true);
-      
-      // Check current permission status
-      OneSignal.Notifications.getPermissionAsync().then((permission) => {
+    const initializeOneSignal = async () => {
+      try {
+        // Set the OneSignal App ID
+        OneSignal.initialize('b732b467-6886-4c7b-b3d9-5010de1199d6');
+        
+        // Set log level for debugging
+        OneSignal.Debug.setLogLevel(6);
+        
+        console.log('🔔 OneSignal: SDK initialized with App ID: b732b467-6886-4c7b-b3d9-5010de1199d6');
+        
+        // Only update state if component is still mounted
+        if (isMounted.current) {
+          setIsInitialized(true);
+        }
+        
+        // Check current permission status
+        const permission = await OneSignal.Notifications.getPermissionAsync();
         console.log('🔔 OneSignal: Current permission status:', permission);
-        setHasPermission(permission);
-      });
-      
-      // Listen for permission changes
-      OneSignal.Notifications.addEventListener('permissionChange', (granted) => {
-        console.log('🔔 OneSignal: Permission changed:', granted);
-        setHasPermission(granted);
-      });
-      
-      // Listen for notification clicks
-      OneSignal.Notifications.addEventListener('click', (event) => {
-        console.log('🔔 OneSignal: Notification clicked:', event);
-        // Handle notification click navigation here if needed
-      });
-      
-    } catch (error) {
-      console.error('🔔 OneSignal: Initialization error:', error);
-    }
+        
+        // Only update state if component is still mounted
+        if (isMounted.current) {
+          setHasPermission(permission);
+        }
+        
+        // Listen for permission changes
+        OneSignal.Notifications.addEventListener('permissionChange', (granted) => {
+          console.log('🔔 OneSignal: Permission changed:', granted);
+          if (isMounted.current) {
+            setHasPermission(granted);
+          }
+        });
+        
+        // Listen for notification clicks
+        OneSignal.Notifications.addEventListener('click', (event) => {
+          console.log('🔔 OneSignal: Notification clicked:', event);
+          // Handle notification click navigation here if needed
+        });
+        
+      } catch (error) {
+        console.error('🔔 OneSignal: Initialization error:', error);
+      }
+    };
+
+    initializeOneSignal();
+
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   // Set external user ID when user logs in
@@ -97,7 +116,11 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       
       const permission = await OneSignal.Notifications.requestPermission(true);
       console.log('🔔 OneSignal: Permission result:', permission);
-      setHasPermission(permission);
+      
+      if (isMounted.current) {
+        setHasPermission(permission);
+      }
+      
       return permission;
     } catch (error) {
       console.error('🔔 OneSignal: Permission request error:', error);
