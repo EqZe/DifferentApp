@@ -21,13 +21,21 @@ export function useOneSignal() {
 }
 
 export function OneSignalProvider({ children }: { children: React.ReactNode }) {
-  const userContext = useUser();
+  const { user, isLoading: isUserLoading } = useUser();
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const isMounted = useRef(false);
+  const isInitializing = useRef(false);
 
   useEffect(() => {
     isMounted.current = true;
+    
+    // Prevent multiple initializations
+    if (isInitializing.current) {
+      return;
+    }
+    
+    isInitializing.current = true;
     console.log('🔔 OneSignal: Initializing OneSignal SDK');
     
     // Initialize OneSignal with App ID
@@ -41,17 +49,13 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         
         console.log('🔔 OneSignal: SDK initialized with App ID: b732b467-6886-4c7b-b3d9-5010de1199d6');
         
-        // Only update state if component is still mounted
-        if (isMounted.current) {
-          setIsInitialized(true);
-        }
-        
         // Check current permission status
         const permission = await OneSignal.Notifications.getPermissionAsync();
         console.log('🔔 OneSignal: Current permission status:', permission);
         
         // Only update state if component is still mounted
         if (isMounted.current) {
+          setIsInitialized(true);
           setHasPermission(permission);
         }
         
@@ -83,16 +87,19 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
 
   // Set external user ID when user logs in
   useEffect(() => {
-    // Safety check: only proceed if userContext and user are available
-    if (!userContext || !userContext.user) {
-      console.log('🔔 OneSignal: User context not ready yet, skipping user ID setup');
+    // Wait for both OneSignal and user to be ready
+    if (!isInitialized || isUserLoading || !user?.id) {
+      console.log('🔔 OneSignal: Waiting for initialization or user data', {
+        isInitialized,
+        isUserLoading,
+        hasUser: !!user?.id
+      });
       return;
     }
 
-    const user = userContext.user;
-
-    if (isInitialized && user?.id) {
-      console.log('🔔 OneSignal: Setting external user ID:', user.id);
+    console.log('🔔 OneSignal: Setting external user ID:', user.id);
+    
+    try {
       OneSignal.login(user.id);
       
       // Set user properties for segmentation
@@ -102,8 +109,10 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         city: user.city || '',
         has_contract: user.hasContract ? 'true' : 'false',
       });
+    } catch (error) {
+      console.error('🔔 OneSignal: Error setting user ID:', error);
     }
-  }, [isInitialized, userContext?.user]);
+  }, [isInitialized, isUserLoading, user]);
 
   const requestPermission = async (): Promise<boolean> => {
     try {
