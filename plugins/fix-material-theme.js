@@ -4,7 +4,6 @@ const path = require('path');
 
 const ONESIGNAL_APP_ID = "b732b467-6886-4c7b-b3d9-5010de1199d6";
 
-// FULL STYLES FOR THE MAIN APP
 const APP_STYLES_XML = `<?xml version="1.0" encoding="utf-8"?>
 <resources>
   <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
@@ -25,6 +24,8 @@ const APP_STYLES_XML = `<?xml version="1.0" encoding="utf-8"?>
 
   <style name="Theme.EdgeToEdge.DayNight.Common" parent="Theme.Material3.DayNight.NoActionBar" />
   <style name="Theme.EdgeToEdge.Light.Common" parent="Theme.Material3.Light.NoActionBar" />
+  <style name="Theme.EdgeToEdge.Material2.DayNight.Common" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+  <style name="Theme.EdgeToEdge.Material2.Light.Common" parent="Theme.MaterialComponents.Light.NoActionBar" />
   <style name="Theme.EdgeToEdge.Material3.DayNight.Common" parent="Theme.Material3.DayNight.NoActionBar" />
   <style name="Theme.EdgeToEdge.Material3.Light.Common" parent="Theme.Material3.Light.NoActionBar" />
   <style name="Theme.EdgeToEdge.Material3.Dynamic.DayNight.Common" parent="Theme.Material3.DayNight.NoActionBar" />
@@ -33,11 +34,8 @@ const APP_STYLES_XML = `<?xml version="1.0" encoding="utf-8"?>
   <style name="Theme.EdgeToEdge.Material3Expressive.Light.Common" parent="Theme.Material3.Light.NoActionBar" />
   <style name="Theme.EdgeToEdge.Material3Expressive.Dynamic.DayNight.Common" parent="Theme.Material3.DayNight.NoActionBar" />
   <style name="Theme.EdgeToEdge.Material3Expressive.Dynamic.Light.Common" parent="Theme.Material3.Light.NoActionBar" />
-  <style name="Theme.EdgeToEdge.Material2.DayNight.Common" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
-  <style name="Theme.EdgeToEdge.Material2.Light.Common" parent="Theme.MaterialComponents.Light.NoActionBar" />
 </resources>`;
 
-// MINIMAL STYLES FOR THE LIBRARY (Removes Splash Screen entirely to avoid attribute errors)
 const LIB_STYLES_XML = `<?xml version="1.0" encoding="utf-8"?>
 <resources>
   <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar" />
@@ -45,10 +43,16 @@ const LIB_STYLES_XML = `<?xml version="1.0" encoding="utf-8"?>
   <style name="Theme.Material3Expressive.Light.NoActionBar" parent="Theme.Material3.Light.NoActionBar" />
   <style name="Theme.EdgeToEdge.DayNight.Common" parent="Theme.Material3.DayNight.NoActionBar" />
   <style name="Theme.EdgeToEdge.Light.Common" parent="Theme.Material3.Light.NoActionBar" />
+  <style name="Theme.EdgeToEdge.Material2.DayNight.Common" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+  <style name="Theme.EdgeToEdge.Material2.Light.Common" parent="Theme.MaterialComponents.Light.NoActionBar" />
   <style name="Theme.EdgeToEdge.Material3.DayNight.Common" parent="Theme.Material3.DayNight.NoActionBar" />
   <style name="Theme.EdgeToEdge.Material3.Light.Common" parent="Theme.Material3.Light.NoActionBar" />
+  <style name="Theme.EdgeToEdge.Material3.Dynamic.DayNight.Common" parent="Theme.Material3.DayNight.NoActionBar" />
+  <style name="Theme.EdgeToEdge.Material3.Dynamic.Light.Common" parent="Theme.Material3.Light.NoActionBar" />
   <style name="Theme.EdgeToEdge.Material3Expressive.DayNight.Common" parent="Theme.Material3.DayNight.NoActionBar" />
   <style name="Theme.EdgeToEdge.Material3Expressive.Light.Common" parent="Theme.Material3.Light.NoActionBar" />
+  <style name="Theme.EdgeToEdge.Material3Expressive.Dynamic.DayNight.Common" parent="Theme.Material3.DayNight.NoActionBar" />
+  <style name="Theme.EdgeToEdge.Material3Expressive.Dynamic.Light.Common" parent="Theme.Material3.Light.NoActionBar" />
 </resources>`;
 
 const withOneSignalManualFix = (config) => {
@@ -66,29 +70,32 @@ const withOneSignalManualFix = (config) => {
 
 const withNativeFixes = (config) => {
   return withDangerousMod(config, ['android', (configMod) => {
-      const projectRoot = configMod.modRequest.projectRoot;
-      const resValues = path.join(configMod.modRequest.platformProjectRoot, 'app', 'src', 'main', 'res', 'values');
-      if (!fs.existsSync(resValues)) fs.mkdirSync(resValues, { recursive: true });
-      fs.writeFileSync(path.join(resValues, 'styles.xml'), APP_STYLES_XML, 'utf8');
+    const projectRoot = configMod.modRequest.projectRoot;
 
-      const libRes = path.join(projectRoot, 'node_modules/react-native-edge-to-edge/android/src/main/res/values');
+    // 1. Write app styles
+    const appResValues = path.join(configMod.modRequest.platformProjectRoot, 'app', 'src', 'main', 'res', 'values');
+    if (!fs.existsSync(appResValues)) fs.mkdirSync(appResValues, { recursive: true });
+    fs.writeFileSync(path.join(appResValues, 'styles.xml'), APP_STYLES_XML, 'utf8');
+
+    // 2. Write to ALL versioned res folders in react-native-edge-to-edge (styles only, do NOT touch build.gradle)
+    const libResPaths = [
+      path.join(projectRoot, 'node_modules/react-native-edge-to-edge/android/src/main/res/values'),
+      path.join(projectRoot, 'node_modules/react-native-edge-to-edge/android/src/main/res/values-v21'),
+      path.join(projectRoot, 'node_modules/react-native-edge-to-edge/android/src/main/res/values-v27'),
+      path.join(projectRoot, 'node_modules/react-native-edge-to-edge/android/src/main/res/values-v35'),
+    ];
+
+    for (const libRes of libResPaths) {
       if (!fs.existsSync(libRes)) fs.mkdirSync(libRes, { recursive: true });
       fs.writeFileSync(path.join(libRes, 'styles.xml'), LIB_STYLES_XML, 'utf8');
+    }
 
-      const libGradle = path.join(projectRoot, 'node_modules/react-native-edge-to-edge/android/build.gradle');
-      if (fs.existsSync(libGradle)) {
-        let contents = fs.readFileSync(libGradle, 'utf8');
-        contents = contents.replace(/\n?.*com\.google\.android\.material:material.*\n?/g, '\n');
-        contents += `\ndependencies {\n    implementation 'com.google.android.material:material:1.13.0-beta01'\n}\n`;
-        fs.writeFileSync(libGradle, contents, 'utf8');
-      }
-      return configMod;
-    },
-  ]);
+    return configMod;
+  }]);
 };
 
 module.exports = createRunOncePlugin((config) => {
   config = withOneSignalManualFix(config);
   config = withNativeFixes(config);
   return config;
-}, 'MaterialThemeFix', '12.0.0');
+}, 'MaterialThemeFix', '14.0.0');

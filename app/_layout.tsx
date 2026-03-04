@@ -102,8 +102,8 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, direction: rtl ? 'rtl' : 'ltr' }}>
       <ThemeProvider value={colorScheme === "dark" ? CustomDarkTheme : LightTheme}>
-        <OneSignalProvider>
-          <UserProvider>
+        <UserProvider>
+          <OneSignalProvider>
             <WidgetProvider>
               <SystemBars style={colorScheme === "dark" ? "light" : "dark"} />
               <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
@@ -121,8 +121,8 @@ export default function RootLayout() {
                 />
               </Stack>
             </WidgetProvider>
-          </UserProvider>
-        </OneSignalProvider>
+          </OneSignalProvider>
+        </UserProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
   );

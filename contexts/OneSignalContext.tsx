@@ -21,7 +21,7 @@ export function useOneSignal() {
 }
 
 export function OneSignalProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useUser();
+  const userContext = useUser();
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
 
@@ -64,6 +64,14 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
 
   // Set external user ID when user logs in
   useEffect(() => {
+    // Safety check: only proceed if userContext and user are available
+    if (!userContext || !userContext.user) {
+      console.log('🔔 OneSignal: User context not ready yet, skipping user ID setup');
+      return;
+    }
+
+    const user = userContext.user;
+
     if (isInitialized && user?.id) {
       console.log('🔔 OneSignal: Setting external user ID:', user.id);
       OneSignal.login(user.id);
@@ -76,7 +84,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         has_contract: user.hasContract ? 'true' : 'false',
       });
     }
-  }, [isInitialized, user]);
+  }, [isInitialized, userContext?.user]);
 
   const requestPermission = async (): Promise<boolean> => {
     try {
