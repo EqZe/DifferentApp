@@ -58,6 +58,11 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     const initializeOneSignal = async () => {
       try {
         console.log('🔔 OneSignal: Calling initialize with App ID: b732b467-6886-4c7b-b3d9-5010de1199d6');
+        console.log('🔔 OneSignal: Platform:', Platform.OS);
+        console.log('🔔 OneSignal: Device info:', {
+          platform: Platform.OS,
+          version: Platform.Version,
+        });
         
         // Set the OneSignal App ID
         OneSignal.initialize('b732b467-6886-4c7b-b3d9-5010de1199d6');
@@ -67,6 +72,9 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         
         console.log('🔔 OneSignal: SDK initialized successfully');
         
+        // Wait a moment for SDK to fully initialize
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         // Check current permission status
         const permission = await OneSignal.Notifications.getPermissionAsync();
         console.log('🔔 OneSignal: Current permission status:', permission);
@@ -75,12 +83,22 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         const deviceState = await OneSignal.User.pushSubscription.getIdAsync();
         console.log('🔔 OneSignal: Player ID (device token):', deviceState);
         
+        // Get subscription state
+        const subscriptionState = await OneSignal.User.pushSubscription.getOptedInAsync();
+        console.log('🔔 OneSignal: Subscription opted in:', subscriptionState);
+        
         // Only update state if component is still mounted
         if (isMounted.current) {
           setIsInitialized(true);
           setHasPermission(permission);
           setPlayerId(deviceState);
         }
+        
+        console.log('🔔 OneSignal: Initialization complete. Ready to receive notifications.');
+        console.log('🔔 OneSignal: To test notifications:');
+        console.log('   1. Make sure you granted notification permissions');
+        console.log('   2. Send a test notification from OneSignal dashboard');
+        console.log('   3. Target this Player ID:', deviceState);
         
         // Listen for permission changes
         OneSignal.Notifications.addEventListener('permissionChange', (granted) => {
@@ -187,6 +205,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   const requestPermission = async (): Promise<boolean> => {
     try {
       console.log('🔔 OneSignal: User requested notification permission');
+      console.log('🔔 OneSignal: Current state - isInitialized:', isInitialized, 'hasPermission:', hasPermission);
       
       if (Platform.OS === 'web') {
         console.log('🔔 OneSignal: Web platform - permission not supported');
@@ -198,28 +217,56 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
       
+      if (!isInitialized) {
+        console.log('⚠️ OneSignal: SDK not initialized yet, waiting...');
+        Alert.alert(
+          'אנא המתן',
+          'מערכת ההתראות עדיין נטענת. אנא נסה שוב בעוד רגע.',
+          [{ text: 'הבנתי', style: 'default' }]
+        );
+        return false;
+      }
+      
+      console.log('🔔 OneSignal: Requesting permission from user...');
       const permission = await OneSignal.Notifications.requestPermission(true);
       console.log('🔔 OneSignal: Permission request result:', permission);
       
       if (permission) {
         console.log('✅ OneSignal: Permission granted! User will receive notifications');
         
+        // Wait a moment for the subscription to register
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         // Get the player ID after permission is granted
         const deviceState = await OneSignal.User.pushSubscription.getIdAsync();
         console.log('🔔 OneSignal: Device registered with Player ID:', deviceState);
+        
+        // Check if we're opted in
+        const optedIn = await OneSignal.User.pushSubscription.getOptedInAsync();
+        console.log('🔔 OneSignal: Opted in status:', optedIn);
         
         if (isMounted.current) {
           setHasPermission(permission);
           setPlayerId(deviceState);
         }
+        
+        console.log('🔔 OneSignal: ✅ Setup complete! You can now receive push notifications.');
+        console.log('🔔 OneSignal: Your Player ID:', deviceState);
+        console.log('🔔 OneSignal: Send a test notification from OneSignal dashboard to this Player ID');
       } else {
         console.log('❌ OneSignal: Permission denied by user');
+        console.log('🔔 OneSignal: User needs to enable notifications in device settings');
       }
       
       return permission;
     } catch (error) {
       console.error('🔔 OneSignal: Permission request error:', error);
       console.error('🔔 OneSignal: Error details:', JSON.stringify(error, null, 2));
+      Alert.alert(
+        'שגיאה',
+        'אירעה שגיאה בעת בקשת הרשאות התראות. אנא נסה שוב.',
+        [{ text: 'הבנתי', style: 'default' }]
+      );
       return false;
     }
   };

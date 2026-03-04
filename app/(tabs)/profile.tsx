@@ -413,26 +413,49 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Debug Info (only show on development) */}
-        {__DEV__ && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>מידע טכני (Debug)</Text>
-            <View style={styles.debugCard}>
-              <Text style={styles.debugTitle}>OneSignal Status</Text>
-              <Text style={styles.debugText}>Platform: {Platform.OS}</Text>
-              <Text style={styles.debugText}>Initialized: {isInitialized ? 'Yes' : 'No'}</Text>
-              <Text style={styles.debugText}>Permission: {hasPermission ? 'Granted' : 'Not Granted'}</Text>
-              <Text style={styles.debugText}>Player ID: {playerId || 'Not available'}</Text>
-              <Text style={styles.debugText}>User ID: {user.id}</Text>
-              {Platform.OS === 'web' && (
-                <Text style={[styles.debugText, { color: designColors.warning, marginTop: spacing.sm }]}>
-                  ⚠️ Push notifications don't work on Web.{'\n'}
-                  Build the app with EAS and test on a physical device.
-                </Text>
-              )}
-            </View>
+        {/* Debug Info (always show for testing) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>מידע טכני (Debug)</Text>
+          <View style={styles.debugCard}>
+            <Text style={styles.debugTitle}>OneSignal Status</Text>
+            <Text style={styles.debugText}>Platform: {Platform.OS}</Text>
+            <Text style={styles.debugText}>Initialized: {isInitialized ? 'Yes ✅' : 'No ❌'}</Text>
+            <Text style={styles.debugText}>Permission: {hasPermission ? 'Granted ✅' : 'Not Granted ❌'}</Text>
+            <Text style={styles.debugText}>Player ID: {playerId || 'Not available ❌'}</Text>
+            <Text style={styles.debugText}>User ID: {user.id}</Text>
+            
+            {Platform.OS === 'web' && (
+              <Text style={[styles.debugText, { color: designColors.warning, marginTop: spacing.sm }]}>
+                ⚠️ Push notifications don't work on Web.{'\n'}
+                Build the app with EAS and test on a physical device.
+              </Text>
+            )}
+            
+            {Platform.OS === 'android' && !isInitialized && (
+              <Text style={[styles.debugText, { color: designColors.error, marginTop: spacing.sm }]}>
+                ❌ OneSignal not initialized!{'\n'}
+                Check that app.json has appId in onesignal-expo-plugin.{'\n'}
+                You may need to rebuild the APK.
+              </Text>
+            )}
+            
+            {Platform.OS === 'android' && isInitialized && !playerId && (
+              <Text style={[styles.debugText, { color: designColors.warning, marginTop: spacing.sm }]}>
+                ⚠️ No Player ID yet.{'\n'}
+                Wait a few seconds or restart the app.{'\n'}
+                If still missing, check console logs for errors.
+              </Text>
+            )}
+            
+            {Platform.OS === 'android' && isInitialized && playerId && hasPermission && (
+              <Text style={[styles.debugText, { color: designColors.success, marginTop: spacing.sm }]}>
+                ✅ All set! You can receive push notifications.{'\n'}
+                Send a test notification from OneSignal dashboard{'\n'}
+                using this Player ID: {playerId}
+              </Text>
+            )}
           </View>
-        )}
+        </View>
 
         {/* Logout */}
         <View style={styles.section}>
