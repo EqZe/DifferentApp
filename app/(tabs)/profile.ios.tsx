@@ -403,9 +403,15 @@ export default function ProfileScreen() {
               <View style={styles.errorCard}>
                 <Text style={styles.errorTitle}>❌ OneSignal לא מאותחל</Text>
                 <Text style={styles.errorText}>
-                  OneSignal SDK לא הצליח להתאתחל. אנא ודא שהאפליקציה נבנתה כ-APK עם התצורה הנכונה.
+                  OneSignal SDK לא הצליח להתאתחל.
                   {'\n\n'}
-                  אם אתה רואה הודעה זו, יש לבנות מחדש את האפליקציה.
+                  🔧 פתרון: יש לבנות מחדש את ה-APK/IPA עם app.json המעודכן.
+                  {'\n\n'}
+                  הבעיה: ה-APK הנוכחי נבנה ללא ה-appId בתצורת onesignal-expo-plugin.
+                  {'\n\n'}
+                  app.json עודכן כעת עם appId: b732b467-6886-4c7b-b3d9-5010de1199d6
+                  {'\n\n'}
+                  לאחר בנייה מחדש, OneSignal יאותחל כראוי.
                 </Text>
               </View>
             )}

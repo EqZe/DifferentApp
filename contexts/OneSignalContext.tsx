@@ -56,6 +56,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       try {
         const appId = 'b732b467-6886-4c7b-b3d9-5010de1199d6';
         console.log('🔔 OneSignal: Initializing with App ID:', appId);
+        console.log('🔔 OneSignal: ⚠️ IMPORTANT: If initialized=false, you need to REBUILD the APK with the updated app.json');
         
         // Set the OneSignal App ID
         OneSignal.initialize(appId);
@@ -66,7 +67,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         console.log('🔔 OneSignal: SDK initialized successfully');
         
         // Wait a moment for SDK to fully initialize
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
         // Check current permission status
         const permission = await OneSignal.Notifications.getPermissionAsync();
@@ -76,12 +77,22 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         const deviceState = await OneSignal.User.pushSubscription.getIdAsync();
         console.log('🔔 OneSignal: Player ID (Push Subscription ID):', deviceState);
         
+        // Check if we actually initialized (if deviceState is null, initialization likely failed)
+        const actuallyInitialized = deviceState !== null || permission !== false;
+        console.log('🔔 OneSignal: Actually initialized?', actuallyInitialized);
+        
         // Only update state if component is still mounted
         if (isMounted.current) {
-          setIsInitialized(true);
+          setIsInitialized(actuallyInitialized);
           setHasPermission(permission);
           setPlayerId(deviceState);
-          console.log('🔔 OneSignal: State updated - initialized:', true, 'permission:', permission, 'playerId:', deviceState);
+          console.log('🔔 OneSignal: State updated - initialized:', actuallyInitialized, 'permission:', permission, 'playerId:', deviceState);
+          
+          if (!actuallyInitialized) {
+            console.error('🔔 OneSignal: ❌❌❌ INITIALIZATION FAILED ❌❌❌');
+            console.error('🔔 OneSignal: This usually means the APK was built WITHOUT the appId in app.json');
+            console.error('🔔 OneSignal: SOLUTION: Rebuild the APK after updating app.json with the appId property');
+          }
         }
         
         // Listen for permission changes
