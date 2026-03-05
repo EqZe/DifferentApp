@@ -14,13 +14,13 @@ import {
   Platform,
 } from 'react-native';
 import { useUser } from '@/contexts/UserContext';
+import { useOneSignal } from '@/contexts/OneSignalContext';
 import LottieView from 'lottie-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/utils/api';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useState, useEffect } from 'react';
-import { sendTestTaskReminders, registerForPushNotificationsAsync } from '@/utils/notifications';
 import { IconSymbol } from '@/components/IconSymbol';
 
 const styles = StyleSheet.create({
@@ -205,6 +205,45 @@ const styles = StyleSheet.create({
     color: '#0C5460',
     lineHeight: 20,
   },
+  debugCard: {
+    backgroundColor: '#F8F9FA',
+    borderLeftWidth: 4,
+    borderLeftColor: '#6C757D',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  debugTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold as any,
+    color: '#495057',
+    marginBottom: spacing.xs,
+  },
+  debugText: {
+    fontSize: typography.sizes.sm,
+    color: '#495057',
+    lineHeight: 20,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  errorCard: {
+    backgroundColor: '#F8D7DA',
+    borderLeftWidth: 4,
+    borderLeftColor: '#DC3545',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  errorTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold as any,
+    color: '#721C24',
+    marginBottom: spacing.xs,
+  },
+  errorText: {
+    fontSize: typography.sizes.sm,
+    color: '#721C24',
+    lineHeight: 20,
+  },
 });
 
 function formatDate(dateString: string | null | undefined): string {
@@ -223,13 +262,12 @@ function formatDate(dateString: string | null | undefined): string {
 }
 
 export default function ProfileScreen() {
-  const { user, session, refreshUser, registerPushNotifications, isRegisteringPush } = useUser();
+  const { user, session, refreshUser } = useUser();
+  const { isInitialized, hasPermission, playerId, requestPermission } = useOneSignal();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
   const colorScheme = useColorScheme();
   const router = useRouter();
-
-  // Check if push token needs to be updated (old raw token format)
-  const needsTokenUpdate = user?.pushToken && !user.pushToken.startsWith('ExponentPushToken[');
 
   useEffect(() => {
     console.log('ProfileScreen: Component mounted');
@@ -269,69 +307,36 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleTestNotification = async () => {
-    console.log('ProfileScreen: User tapped test notification button');
-    
-    try {
-      await sendTestTaskReminders('בדיקת התראות מערכת');
-      Alert.alert(
-        'התראות נשלחו',
-        'שלוש התראות בדיקה נשלחו. בדוק את מרכז ההתראות שלך.',
-        [{ text: 'אישור' }]
-      );
-    } catch (error: any) {
-      console.error('ProfileScreen: Test notification error:', error);
-      Alert.alert(
-        'שגיאה',
-        error?.message || 'לא ניתן לשלוח התראות בדיקה',
-        [{ text: 'אישור' }]
-      );
-    }
-  };
-
   const handleRegisterPushNotifications = async () => {
     console.log('ProfileScreen: ========== USER TAPPED REGISTER PUSH BUTTON ==========');
-    console.log('ProfileScreen: Button handler called');
-    console.log('ProfileScreen: isRegisteringPush:', isRegisteringPush);
-    console.log('ProfileScreen: user exists:', !!user);
-    console.log('ProfileScreen: session exists:', !!session);
+    setIsRequestingPermission(true);
     
     try {
-      console.log('ProfileScreen: About to call registerPushNotifications from context...');
-      const token = await registerPushNotifications();
-      console.log('ProfileScreen: registerPushNotifications returned');
-      console.log('ProfileScreen: Token received:', token ? `YES (${token.substring(0, 30)}...)` : 'NULL');
+      const granted = await requestPermission();
+      console.log('ProfileScreen: Permission granted:', granted);
       
-      if (token) {
-        console.log('ProfileScreen: ✅ Push notifications registered successfully');
+      if (granted) {
         Alert.alert(
           'הצלחה',
           'התראות Push הופעלו בהצלחה! תקבל עדכונים על משימות, מכולות ולוח זמנים.',
           [{ text: 'אישור' }]
         );
       } else {
-        console.log('ProfileScreen: ⚠️ Registration returned null - likely device/permission issue');
         Alert.alert(
           'שים לב',
-          'לא ניתן להפעיל התראות.\n\nאנא ודא:\n• אתה משתמש במכשיר פיזי (לא סימולטור)\n• הרשאות התראות מופעלות בהגדרות המכשיר\n• אתה מחובר לאינטרנט',
+          'לא ניתן להפעיל התראות.\n\nאנא ודא:\n• הרשאות התראות מופעלות בהגדרות המכשיר\n• אתה מחובר לאינטרנט',
           [{ text: 'אישור' }]
         );
       }
     } catch (error: any) {
       console.error('ProfileScreen: ❌ Push notification registration error:', error);
-      console.error('ProfileScreen: Error message:', error?.message);
-      console.error('ProfileScreen: Error name:', error?.name);
-      console.error('ProfileScreen: Error code:', error?.code);
-      console.error('ProfileScreen: Error details:', JSON.stringify(error, null, 2));
-      console.error('ProfileScreen: Error stack:', error?.stack);
-      
-      // Show the actual error message from the registration function
-      const errorMessage = error?.message || 'לא ניתן להפעיל התראות Push';
       Alert.alert(
         'שגיאה',
-        errorMessage,
+        error?.message || 'לא ניתן להפעיל התראות Push',
         [{ text: 'אישור' }]
       );
+    } finally {
+      setIsRequestingPermission(false);
     }
   };
 
@@ -350,8 +355,6 @@ export default function ProfileScreen() {
 
   const contractStatusText = user.hasContract ? 'חתום' : 'לא חתום';
   const contractStatusColor = user.hasContract ? designColors.success.main : designColors.warning.main;
-  const pushTokenStatusText = user.pushToken ? 'פעיל' : 'לא פעיל';
-  const pushTokenStatusColor = user.pushToken ? designColors.success.main : designColors.error.main;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -380,17 +383,63 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Warning Card for Token Update */}
-        {needsTokenUpdate && Platform.OS !== 'web' && (
+        {/* OneSignal Debug Info - Only show on native platforms */}
+        {Platform.OS !== 'web' && (
           <View style={styles.section}>
-            <View style={styles.warningCard}>
-              <Text style={styles.warningTitle}>⚠️ נדרש עדכון התראות</Text>
-              <Text style={styles.warningText}>
-                מערכת ההתראות עודכנה. יש לרשום מחדש את ההתראות כדי לקבל עדכונים על משימות ומכולות.
-                {'\n\n'}
-                לחץ על כפתור "רישום מחדש להתראות Push" למטה.
+            <Text style={styles.sectionTitle}>🔔 מידע על התראות (Debug)</Text>
+            
+            <View style={styles.debugCard}>
+              <Text style={styles.debugTitle}>סטטוס OneSignal</Text>
+              <Text style={styles.debugText}>
+                Platform: {Platform.OS}
+                {'\n'}Initialized: {isInitialized ? '✅ Yes' : '❌ No'}
+                {'\n'}Permission: {hasPermission ? '✅ Granted' : '❌ Not Granted'}
+                {'\n'}Player ID: {playerId || '⚠️ Not available'}
+                {'\n'}User ID: {user.authUserId}
               </Text>
             </View>
+
+            {!isInitialized && (
+              <View style={styles.errorCard}>
+                <Text style={styles.errorTitle}>❌ OneSignal לא מאותחל</Text>
+                <Text style={styles.errorText}>
+                  OneSignal SDK לא הצליח להתאתחל. אנא ודא שהאפליקציה נבנתה כ-APK עם התצורה הנכונה.
+                  {'\n\n'}
+                  אם אתה רואה הודעה זו, יש לבנות מחדש את האפליקציה.
+                </Text>
+              </View>
+            )}
+
+            {isInitialized && !hasPermission && (
+              <View style={styles.warningCard}>
+                <Text style={styles.warningTitle}>⚠️ נדרשת הרשאה להתראות</Text>
+                <Text style={styles.warningText}>
+                  כדי לקבל התראות Push, יש ללחוץ על כפתור "הפעל התראות Push" למטה ולאשר את ההרשאה.
+                </Text>
+              </View>
+            )}
+
+            {isInitialized && hasPermission && !playerId && (
+              <View style={styles.errorCard}>
+                <Text style={styles.errorTitle}>❌ Player ID חסר</Text>
+                <Text style={styles.errorText}>
+                  OneSignal מאותחל אך Player ID לא זמין. זה עלול להיות בעיה ברשת או בתצורת OneSignal.
+                  {'\n\n'}
+                  נסה לסגור ולפתוח מחדש את האפליקציה.
+                </Text>
+              </View>
+            )}
+
+            {isInitialized && hasPermission && playerId && (
+              <View style={styles.infoCard}>
+                <Text style={styles.infoTitle}>✅ התראות מוכנות!</Text>
+                <Text style={styles.infoText}>
+                  OneSignal מוגדר כראוי ואתה אמור לקבל התראות כאשר משימות מאושרות או מכולות מתעדכנות.
+                  {'\n\n'}
+                  Player ID: {playerId.substring(0, 20)}...
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -493,22 +542,6 @@ export default function ProfileScreen() {
                 </View>
               </View>
             </View>
-
-            <View style={styles.infoRow}>
-              <IconSymbol 
-                ios_icon_name="bell.fill" 
-                android_material_icon_name="notifications"
-                size={24} 
-                color={designColors.primary.main}
-                style={styles.infoIcon}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.infoLabel}>התראות Push</Text>
-                <View style={[styles.statusBadge, { backgroundColor: pushTokenStatusColor }]}>
-                  <Text style={styles.statusText}>{pushTokenStatusText}</Text>
-                </View>
-              </View>
-            </View>
           </View>
         </View>
 
@@ -516,30 +549,20 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>פעולות</Text>
           
-          {/* Register/Re-register Push Notifications Button - Only show on native platforms */}
+          {/* Register Push Notifications Button - Only show on native platforms */}
           {Platform.OS !== 'web' && (
             <TouchableOpacity
               style={[styles.button, styles.buttonSecondary]}
               onPress={handleRegisterPushNotifications}
-              disabled={isRegisteringPush}
+              disabled={isRequestingPermission}
             >
-              {isRegisteringPush ? (
+              {isRequestingPermission ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={styles.buttonText}>
-                  {needsTokenUpdate ? 'רישום מחדש להתראות Push' : user.pushToken ? 'רישום מחדש להתראות Push' : 'הירשם להתראות'}
+                  {hasPermission ? 'רישום מחדש להתראות Push' : 'הפעל התראות Push'}
                 </Text>
               )}
-            </TouchableOpacity>
-          )}
-
-          {/* Test Notification Button - Only show on native platforms */}
-          {Platform.OS !== 'web' && (
-            <TouchableOpacity
-              style={[styles.button, styles.buttonPrimary]}
-              onPress={handleTestNotification}
-            >
-              <Text style={styles.buttonText}>שלח התראת בדיקה</Text>
             </TouchableOpacity>
           )}
 
