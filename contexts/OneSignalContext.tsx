@@ -45,28 +45,29 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
-    // Get OneSignal App ID from expo-constants
-    const oneSignalAppId = Constants.expoConfig?.extra?.oneSignalAppId;
+    // HARDCODED App ID - This bypasses the need for app.json configuration
+    // This allows the app to work with the current APK without rebuilding
+    const oneSignalAppId = 'b732b467-6886-4c7b-b3d9-5010de1199d6';
     
     if (!oneSignalAppId) {
-      console.error('🔔 OneSignal: ❌ App ID not found in app.json extra.oneSignalAppId');
-      console.error('🔔 OneSignal: Please add "oneSignalAppId" to app.json extra field');
+      console.error('🔔 OneSignal: ❌ App ID not configured');
       return;
     }
     
     hasInitialized.current = true;
     
     console.log('🔔 OneSignal: ========================================');
-    console.log('🔔 OneSignal: STARTING INITIALIZATION');
+    console.log('🔔 OneSignal: STARTING INITIALIZATION (RUNTIME MODE)');
     console.log('🔔 OneSignal: ========================================');
     console.log('🔔 OneSignal: Platform:', Platform.OS);
     console.log('🔔 OneSignal: Is Device:', Device.isDevice);
     console.log('🔔 OneSignal: App ID:', oneSignalAppId);
+    console.log('🔔 OneSignal: Mode: Runtime initialization (no plugin required)');
     
     const initializeOneSignal = async () => {
       try {
-        // Initialize OneSignal SDK
-        console.log('🔔 OneSignal: Step 1 - Calling OneSignal.initialize()');
+        // Initialize OneSignal SDK with the hardcoded App ID
+        console.log('🔔 OneSignal: Step 1 - Calling OneSignal.initialize() with hardcoded App ID');
         OneSignal.initialize(oneSignalAppId);
         
         // Enable verbose logging for debugging
@@ -75,7 +76,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         
         // Wait for SDK to initialize
         console.log('🔔 OneSignal: Step 3 - Waiting for SDK to initialize...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Increased wait time
         
         // Check permission status
         console.log('🔔 OneSignal: Step 4 - Checking permission status');
@@ -95,11 +96,12 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           setPlayerId(subscriptionId);
           
           console.log('🔔 OneSignal: ========================================');
-          console.log('🔔 OneSignal: INITIALIZATION COMPLETE');
+          console.log('🔔 OneSignal: INITIALIZATION COMPLETE ✅');
           console.log('🔔 OneSignal: ========================================');
           console.log('🔔 OneSignal: Initialized:', initialized);
           console.log('🔔 OneSignal: Permission:', permission);
           console.log('🔔 OneSignal: Player ID:', subscriptionId || 'Not available');
+          console.log('🔔 OneSignal: Runtime Mode: Working without plugin config');
           console.log('🔔 OneSignal: ========================================');
           
           if (!permission) {
@@ -166,10 +168,10 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         console.error('🔔 OneSignal: Error details:', JSON.stringify(error, null, 2));
         console.error('🔔 OneSignal: ========================================');
         console.error('🔔 OneSignal: TROUBLESHOOTING:');
-        console.error('🔔 OneSignal: 1. Make sure app.json has oneSignalAppId in extra field');
-        console.error('🔔 OneSignal: 2. Rebuild the APK/IPA after updating app.json');
-        console.error('🔔 OneSignal: 3. Check that onesignal-expo-plugin is in plugins array');
-        console.error('🔔 OneSignal: 4. Verify the App ID is correct in OneSignal dashboard');
+        console.error('🔔 OneSignal: 1. Check internet connection');
+        console.error('🔔 OneSignal: 2. Verify the App ID is correct in OneSignal dashboard');
+        console.error('🔔 OneSignal: 3. Make sure react-native-onesignal is installed');
+        console.error('🔔 OneSignal: 4. Try restarting the app');
         console.error('🔔 OneSignal: ========================================');
       }
     };
@@ -253,6 +255,8 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       
       // Get Player ID after permission granted
       if (granted) {
+        // Wait a bit for OneSignal to register the device
+        await new Promise(resolve => setTimeout(resolve, 2000));
         const id = await OneSignal.User.pushSubscription.getIdAsync();
         console.log('🔔 OneSignal: Player ID after permission:', id);
         if (isMounted.current && id) {

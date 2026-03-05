@@ -1,5 +1,5 @@
 
-import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,15 +13,15 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-import { useUser } from '@/contexts/UserContext';
-import { useOneSignal } from '@/contexts/OneSignalContext';
-import LottieView from 'lottie-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { api } from '@/utils/api';
 import { LinearGradient } from 'expo-linear-gradient';
+import LottieView from 'lottie-react-native';
+import { designColors, typography, spacing, radius, shadows, layout } from '@/styles/designSystem';
 import { useRouter } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import { useOneSignal } from '@/contexts/OneSignalContext';
+import { useUser } from '@/contexts/UserContext';
 import { IconSymbol } from '@/components/IconSymbol';
+import { api } from '@/utils/api';
 
 const styles = StyleSheet.create({
   container: {
@@ -205,6 +205,25 @@ const styles = StyleSheet.create({
     color: '#0C5460',
     lineHeight: 20,
   },
+  successCard: {
+    backgroundColor: '#D4EDDA',
+    borderLeftWidth: 4,
+    borderLeftColor: '#28A745',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  successTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold as any,
+    color: '#155724',
+    marginBottom: spacing.xs,
+  },
+  successText: {
+    fontSize: typography.sizes.sm,
+    color: '#155724',
+    lineHeight: 20,
+  },
   debugCard: {
     backgroundColor: '#F8F9FA',
     borderLeftWidth: 4,
@@ -363,93 +382,91 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.greeting}>שלום, {user.fullName}</Text>
           <Text style={styles.subtitle}>ניהול הפרופיל שלך</Text>
         </View>
 
-        {/* Web Platform Info Card */}
-        {Platform.OS === 'web' && (
-          <View style={styles.section}>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoTitle}>ℹ️ התראות Push במכשיר נייד בלבד</Text>
-              <Text style={styles.infoText}>
-                התראות Push זמינות רק באפליקציה במכשיר נייד (Android/iOS).
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🔔 מידע על התראות (Debug)</Text>
+          
+          <View style={styles.successCard}>
+            <Text style={styles.successTitle}>✅ מצב Runtime מופעל</Text>
+            <Text style={styles.successText}>
+              OneSignal מאותחל ישירות בקוד (Runtime Mode).
+              {'\n\n'}
+              זה מאפשר לאפליקציה לעבוד עם ה-APK הנוכחי ללא צורך בבנייה מחדש.
+              {'\n\n'}
+              ה-App ID מוגדר ישירות בקוד ולא דורש תצורה ב-app.json.
+            </Text>
+          </View>
+          
+          <View style={styles.debugCard}>
+            <Text style={styles.debugTitle}>סטטוס OneSignal</Text>
+            <Text style={styles.debugText}>
+              Platform: {Platform.OS}
+              {'\n'}Mode: Runtime (Direct Initialization)
+              {'\n'}Initialized: {isInitialized ? '✅ Yes' : '❌ No'}
+              {'\n'}Permission: {hasPermission ? '✅ Granted' : '❌ Not Granted'}
+              {'\n'}Player ID: {playerId || '⚠️ Not available'}
+              {'\n'}User ID: {user.authUserId}
+            </Text>
+          </View>
+
+          {!isInitialized && (
+            <View style={styles.errorCard}>
+              <Text style={styles.errorTitle}>❌ OneSignal לא מאותחל</Text>
+              <Text style={styles.errorText}>
+                OneSignal SDK לא הצליח להתאתחל במצב Runtime.
                 {'\n\n'}
-                כדי להפעיל התראות, אנא פתח את האפליקציה במכשיר הנייד שלך.
+                🔧 פתרונות אפשריים:
+                {'\n'}• בדוק חיבור לאינטרנט
+                {'\n'}• סגור ופתח מחדש את האפליקציה
+                {'\n'}• ודא ש-react-native-onesignal מותקן
+                {'\n'}• בדוק את הלוגים בקונסול למידע נוסף
               </Text>
             </View>
-          </View>
-        )}
+          )}
 
-        {/* OneSignal Debug Info - Only show on native platforms */}
-        {Platform.OS !== 'web' && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🔔 מידע על התראות (Debug)</Text>
-            
-            <View style={styles.debugCard}>
-              <Text style={styles.debugTitle}>סטטוס OneSignal</Text>
-              <Text style={styles.debugText}>
-                Platform: {Platform.OS}
-                {'\n'}Initialized: {isInitialized ? '✅ Yes' : '❌ No'}
-                {'\n'}Permission: {hasPermission ? '✅ Granted' : '❌ Not Granted'}
-                {'\n'}Player ID: {playerId || '⚠️ Not available'}
-                {'\n'}User ID: {user.authUserId}
+          {isInitialized && !hasPermission && (
+            <View style={styles.warningCard}>
+              <Text style={styles.warningTitle}>⚠️ נדרשת הרשאה להתראות</Text>
+              <Text style={styles.warningText}>
+                OneSignal מאותחל בהצלחה! 🎉
+                {'\n\n'}
+                כדי לקבל התראות Push, יש ללחוץ על כפתור "הפעל התראות Push" למטה ולאשר את ההרשאה.
               </Text>
             </View>
+          )}
 
-            {!isInitialized && (
-              <View style={styles.errorCard}>
-                <Text style={styles.errorTitle}>❌ OneSignal לא מאותחל</Text>
-                <Text style={styles.errorText}>
-                  OneSignal SDK לא הצליח להתאתחל.
-                  {'\n\n'}
-                  🔧 פתרון: יש לבנות מחדש את ה-APK/IPA עם app.json המעודכן.
-                  {'\n\n'}
-                  הבעיה: ה-APK הנוכחי נבנה ללא ה-appId בתצורת onesignal-expo-plugin.
-                  {'\n\n'}
-                  app.json עודכן כעת עם appId: b732b467-6886-4c7b-b3d9-5010de1199d6
-                  {'\n\n'}
-                  לאחר בנייה מחדש, OneSignal יאותחל כראוי.
-                </Text>
-              </View>
-            )}
+          {isInitialized && hasPermission && !playerId && (
+            <View style={styles.warningCard}>
+              <Text style={styles.warningTitle}>⚠️ Player ID טוען...</Text>
+              <Text style={styles.warningText}>
+                OneSignal מאותחל והרשאה ניתנה, אך Player ID עדיין לא זמין.
+                {'\n\n'}
+                זה יכול לקחת כמה שניות. אם זה לא מופיע תוך דקה, נסה לסגור ולפתוח מחדש את האפליקציה.
+              </Text>
+            </View>
+          )}
 
-            {isInitialized && !hasPermission && (
-              <View style={styles.warningCard}>
-                <Text style={styles.warningTitle}>⚠️ נדרשת הרשאה להתראות</Text>
-                <Text style={styles.warningText}>
-                  כדי לקבל התראות Push, יש ללחוץ על כפתור "הפעל התראות Push" למטה ולאשר את ההרשאה.
-                </Text>
-              </View>
-            )}
+          {isInitialized && hasPermission && playerId && (
+            <View style={styles.successCard}>
+              <Text style={styles.successTitle}>✅ התראות מוכנות!</Text>
+              <Text style={styles.successText}>
+                OneSignal מוגדר כראוי במצב Runtime! 🎉
+                {'\n\n'}
+                אתה אמור לקבל התראות כאשר:
+                {'\n'}• משימות מאושרות
+                {'\n'}• מכולות מתעדכנות
+                {'\n'}• לוח הזמנים משתנה
+                {'\n\n'}
+                Player ID: {playerId.substring(0, 20)}...
+              </Text>
+            </View>
+          )}
+        </View>
 
-            {isInitialized && hasPermission && !playerId && (
-              <View style={styles.errorCard}>
-                <Text style={styles.errorTitle}>❌ Player ID חסר</Text>
-                <Text style={styles.errorText}>
-                  OneSignal מאותחל אך Player ID לא זמין. זה עלול להיות בעיה ברשת או בתצורת OneSignal.
-                  {'\n\n'}
-                  נסה לסגור ולפתוח מחדש את האפליקציה.
-                </Text>
-              </View>
-            )}
-
-            {isInitialized && hasPermission && playerId && (
-              <View style={styles.infoCard}>
-                <Text style={styles.infoTitle}>✅ התראות מוכנות!</Text>
-                <Text style={styles.infoText}>
-                  OneSignal מוגדר כראוי ואתה אמור לקבל התראות כאשר משימות מאושרות או מכולות מתעדכנות.
-                  {'\n\n'}
-                  Player ID: {playerId.substring(0, 20)}...
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* User Info Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>פרטים אישיים</Text>
           
@@ -528,7 +545,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Status Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>סטטוס</Text>
           
@@ -551,28 +567,23 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Actions Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>פעולות</Text>
           
-          {/* Register Push Notifications Button - Only show on native platforms */}
-          {Platform.OS !== 'web' && (
-            <TouchableOpacity
-              style={[styles.button, styles.buttonSecondary]}
-              onPress={handleRegisterPushNotifications}
-              disabled={isRequestingPermission}
-            >
-              {isRequestingPermission ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.buttonText}>
-                  {hasPermission ? 'רישום מחדש להתראות Push' : 'הפעל התראות Push'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[styles.button, styles.buttonSecondary]}
+            onPress={handleRegisterPushNotifications}
+            disabled={isRequestingPermission}
+          >
+            {isRequestingPermission ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.buttonText}>
+                {hasPermission ? 'רישום מחדש להתראות Push' : 'הפעל התראות Push'}
+              </Text>
+            )}
+          </TouchableOpacity>
 
-          {/* Logout Button */}
           <TouchableOpacity
             style={[styles.button, styles.buttonDanger]}
             onPress={handleLogout}
@@ -582,7 +593,6 @@ export default function ProfileScreen() {
         </View>
       </ScrollView>
 
-      {/* Logout Confirmation Modal */}
       <Modal
         visible={showLogoutModal}
         transparent
