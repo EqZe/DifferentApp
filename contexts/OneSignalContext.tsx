@@ -29,12 +29,10 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const isMounted = useRef(false);
-  const isInitializing = useRef(false);
+  const isMounted = useRef(true);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
-    isMounted.current = true;
-    
     // Skip initialization on web or simulator
     if (Platform.OS === 'web' || !Device.isDevice) {
       console.log('🔔 OneSignal: Skipping initialization (web or simulator)');
@@ -42,88 +40,113 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     }
     
     // Prevent multiple initializations
-    if (isInitializing.current) {
-      console.log('🔔 OneSignal: Already initializing, skipping...');
+    if (hasInitialized.current) {
+      console.log('🔔 OneSignal: Already initialized, skipping...');
       return;
     }
     
-    // Get OneSignal App ID from expo-constants (reads from app.json extra field)
+    // Get OneSignal App ID from expo-constants
     const oneSignalAppId = Constants.expoConfig?.extra?.oneSignalAppId;
     
     if (!oneSignalAppId) {
       console.error('🔔 OneSignal: ❌ App ID not found in app.json extra.oneSignalAppId');
+      console.error('🔔 OneSignal: Please add "oneSignalAppId" to app.json extra field');
       return;
     }
     
-    isInitializing.current = true;
-    console.log('🔔 OneSignal: ========== STARTING INITIALIZATION ==========');
+    hasInitialized.current = true;
+    
+    console.log('🔔 OneSignal: ========================================');
+    console.log('🔔 OneSignal: STARTING INITIALIZATION');
+    console.log('🔔 OneSignal: ========================================');
     console.log('🔔 OneSignal: Platform:', Platform.OS);
     console.log('🔔 OneSignal: Is Device:', Device.isDevice);
-    console.log('🔔 OneSignal: App ID from extra field:', oneSignalAppId);
+    console.log('🔔 OneSignal: App ID:', oneSignalAppId);
     
-    // Initialize OneSignal with App ID from extra field
     const initializeOneSignal = async () => {
       try {
-        console.log('🔔 OneSignal: Initializing with App ID:', oneSignalAppId);
-        console.log('🔔 OneSignal: ⚠️ IMPORTANT: If initialized=false, you need to REBUILD the APK');
-        
-        // Set the OneSignal App ID
+        // Initialize OneSignal SDK
+        console.log('🔔 OneSignal: Step 1 - Calling OneSignal.initialize()');
         OneSignal.initialize(oneSignalAppId);
         
-        // Set log level for debugging
+        // Enable verbose logging for debugging
+        console.log('🔔 OneSignal: Step 2 - Setting log level to verbose');
         OneSignal.Debug.setLogLevel(6);
         
-        console.log('🔔 OneSignal: SDK initialized successfully');
+        // Wait for SDK to initialize
+        console.log('🔔 OneSignal: Step 3 - Waiting for SDK to initialize...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Wait a moment for SDK to fully initialize
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Check current permission status
+        // Check permission status
+        console.log('🔔 OneSignal: Step 4 - Checking permission status');
         const permission = await OneSignal.Notifications.getPermissionAsync();
-        console.log('🔔 OneSignal: Current permission status:', permission);
+        console.log('🔔 OneSignal: Permission status:', permission);
         
-        // Get device state to retrieve Player ID
-        const deviceState = await OneSignal.User.pushSubscription.getIdAsync();
-        console.log('🔔 OneSignal: Player ID (Push Subscription ID):', deviceState);
+        // Get Player ID (Push Subscription ID)
+        console.log('🔔 OneSignal: Step 5 - Getting Player ID');
+        const subscriptionId = await OneSignal.User.pushSubscription.getIdAsync();
+        console.log('🔔 OneSignal: Player ID:', subscriptionId || 'Not available yet');
         
-        // Check if we actually initialized (if deviceState is null, initialization likely failed)
-        const actuallyInitialized = deviceState !== null || permission !== false;
-        console.log('🔔 OneSignal: Actually initialized?', actuallyInitialized);
-        
-        // Only update state if component is still mounted
+        // Update state
         if (isMounted.current) {
-          setIsInitialized(actuallyInitialized);
+          const initialized = true; // SDK initialized successfully
+          setIsInitialized(initialized);
           setHasPermission(permission);
-          setPlayerId(deviceState);
-          console.log('🔔 OneSignal: State updated - initialized:', actuallyInitialized, 'permission:', permission, 'playerId:', deviceState);
+          setPlayerId(subscriptionId);
           
-          if (!actuallyInitialized) {
-            console.error('🔔 OneSignal: ❌❌❌ INITIALIZATION FAILED ❌❌❌');
-            console.error('🔔 OneSignal: This usually means the APK was built WITHOUT proper OneSignal configuration');
-            console.error('🔔 OneSignal: SOLUTION: Rebuild the APK after updating app.json');
+          console.log('🔔 OneSignal: ========================================');
+          console.log('🔔 OneSignal: INITIALIZATION COMPLETE');
+          console.log('🔔 OneSignal: ========================================');
+          console.log('🔔 OneSignal: Initialized:', initialized);
+          console.log('🔔 OneSignal: Permission:', permission);
+          console.log('🔔 OneSignal: Player ID:', subscriptionId || 'Not available');
+          console.log('🔔 OneSignal: ========================================');
+          
+          if (!permission) {
+            console.log('🔔 OneSignal: ⚠️ Permission not granted yet');
+            console.log('🔔 OneSignal: User needs to grant notification permission');
+          }
+          
+          if (!subscriptionId) {
+            console.log('🔔 OneSignal: ⚠️ Player ID not available yet');
+            console.log('🔔 OneSignal: This is normal - Player ID appears after permission is granted');
           }
         }
         
-        // Listen for permission changes
+        // Set up event listeners
+        console.log('🔔 OneSignal: Step 6 - Setting up event listeners');
+        
+        // Permission change listener
         OneSignal.Notifications.addEventListener('permissionChange', (granted) => {
-          console.log('🔔 OneSignal: Permission changed:', granted);
+          console.log('🔔 OneSignal: 📢 Permission changed:', granted);
           if (isMounted.current) {
             setHasPermission(granted);
+            
+            // Get updated Player ID after permission change
+            if (granted) {
+              OneSignal.User.pushSubscription.getIdAsync().then(id => {
+                console.log('🔔 OneSignal: Updated Player ID after permission:', id);
+                if (isMounted.current) {
+                  setPlayerId(id);
+                }
+              });
+            }
           }
         });
         
-        // Listen for notification clicks
+        // Notification click listener
         OneSignal.Notifications.addEventListener('click', (event) => {
-          console.log('🔔 OneSignal: Notification clicked:', JSON.stringify(event, null, 2));
-          // Handle notification click navigation here if needed
+          console.log('🔔 OneSignal: 📢 Notification clicked');
+          console.log('🔔 OneSignal: Click data:', JSON.stringify(event, null, 2));
         });
         
-        // Listen for foreground notifications
+        // Foreground notification listener
         OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event) => {
-          console.log('🔔 OneSignal: Notification received in foreground:', JSON.stringify(event.notification, null, 2));
-          
-          // Show alert when notification arrives in foreground
+          console.log('🔔 OneSignal: 📢 Notification received in foreground');
           const notification = event.getNotification();
+          console.log('🔔 OneSignal: Notification data:', JSON.stringify(notification, null, 2));
+          
+          // Show alert for foreground notifications
           Alert.alert(
             notification.title || 'התראה חדשה',
             notification.body || 'יש לך התראה חדשה',
@@ -135,11 +158,19 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           event.getNotification();
         });
         
-        console.log('🔔 OneSignal: ========== INITIALIZATION COMPLETE ==========');
+        console.log('🔔 OneSignal: Event listeners configured successfully');
         
       } catch (error) {
-        console.error('🔔 OneSignal: ❌ Initialization error:', error);
+        console.error('🔔 OneSignal: ❌❌❌ INITIALIZATION ERROR ❌❌❌');
+        console.error('🔔 OneSignal: Error:', error);
         console.error('🔔 OneSignal: Error details:', JSON.stringify(error, null, 2));
+        console.error('🔔 OneSignal: ========================================');
+        console.error('🔔 OneSignal: TROUBLESHOOTING:');
+        console.error('🔔 OneSignal: 1. Make sure app.json has oneSignalAppId in extra field');
+        console.error('🔔 OneSignal: 2. Rebuild the APK/IPA after updating app.json');
+        console.error('🔔 OneSignal: 3. Check that onesignal-expo-plugin is in plugins array');
+        console.error('🔔 OneSignal: 4. Verify the App ID is correct in OneSignal dashboard');
+        console.error('🔔 OneSignal: ========================================');
       }
     };
 
@@ -152,26 +183,22 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
 
   // Set external user ID when user logs in
   useEffect(() => {
-    // Wait for both OneSignal and user to be ready
     if (!isInitialized || isUserLoading || !user?.authUserId) {
-      console.log('🔔 OneSignal: Waiting for initialization or user data', {
-        isInitialized,
-        isUserLoading,
-        hasUser: !!user?.authUserId
-      });
       return;
     }
 
-    console.log('🔔 OneSignal: ========== SETTING EXTERNAL USER ID ==========');
+    console.log('🔔 OneSignal: ========================================');
+    console.log('🔔 OneSignal: SETTING EXTERNAL USER ID');
+    console.log('🔔 OneSignal: ========================================');
     console.log('🔔 OneSignal: User ID:', user.authUserId);
     console.log('🔔 OneSignal: User Name:', user.fullName);
     
     try {
       // Login user with external ID
       OneSignal.login(user.authUserId);
-      console.log('🔔 OneSignal: ✅ External user ID set successfully');
+      console.log('🔔 OneSignal: ✅ User logged in with external ID');
       
-      // Set user properties for segmentation
+      // Set user tags for segmentation
       OneSignal.User.addTags({
         user_id: user.authUserId,
         full_name: user.fullName || '',
@@ -180,56 +207,64 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       });
       console.log('🔔 OneSignal: ✅ User tags set successfully');
       
-      // Log subscription status
+      // Get updated Player ID
       OneSignal.User.pushSubscription.getIdAsync().then(id => {
-        console.log('🔔 OneSignal: Current Push Subscription ID after login:', id);
-        if (isMounted.current) {
+        console.log('🔔 OneSignal: Player ID after login:', id);
+        if (isMounted.current && id) {
           setPlayerId(id);
         }
       });
       
+      console.log('🔔 OneSignal: ========================================');
+      
     } catch (error) {
       console.error('🔔 OneSignal: ❌ Error setting user ID:', error);
-      console.error('🔔 OneSignal: Error details:', JSON.stringify(error, null, 2));
     }
   }, [isInitialized, isUserLoading, user]);
 
   const requestPermission = async (): Promise<boolean> => {
     try {
-      console.log('🔔 OneSignal: ========== REQUESTING PERMISSION ==========');
+      console.log('🔔 OneSignal: ========================================');
+      console.log('🔔 OneSignal: REQUESTING NOTIFICATION PERMISSION');
+      console.log('🔔 OneSignal: ========================================');
       
       if (Platform.OS === 'web') {
-        console.log('🔔 OneSignal: Web platform - permission not supported');
+        console.log('🔔 OneSignal: ❌ Web platform - permission not supported');
         return false;
       }
       
       if (!Device.isDevice) {
-        console.log('🔔 OneSignal: Simulator detected - permission not supported');
+        console.log('🔔 OneSignal: ❌ Simulator - permission not supported');
         return false;
       }
       
-      console.log('🔔 OneSignal: Calling requestPermission...');
-      const permission = await OneSignal.Notifications.requestPermission(true);
-      console.log('🔔 OneSignal: Permission result:', permission);
-      
-      if (isMounted.current) {
-        setHasPermission(permission);
+      if (!isInitialized) {
+        console.log('🔔 OneSignal: ❌ SDK not initialized yet');
+        return false;
       }
       
-      // Get updated Player ID after permission granted
-      if (permission) {
+      console.log('🔔 OneSignal: Requesting permission...');
+      const granted = await OneSignal.Notifications.requestPermission(true);
+      console.log('🔔 OneSignal: Permission result:', granted);
+      
+      if (isMounted.current) {
+        setHasPermission(granted);
+      }
+      
+      // Get Player ID after permission granted
+      if (granted) {
         const id = await OneSignal.User.pushSubscription.getIdAsync();
-        console.log('🔔 OneSignal: Player ID after permission granted:', id);
-        if (isMounted.current) {
+        console.log('🔔 OneSignal: Player ID after permission:', id);
+        if (isMounted.current && id) {
           setPlayerId(id);
         }
       }
       
-      console.log('🔔 OneSignal: ========== PERMISSION REQUEST COMPLETE ==========');
-      return permission;
+      console.log('🔔 OneSignal: ========================================');
+      return granted;
+      
     } catch (error) {
       console.error('🔔 OneSignal: ❌ Permission request error:', error);
-      console.error('🔔 OneSignal: Error details:', JSON.stringify(error, null, 2));
       return false;
     }
   };

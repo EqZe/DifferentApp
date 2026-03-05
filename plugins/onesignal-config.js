@@ -1,34 +1,62 @@
 
-const { withAppBuildGradle, withProjectBuildGradle } = require('@expo/config-plugins');
+const { withAndroidManifest, withInfoPlist } = require('@expo/config-plugins');
 
 /**
  * Custom OneSignal configuration plugin
- * Reads appId from app.json extra field instead of plugin config
+ * Injects OneSignal App ID into native configuration without crashing
+ * This reads from app.json extra.oneSignalAppId and injects it properly
  */
 const withOneSignalAppId = (config) => {
   const oneSignalAppId = config.extra?.oneSignalAppId;
   
   if (!oneSignalAppId) {
-    console.warn('⚠️ OneSignal App ID not found in app.json extra field');
+    console.warn('⚠️ OneSignal App ID not found in app.json extra.oneSignalAppId');
     return config;
   }
 
-  console.log('✅ OneSignal App ID configured:', oneSignalAppId);
+  console.log('✅ Configuring OneSignal with App ID:', oneSignalAppId);
 
-  // Add OneSignal App ID to Android build.gradle
-  config = withAppBuildGradle(config, (config) => {
-    if (config.modResults.contents.includes('onesignal_app_id')) {
-      return config;
+  // Configure Android
+  config = withAndroidManifest(config, (config) => {
+    const androidManifest = config.modResults;
+    const mainApplication = androidManifest.manifest.application[0];
+
+    // Ensure meta-data array exists
+    if (!mainApplication['meta-data']) {
+      mainApplication['meta-data'] = [];
     }
 
-    // Add OneSignal App ID as a build config field
-    config.modResults.contents = config.modResults.contents.replace(
-      /defaultConfig\s*{/,
-      `defaultConfig {
-        manifestPlaceholders = [onesignal_app_id: "${oneSignalAppId}"]
-        buildConfigField "String", "ONESIGNAL_APP_ID", "\\"${oneSignalAppId}\\""`
+    // Remove existing OneSignal app ID if present
+    mainApplication['meta-data'] = mainApplication['meta-data'].filter(
+      (meta) => meta.$['android:name'] !== 'onesignal_app_id'
     );
 
+    // Add OneSignal App ID as meta-data
+    mainApplication['meta-data'].push({
+      $: {
+        'android:name': 'onesignal_app_id',
+        'android:value': oneSignalAppId,
+      },
+    });
+
+    console.log('✅ Android: OneSignal App ID injected into AndroidManifest.xml');
+    return config;
+  });
+
+  // Configure iOS
+  config = withInfoPlist(config, (config) => {
+    // Add OneSignal App ID to Info.plist
+    config.modResults.OneSignal_app_id = oneSignalAppId;
+    
+    // Ensure background modes are set for remote notifications
+    if (!config.modResults.UIBackgroundModes) {
+      config.modResults.UIBackgroundModes = [];
+    }
+    if (!config.modResults.UIBackgroundModes.includes('remote-notification')) {
+      config.modResults.UIBackgroundModes.push('remote-notification');
+    }
+
+    console.log('✅ iOS: OneSignal App ID injected into Info.plist');
     return config;
   });
 
