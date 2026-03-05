@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { Platform, Alert } from 'react-native';
 import OneSignal from 'react-native-onesignal';
+import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { useUser } from './UserContext';
 
@@ -46,20 +47,28 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
+    // Get OneSignal App ID from expo-constants (reads from app.json extra field)
+    const oneSignalAppId = Constants.expoConfig?.extra?.oneSignalAppId;
+    
+    if (!oneSignalAppId) {
+      console.error('🔔 OneSignal: ❌ App ID not found in app.json extra.oneSignalAppId');
+      return;
+    }
+    
     isInitializing.current = true;
     console.log('🔔 OneSignal: ========== STARTING INITIALIZATION ==========');
     console.log('🔔 OneSignal: Platform:', Platform.OS);
     console.log('🔔 OneSignal: Is Device:', Device.isDevice);
+    console.log('🔔 OneSignal: App ID from extra field:', oneSignalAppId);
     
-    // Initialize OneSignal with App ID
+    // Initialize OneSignal with App ID from extra field
     const initializeOneSignal = async () => {
       try {
-        const appId = 'b732b467-6886-4c7b-b3d9-5010de1199d6';
-        console.log('🔔 OneSignal: Initializing with App ID:', appId);
-        console.log('🔔 OneSignal: ⚠️ IMPORTANT: If initialized=false, you need to REBUILD the APK with the updated app.json');
+        console.log('🔔 OneSignal: Initializing with App ID:', oneSignalAppId);
+        console.log('🔔 OneSignal: ⚠️ IMPORTANT: If initialized=false, you need to REBUILD the APK');
         
         // Set the OneSignal App ID
-        OneSignal.initialize(appId);
+        OneSignal.initialize(oneSignalAppId);
         
         // Set log level for debugging
         OneSignal.Debug.setLogLevel(6);
@@ -90,8 +99,8 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           
           if (!actuallyInitialized) {
             console.error('🔔 OneSignal: ❌❌❌ INITIALIZATION FAILED ❌❌❌');
-            console.error('🔔 OneSignal: This usually means the APK was built WITHOUT the appId in app.json');
-            console.error('🔔 OneSignal: SOLUTION: Rebuild the APK after updating app.json with the appId property');
+            console.error('🔔 OneSignal: This usually means the APK was built WITHOUT proper OneSignal configuration');
+            console.error('🔔 OneSignal: SOLUTION: Rebuild the APK after updating app.json');
           }
         }
         
