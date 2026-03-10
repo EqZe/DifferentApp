@@ -314,6 +314,21 @@ export default function ProfileScreen() {
     try {
       const granted = await requestPermission();
       console.log('ProfileScreen: Permission granted:', granted);
+      
+      // Manually trigger handshake after permission granted
+      if (granted && user?.authUserId) {
+        console.log('🔔 ProfileScreen: Manually triggering OneSignal handshake...');
+        console.log('🔔 ProfileScreen: User ID:', user.authUserId);
+        try {
+          const OneSignal = require('react-native-onesignal').default;
+          OneSignal.login(user.authUserId);
+          console.log('🔔 ProfileScreen: ✅ Manual handshake complete');
+          console.log('🔔 ProfileScreen: User should now appear in OneSignal dashboard');
+          console.log('🔔 ProfileScreen: External User ID:', user.authUserId);
+        } catch (error) {
+          console.error('🔔 ProfileScreen: ❌ Manual handshake failed:', error);
+        }
+      }
     } catch (error: any) {
       console.error('ProfileScreen: Push notification registration error:', error);
     } finally {

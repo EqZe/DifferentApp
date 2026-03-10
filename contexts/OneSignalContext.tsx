@@ -185,42 +185,74 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
 
   // Set external user ID when user logs in
   useEffect(() => {
+    // Skip on web or simulator
+    if (Platform.OS === 'web' || !Device.isDevice) {
+      return;
+    }
+
     if (!isInitialized || isUserLoading || !user?.authUserId) {
+      console.log('🔔 OneSignal: Waiting for initialization and user data...');
+      console.log('🔔 OneSignal: - isInitialized:', isInitialized);
+      console.log('🔔 OneSignal: - isUserLoading:', isUserLoading);
+      console.log('🔔 OneSignal: - user?.authUserId:', user?.authUserId);
       return;
     }
 
     console.log('🔔 OneSignal: ========================================');
-    console.log('🔔 OneSignal: SETTING EXTERNAL USER ID');
+    console.log('🔔 OneSignal: SETTING EXTERNAL USER ID (HANDSHAKE)');
     console.log('🔔 OneSignal: ========================================');
     console.log('🔔 OneSignal: User ID:', user.authUserId);
     console.log('🔔 OneSignal: User Name:', user.fullName);
+    console.log('🔔 OneSignal: User Email:', user.email);
     
     try {
-      // Login user with external ID
+      // CRITICAL: Login user with external ID
+      // This is the "handshake" that registers the user in OneSignal dashboard
+      console.log('🔔 OneSignal: Step 1 - Calling OneSignal.login() with external_user_id:', user.authUserId);
       OneSignal.login(user.authUserId);
       console.log('🔔 OneSignal: ✅ User logged in with external ID');
+      console.log('🔔 OneSignal: This user should now appear in OneSignal dashboard');
       
       // Set user tags for segmentation
+      console.log('🔔 OneSignal: Step 2 - Setting user tags for segmentation');
       OneSignal.User.addTags({
         user_id: user.authUserId,
         full_name: user.fullName || '',
+        email: user.email || '',
         city: user.city || '',
         has_contract: user.hasContract ? 'true' : 'false',
       });
       console.log('🔔 OneSignal: ✅ User tags set successfully');
       
+      // Set email for better user identification
+      if (user.email) {
+        console.log('🔔 OneSignal: Step 3 - Setting user email:', user.email);
+        OneSignal.User.addEmail(user.email);
+        console.log('🔔 OneSignal: ✅ User email set');
+      }
+      
       // Get updated Player ID
+      console.log('🔔 OneSignal: Step 4 - Getting Player ID after login');
       OneSignal.User.pushSubscription.getIdAsync().then(id => {
         console.log('🔔 OneSignal: Player ID after login:', id);
         if (isMounted.current && id) {
           setPlayerId(id);
+          console.log('🔔 OneSignal: ✅ Player ID updated in state');
+        } else {
+          console.log('🔔 OneSignal: ⚠️ Player ID not available yet (user may need to grant permission)');
         }
       });
       
       console.log('🔔 OneSignal: ========================================');
+      console.log('🔔 OneSignal: HANDSHAKE COMPLETE ✅');
+      console.log('🔔 OneSignal: User should now be visible in OneSignal dashboard');
+      console.log('🔔 OneSignal: External User ID:', user.authUserId);
+      console.log('🔔 OneSignal: ========================================');
       
     } catch (error) {
       console.error('🔔 OneSignal: ❌ Error setting user ID:', error);
+      console.error('🔔 OneSignal: This means the handshake failed!');
+      console.error('🔔 OneSignal: User will NOT appear in OneSignal dashboard');
     }
   }, [isInitialized, isUserLoading, user]);
 
