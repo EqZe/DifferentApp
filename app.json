@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Different",
@@ -53,7 +54,6 @@
     "experiments": {
       "typedRoutes": true
     },
-    "runtimeVersion": "1.0.0",
     "updates": {
       "enabled": false
     },
