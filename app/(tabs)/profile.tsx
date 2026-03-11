@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   View,
   Text,
@@ -12,188 +12,115 @@ import {
   ActivityIndicator,
   Dimensions,
 } from 'react-native';
-import { useUser } from '@/contexts/UserContext';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { api } from '@/utils/api';
+import React, { useState, useEffect } from 'react';
 import { designColors, typography, spacing, radius, shadows } from '@/styles/designSystem';
+import { useUser } from '@/contexts/UserContext';
+import { api } from '@/utils/api';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { IconSymbol } from '@/components/IconSymbol';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOneSignal } from '@/contexts/OneSignalContext';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import { supabase } from '@/lib/supabase';
 
 const { width } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: designColors.light.backgroundSecondary,
   },
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: 100,
   },
-  headerGradient: {
+  header: {
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
-    paddingBottom: spacing.xxl,
-    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
   },
-  profileHeader: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  userName: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold as any,
-    color: '#FFFFFF',
-    marginBottom: spacing.xs,
-    textAlign: 'center',
-  },
-  userSubtitle: {
-    fontSize: typography.sizes.md,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    marginTop: spacing.md,
-  },
-  statusBadgeText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold as any,
-    color: '#FFFFFF',
-    marginLeft: spacing.xs,
-  },
-  contentContainer: {
-    paddingHorizontal: spacing.lg,
-    marginTop: -spacing.xl,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    ...shadows.md,
-  },
-  cardTitle: {
-    fontSize: typography.sizes.lg,
+  greeting: {
+    fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold as any,
     color: designColors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  subtitle: {
+    fontSize: typography.sizes.md,
+    color: designColors.text.secondary,
+  },
+  section: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.semibold as any,
+    color: designColors.text.primary,
     marginBottom: spacing.md,
+  },
+  card: {
+    backgroundColor: designColors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadows.md,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: designColors.light.divider,
+    borderBottomColor: designColors.border,
   },
   infoRowLast: {
     borderBottomWidth: 0,
   },
-  infoIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: designColors.primaryBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  infoContent: {
-    flex: 1,
-  },
   infoLabel: {
-    fontSize: typography.sizes.sm,
+    flex: 1,
+    fontSize: typography.sizes.md,
     color: designColors.text.secondary,
-    marginBottom: spacing.xs,
   },
   infoValue: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium as any,
     color: designColors.text.primary,
   },
-  actionButton: {
-    flexDirection: 'row',
+  statusBadge: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: designColors.primary + '20',
+  },
+  statusText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold as any,
+    color: designColors.primary,
+  },
+  logoutButton: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    backgroundColor: designColors.error,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-    marginBottom: spacing.md,
     ...shadows.sm,
   },
-  actionButtonPrimary: {
-    backgroundColor: designColors.primary,
-  },
-  actionButtonSecondary: {
-    backgroundColor: designColors.secondary,
-  },
-  actionButtonDanger: {
-    backgroundColor: designColors.error,
-  },
-  actionButtonText: {
+  logoutButtonText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold as any,
     color: '#FFFFFF',
-    marginLeft: spacing.sm,
-  },
-  notificationCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderLeftWidth: 4,
-    ...shadows.md,
-  },
-  notificationCardSuccess: {
-    borderLeftColor: designColors.success,
-    backgroundColor: designColors.successBg,
-  },
-  notificationCardWarning: {
-    borderLeftColor: designColors.warning,
-    backgroundColor: designColors.warningBg,
-  },
-  notificationCardInfo: {
-    borderLeftColor: designColors.info,
-    backgroundColor: designColors.infoBg,
-  },
-  notificationTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold as any,
-    marginBottom: spacing.xs,
-  },
-  notificationText: {
-    fontSize: typography.sizes.sm,
-    lineHeight: 20,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.xl,
+    backgroundColor: designColors.surface,
+    borderRadius: radius.lg,
     padding: spacing.xl,
     width: width * 0.85,
     maxWidth: 400,
-    ...shadows.xl,
+    ...shadows.lg,
   },
   modalTitle: {
     fontSize: typography.sizes.xl,
@@ -207,7 +134,7 @@ const styles = StyleSheet.create({
     color: designColors.text.secondary,
     marginBottom: spacing.xl,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -215,12 +142,12 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    borderRadius: radius.md,
     padding: spacing.md,
+    borderRadius: radius.md,
     alignItems: 'center',
   },
   modalButtonCancel: {
-    backgroundColor: designColors.light.backgroundSecondary,
+    backgroundColor: designColors.border,
   },
   modalButtonConfirm: {
     backgroundColor: designColors.error,
@@ -235,366 +162,383 @@ const styles = StyleSheet.create({
   modalButtonTextConfirm: {
     color: '#FFFFFF',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: designColors.light.backgroundSecondary,
-  },
-  loadingText: {
+  oneSignalSection: {
     marginTop: spacing.md,
+    padding: spacing.md,
+    backgroundColor: designColors.primary + '10',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: designColors.primary + '30',
+  },
+  oneSignalTitle: {
     fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold as any,
+    color: designColors.primary,
+    marginBottom: spacing.sm,
+  },
+  oneSignalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  oneSignalLabel: {
+    fontSize: typography.sizes.sm,
     color: designColors.text.secondary,
+    flex: 1,
+  },
+  oneSignalValue: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium as any,
+    color: designColors.text.primary,
+  },
+  oneSignalStatus: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold as any,
+  },
+  oneSignalStatusActive: {
+    color: '#10B981',
+  },
+  oneSignalStatusInactive: {
+    color: designColors.error,
+  },
+  oneSignalNote: {
+    fontSize: typography.sizes.xs,
+    color: designColors.text.secondary,
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
+  },
+  requestPermissionButton: {
+    marginTop: spacing.md,
+    backgroundColor: designColors.primary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: 'center',
+  },
+  requestPermissionButtonText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold as any,
+    color: '#FFFFFF',
   },
 });
 
 function formatDate(dateString: string | null | undefined): string {
-  if (!dateString) return 'לא הוגדר';
+  if (!dateString) {
+    const notSetText = 'לא הוגדר';
+    return notSetText;
+  }
   
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString('he-IL', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  } catch {
-    return 'תאריך לא תקין';
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+    return formattedDate;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    const errorText = 'תאריך לא תקין';
+    return errorText;
   }
 }
 
 export default function ProfileScreen() {
   const { user, session, refreshUser } = useUser();
   const { isInitialized, hasPermission, playerId, requestPermission } = useOneSignal();
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
-  const colorScheme = useColorScheme();
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isRequestingPermission, setIsRequestingPermission] = useState(false);
 
   useEffect(() => {
     console.log('ProfileScreen: Component mounted');
-    console.log('ProfileScreen: User:', user?.fullName);
-    console.log('ProfileScreen: Session:', session ? 'exists' : 'null');
-  }, [user, session]);
+    refreshUser();
+  }, []);
 
   useEffect(() => {
-    console.log('ProfileScreen: Refreshing user data on mount');
-    refreshUser();
-  }, [refreshUser]);
+    console.log('ProfileScreen: User or session changed');
+    console.log('ProfileScreen: user exists:', !!user);
+    console.log('ProfileScreen: session exists:', !!session);
+    
+    if (!user && !session) {
+      console.log('ProfileScreen: No user or session, redirecting to register');
+      router.replace('/register');
+    }
+  }, [user, session, router]);
 
   const handleLogout = () => {
-    console.log('ProfileScreen: User tapped logout button');
+    console.log('ProfileScreen: Logout button pressed');
     setShowLogoutModal(true);
   };
 
   const confirmLogout = async () => {
-    console.log('ProfileScreen: User confirmed logout');
-    setShowLogoutModal(false);
+    console.log('ProfileScreen: Logout confirmed');
+    setIsLoggingOut(true);
     
     try {
-      console.log('ProfileScreen: Signing out from Supabase');
-      const { error } = await api.signOut();
+      console.log('ProfileScreen: Calling supabase.auth.signOut()');
+      const { error } = await supabase.auth.signOut();
       
       if (error) {
         console.error('ProfileScreen: Logout error:', error);
-        return;
+        throw error;
       }
       
-      console.log('ProfileScreen: ✅ Logout successful, navigating to index');
-      router.replace('/');
-    } catch (error) {
-      console.error('ProfileScreen: Unexpected logout error:', error);
+      console.log('ProfileScreen: ✅ Logout successful');
+      setShowLogoutModal(false);
+      router.replace('/register');
+    } catch (error: any) {
+      console.error('ProfileScreen: ❌ Logout failed:', error);
+      console.error('ProfileScreen: Error message:', error?.message);
+      setShowLogoutModal(false);
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
-  const handleRegisterPushNotifications = async () => {
-    console.log('ProfileScreen: User tapped register push button');
+  const handleRequestPermission = async () => {
+    console.log('ProfileScreen: Request permission button pressed');
     setIsRequestingPermission(true);
     
     try {
       const granted = await requestPermission();
-      console.log('ProfileScreen: Permission granted:', granted);
+      console.log('ProfileScreen: Permission result:', granted);
       
-      // Manually trigger handshake after permission granted
-      if (granted && user?.authUserId) {
-        console.log('🔔 ProfileScreen: Manually triggering OneSignal handshake...');
-        console.log('🔔 ProfileScreen: User ID:', user.authUserId);
-        try {
-          const OneSignal = require('react-native-onesignal').default;
-          OneSignal.login(user.authUserId);
-          console.log('🔔 ProfileScreen: ✅ Manual handshake complete');
-          console.log('🔔 ProfileScreen: User should now appear in OneSignal dashboard');
-          console.log('🔔 ProfileScreen: External User ID:', user.authUserId);
-        } catch (error) {
-          console.error('🔔 ProfileScreen: ❌ Manual handshake failed:', error);
-        }
+      if (granted) {
+        console.log('ProfileScreen: ✅ Permission granted successfully');
+      } else {
+        console.log('ProfileScreen: ⚠️ Permission denied or unavailable');
       }
-    } catch (error: any) {
-      console.error('ProfileScreen: Push notification registration error:', error);
+    } catch (error) {
+      console.error('ProfileScreen: ❌ Permission request error:', error);
     } finally {
       setIsRequestingPermission(false);
     }
   };
 
   if (!user) {
+    const loadingText = 'טוען...';
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={designColors.primary} />
-        <Text style={styles.loadingText}>טוען פרופיל...</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={designColors.primary} />
+          <Text style={{ marginTop: spacing.md, color: designColors.text.secondary }}>
+            {loadingText}
+          </Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
-  const contractStatusText = user.hasContract ? 'חוזה חתום' : 'ממתין לחתימה';
-  const contractStatusColor = user.hasContract ? designColors.success : designColors.warning;
-  const contractStatusIcon = user.hasContract ? 'check-circle' : 'schedule';
+  const greetingText = 'שלום';
+  const personalInfoTitle = 'מידע אישי';
+  const fullNameLabel = 'שם מלא';
+  const emailLabel = 'אימייל';
+  const phoneLabel = 'טלפון';
+  const cityLabel = 'עיר';
+  const travelDateLabel = 'תאריך טיסה';
+  const contractStatusLabel = 'סטטוס חוזה';
+  const contractActiveText = 'חוזה פעיל';
+  const contractInactiveText = 'ללא חוזה';
+  const logoutButtonText = 'התנתק';
+  const logoutModalTitle = 'האם אתה בטוח?';
+  const logoutModalMessage = 'האם אתה בטוח שברצונך להתנתק מהחשבון?';
+  const cancelButtonText = 'ביטול';
+  const confirmButtonText = 'התנתק';
+  const loggingOutText = 'מתנתק...';
+  const oneSignalTitle = 'מצב התראות (OneSignal)';
+  const oneSignalInitializedLabel = 'מערכת מאותחלת';
+  const oneSignalPermissionLabel = 'הרשאות';
+  const oneSignalPlayerIdLabel = 'מזהה מכשיר';
+  const oneSignalUserIdLabel = 'מזהה משתמש';
+  const oneSignalYesText = 'כן';
+  const oneSignalNoText = 'לא';
+  const oneSignalGrantedText = 'ניתנו';
+  const oneSignalNotGrantedText = 'לא ניתנו';
+  const oneSignalNoteText = 'התראות Push עובדות רק במכשירים פיזיים (iOS/Android). לא עובד בדפדפן או סימולטור.';
+  const requestPermissionButtonText = 'בקש הרשאות התראות';
+  const requestingPermissionText = 'מבקש הרשאות...';
+
+  const initializedText = isInitialized ? oneSignalYesText : oneSignalNoText;
+  const permissionText = hasPermission ? oneSignalGrantedText : oneSignalNotGrantedText;
+  const playerIdText = playerId || 'לא זמין';
+  const userIdText = user.authUserId || 'לא זמין';
+  const statusText = isInitialized && hasPermission ? 'פעיל' : 'לא פעיל';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView 
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      <LinearGradient
+        colors={colorScheme === 'dark' ? ['#1a1a1a', '#0a0a0a'] : ['#f8f9fa', '#ffffff']}
+        style={{ flex: 1 }}
       >
-        {/* Header with Gradient */}
-        <LinearGradient
-          colors={[designColors.primary, designColors.primaryDark]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}
-        >
-          <Animated.View entering={FadeIn.duration(600)} style={styles.profileHeader}>
-            <View style={styles.avatarContainer}>
-              <IconSymbol 
-                ios_icon_name="person.fill" 
-                android_material_icon_name="person"
-                size={50} 
-                color="#FFFFFF"
-              />
-            </View>
-            <Text style={styles.userName}>{user.fullName}</Text>
-            <Text style={styles.userSubtitle}>{user.city}</Text>
-            
-            <View style={[styles.statusBadge, { backgroundColor: contractStatusColor }]}>
-              <IconSymbol 
-                ios_icon_name={user.hasContract ? 'checkmark.circle.fill' : 'clock.fill'} 
-                android_material_icon_name={contractStatusIcon}
-                size={16} 
-                color="#FFFFFF"
-              />
-              <Text style={styles.statusBadgeText}>{contractStatusText}</Text>
-            </View>
+        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+          <Animated.View entering={FadeIn.duration(400)} style={styles.header}>
+            <Text style={styles.greeting}>{greetingText}, {user.fullName}</Text>
+            <Text style={styles.subtitle}>{user.email}</Text>
           </Animated.View>
-        </LinearGradient>
 
-        {/* Content */}
-        <View style={styles.contentContainer}>
-          {/* Personal Information Card */}
-          <Animated.View entering={FadeInDown.delay(100).duration(600)}>
+          <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.section}>
+            <Text style={styles.sectionTitle}>{personalInfoTitle}</Text>
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>פרטים אישיים</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{fullNameLabel}</Text>
+                <Text style={styles.infoValue}>{user.fullName}</Text>
+              </View>
               
               <View style={styles.infoRow}>
-                <View style={styles.infoIcon}>
-                  <IconSymbol 
-                    ios_icon_name="person.fill" 
-                    android_material_icon_name="person"
-                    size={20} 
-                    color={designColors.primary}
-                  />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>שם מלא</Text>
-                  <Text style={styles.infoValue}>{user.fullName}</Text>
-                </View>
+                <Text style={styles.infoLabel}>{emailLabel}</Text>
+                <Text style={styles.infoValue}>{user.email}</Text>
               </View>
-
+              
               <View style={styles.infoRow}>
-                <View style={styles.infoIcon}>
-                  <IconSymbol 
-                    ios_icon_name="location.fill" 
-                    android_material_icon_name="location-on"
-                    size={20} 
-                    color={designColors.primary}
-                  />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>עיר</Text>
-                  <Text style={styles.infoValue}>{user.city}</Text>
-                </View>
+                <Text style={styles.infoLabel}>{phoneLabel}</Text>
+                <Text style={styles.infoValue}>{user.phoneNumber}</Text>
               </View>
-
+              
               <View style={styles.infoRow}>
-                <View style={styles.infoIcon}>
-                  <IconSymbol 
-                    ios_icon_name="phone.fill" 
-                    android_material_icon_name="phone"
-                    size={20} 
-                    color={designColors.primary}
-                  />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>טלפון</Text>
-                  <Text style={styles.infoValue}>{user.phoneNumber}</Text>
-                </View>
+                <Text style={styles.infoLabel}>{cityLabel}</Text>
+                <Text style={styles.infoValue}>{user.city}</Text>
               </View>
-
-              {user.email && (
-                <View style={styles.infoRow}>
-                  <View style={styles.infoIcon}>
-                    <IconSymbol 
-                      ios_icon_name="envelope.fill" 
-                      android_material_icon_name="email"
-                      size={20} 
-                      color={designColors.primary}
-                    />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>אימייל</Text>
-                    <Text style={styles.infoValue}>{user.email}</Text>
-                  </View>
-                </View>
-              )}
-
+              
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>{travelDateLabel}</Text>
+                <Text style={styles.infoValue}>{formatDate(user.travelDate)}</Text>
+              </View>
+              
               <View style={[styles.infoRow, styles.infoRowLast]}>
-                <View style={styles.infoIcon}>
-                  <IconSymbol 
-                    ios_icon_name="calendar" 
-                    android_material_icon_name="calendar-today"
-                    size={20} 
-                    color={designColors.primary}
-                  />
+                <Text style={styles.infoLabel}>{contractStatusLabel}</Text>
+                <View style={styles.statusBadge}>
+                  <Text style={styles.statusText}>
+                    {user.hasContract ? contractActiveText : contractInactiveText}
+                  </Text>
                 </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>תאריך נסיעה</Text>
-                  <Text style={styles.infoValue}>{formatDate(user.travelDate)}</Text>
+              </View>
+
+              <View style={styles.oneSignalSection}>
+                <Text style={styles.oneSignalTitle}>{oneSignalTitle}</Text>
+                
+                <View style={styles.oneSignalRow}>
+                  <Text style={styles.oneSignalLabel}>{oneSignalInitializedLabel}:</Text>
+                  <Text style={[
+                    styles.oneSignalValue,
+                    styles.oneSignalStatus,
+                    isInitialized ? styles.oneSignalStatusActive : styles.oneSignalStatusInactive
+                  ]}>
+                    {initializedText}
+                  </Text>
                 </View>
+                
+                <View style={styles.oneSignalRow}>
+                  <Text style={styles.oneSignalLabel}>{oneSignalPermissionLabel}:</Text>
+                  <Text style={[
+                    styles.oneSignalValue,
+                    styles.oneSignalStatus,
+                    hasPermission ? styles.oneSignalStatusActive : styles.oneSignalStatusInactive
+                  ]}>
+                    {permissionText}
+                  </Text>
+                </View>
+                
+                <View style={styles.oneSignalRow}>
+                  <Text style={styles.oneSignalLabel}>{oneSignalPlayerIdLabel}:</Text>
+                  <Text style={styles.oneSignalValue} numberOfLines={1}>
+                    {playerIdText}
+                  </Text>
+                </View>
+                
+                <View style={styles.oneSignalRow}>
+                  <Text style={styles.oneSignalLabel}>{oneSignalUserIdLabel}:</Text>
+                  <Text style={styles.oneSignalValue} numberOfLines={1}>
+                    {userIdText}
+                  </Text>
+                </View>
+                
+                <View style={styles.oneSignalRow}>
+                  <Text style={styles.oneSignalLabel}>סטטוס כללי:</Text>
+                  <Text style={[
+                    styles.oneSignalValue,
+                    styles.oneSignalStatus,
+                    isInitialized && hasPermission ? styles.oneSignalStatusActive : styles.oneSignalStatusInactive
+                  ]}>
+                    {statusText}
+                  </Text>
+                </View>
+                
+                <Text style={styles.oneSignalNote}>{oneSignalNoteText}</Text>
+                
+                {Platform.OS !== 'web' && !hasPermission && (
+                  <TouchableOpacity
+                    style={styles.requestPermissionButton}
+                    onPress={handleRequestPermission}
+                    disabled={isRequestingPermission}
+                  >
+                    {isRequestingPermission ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.requestPermissionButtonText}>
+                        {requestPermissionButtonText}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </Animated.View>
 
-          {/* Notification Status - Only on native platforms */}
-          {Platform.OS !== 'web' && (
-            <Animated.View entering={FadeInDown.delay(200).duration(600)}>
-              {isInitialized && hasPermission && playerId ? (
-                <View style={[styles.notificationCard, styles.notificationCardSuccess]}>
-                  <Text style={[styles.notificationTitle, { color: designColors.success }]}>
-                    ✅ התראות מופעלות
-                  </Text>
-                  <Text style={[styles.notificationText, { color: designColors.success }]}>
-                    תקבל עדכונים על משימות, מכולות ולוח זמנים
-                  </Text>
-                </View>
-              ) : isInitialized && !hasPermission ? (
-                <View style={[styles.notificationCard, styles.notificationCardWarning]}>
-                  <Text style={[styles.notificationTitle, { color: designColors.warning }]}>
-                    ⚠️ התראות לא מופעלות
-                  </Text>
-                  <Text style={[styles.notificationText, { color: designColors.warning }]}>
-                    הפעל התראות כדי לקבל עדכונים חשובים
+          <Animated.View entering={FadeInDown.delay(200).duration(400)}>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+              disabled={isLoggingOut}
+            >
+              <Text style={styles.logoutButtonText}>{logoutButtonText}</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </ScrollView>
+
+        <Modal
+          visible={showLogoutModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowLogoutModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <Animated.View entering={FadeIn.duration(200)} style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{logoutModalTitle}</Text>
+              <Text style={styles.modalMessage}>{logoutModalMessage}</Text>
+              
+              {isLoggingOut ? (
+                <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
+                  <ActivityIndicator size="large" color={designColors.primary} />
+                  <Text style={{ marginTop: spacing.md, color: designColors.text.secondary }}>
+                    {loggingOutText}
                   </Text>
                 </View>
               ) : (
-                <View style={[styles.notificationCard, styles.notificationCardInfo]}>
-                  <Text style={[styles.notificationTitle, { color: designColors.info }]}>
-                    ℹ️ מערכת התראות
-                  </Text>
-                  <Text style={[styles.notificationText, { color: designColors.info }]}>
-                    התראות זמינות במכשיר נייד בלבד
-                  </Text>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonCancel]}
+                    onPress={() => setShowLogoutModal(false)}
+                  >
+                    <Text style={[styles.modalButtonText, styles.modalButtonTextCancel]}>
+                      {cancelButtonText}
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonConfirm]}
+                    onPress={confirmLogout}
+                  >
+                    <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
+                      {confirmButtonText}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               )}
             </Animated.View>
-          )}
-
-          {/* Web Platform Info */}
-          {Platform.OS === 'web' && (
-            <Animated.View entering={FadeInDown.delay(200).duration(600)}>
-              <View style={[styles.notificationCard, styles.notificationCardInfo]}>
-                <Text style={[styles.notificationTitle, { color: designColors.info }]}>
-                  ℹ️ התראות במכשיר נייד
-                </Text>
-                <Text style={[styles.notificationText, { color: designColors.info }]}>
-                  התראות Push זמינות רק באפליקציה במכשיר נייד (Android/iOS)
-                </Text>
-              </View>
-            </Animated.View>
-          )}
-
-          {/* Actions */}
-          <Animated.View entering={FadeInDown.delay(300).duration(600)}>
-            {Platform.OS !== 'web' && !hasPermission && (
-              <TouchableOpacity
-                style={[styles.actionButton, styles.actionButtonSecondary]}
-                onPress={handleRegisterPushNotifications}
-                disabled={isRequestingPermission}
-              >
-                {isRequestingPermission ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <>
-                    <IconSymbol 
-                      ios_icon_name="bell.fill" 
-                      android_material_icon_name="notifications"
-                      size={20} 
-                      color="#FFFFFF"
-                    />
-                    <Text style={styles.actionButtonText}>הפעל התראות</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={[styles.actionButton, styles.actionButtonDanger]}
-              onPress={handleLogout}
-            >
-              <IconSymbol 
-                ios_icon_name="arrow.right.square.fill" 
-                android_material_icon_name="logout"
-                size={20} 
-                color="#FFFFFF"
-              />
-              <Text style={styles.actionButtonText}>התנתק</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
-      </ScrollView>
-
-      {/* Logout Confirmation Modal */}
-      <Modal
-        visible={showLogoutModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowLogoutModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <Animated.View entering={FadeIn.duration(300)} style={styles.modalContent}>
-            <Text style={styles.modalTitle}>התנתקות</Text>
-            <Text style={styles.modalMessage}>
-              האם אתה בטוח שברצונך להתנתק מהמערכת?
-            </Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
-                onPress={() => setShowLogoutModal(false)}
-              >
-                <Text style={[styles.modalButtonText, styles.modalButtonTextCancel]}>
-                  ביטול
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
-                onPress={confirmLogout}
-              >
-                <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
-                  התנתק
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </View>
-      </Modal>
+          </View>
+        </Modal>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
