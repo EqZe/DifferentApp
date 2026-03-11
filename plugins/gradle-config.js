@@ -1,48 +1,51 @@
 
-const { withProjectBuildGradle, withSettingsGradle } = require('@expo/config-plugins');
+const { withProjectBuildGradle, withAppBuildGradle } = require('@expo/config-plugins');
 
 /**
  * Gradle configuration plugin to fix dependency resolution issues
- * Applies resolution strategy BEFORE dependencies are resolved
+ * Adds retry logic and alternative repository configurations
  */
 function withGradleConfig(config) {
-  // Configure settings.gradle to add repositories at the earliest stage
-  config = withSettingsGradle(config, (config) => {
+  // Configure project-level build.gradle
+  config = withProjectBuildGradle(config, (config) => {
     if (config.modResults.contents) {
       let contents = config.modResults.contents;
 
-      // Ensure repositories are configured in dependencyResolutionManagement
-      if (!contents.includes('// Custom repository configuration')) {
-        const repositoryConfig = `
-// Custom repository configuration for dependency resolution
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
-    repositories {
-        google {
-            content {
-                includeGroupByRegex "com\\\\.android.*"
-                includeGroupByRegex "com\\\\.google.*"
-                includeGroupByRegex "androidx.*"
+      // Add retry configuration for dependency resolution
+      if (!contents.includes('gradle.projectsEvaluated')) {
+        const retryConfig = `
+// Retry configuration for dependency resolution
+gradle.projectsEvaluated {
+    allprojects {
+        repositories {
+            // Ensure Google Maven is first
+            google {
+                content {
+                    includeGroupByRegex "com\\\\.android.*"
+                    includeGroupByRegex "com\\\\.google.*"
+                    includeGroupByRegex "androidx.*"
+                }
+            }
+            mavenCentral()
+            
+            // Add JitPack as fallback
+            maven { url 'https://jitpack.io' }
+        }
+        
+        // Configure retry logic for failed downloads
+        configurations.all {
+            resolutionStrategy {
+                cacheChangingModulesFor 0, 'seconds'
+                cacheDynamicVersionsFor 0, 'seconds'
             }
         }
-        mavenCentral()
-        maven { url = uri("https://jitpack.io") }
     }
 }
 `;
-        // Replace existing dependencyResolutionManagement if present
-        if (contents.includes('dependencyResolutionManagement')) {
-          contents = contents.replace(
-            /dependencyResolutionManagement\s*\{[^}]*\}/s,
-            repositoryConfig.trim()
-          );
-        } else {
-          // Add before pluginManagement or at the beginning
-          if (contents.includes('pluginManagement')) {
-            contents = contents.replace('pluginManagement', repositoryConfig + '\npluginManagement');
-          } else {
-            contents = repositoryConfig + '\n' + contents;
-          }
+        // Insert before the last closing brace
+        const lastBraceIndex = contents.lastIndexOf('}');
+        if (lastBraceIndex !== -1) {
+          contents = contents.slice(0, lastBraceIndex) + retryConfig + contents.slice(lastBraceIndex);
         }
       }
 
@@ -51,58 +54,23 @@ dependencyResolutionManagement {
     return config;
   });
 
-  // Configure project-level build.gradle
-  config = withProjectBuildGradle(config, (config) => {
+  // Configure app-level build.gradle
+  config = withAppBuildGradle(config, (config) => {
     if (config.modResults.contents) {
       let contents = config.modResults.contents;
 
-      // Add resolution strategy in allprojects block BEFORE projectsEvaluated
-      // This ensures it's applied early enough
-      if (!contents.includes('// Early resolution strategy configuration')) {
-        const earlyResolutionConfig = `
-// Early resolution strategy configuration
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url 'https://jitpack.io' }
-    }
+      // Ensure proper repository configuration
+      if (!contents.includes('repositories {') && contents.includes('dependencies {')) {
+        const repositoriesConfig = `
+repositories {
+    google()
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
 }
 
-// Configure resolution strategy before dependencies are resolved
-subprojects {
-    afterEvaluate { project ->
-        project.configurations.configureEach { configuration ->
-            // Only configure if not already resolved
-            if (configuration.state == Configuration.State.UNRESOLVED) {
-                configuration.resolutionStrategy {
-                    // Cache dynamic versions for 0 seconds to always get latest
-                    cacheDynamicVersionsFor 0, 'seconds'
-                    // Cache changing modules for 0 seconds
-                    cacheChangingModulesFor 0, 'seconds'
-                }
-            }
-        }
-    }
-}
 `;
-        // Insert after buildscript block but before any other configuration
-        if (contents.includes('allprojects {')) {
-          // Replace existing allprojects block
-          contents = contents.replace(
-            /allprojects\s*\{[^}]*\}/s,
-            earlyResolutionConfig.trim()
-          );
-        } else {
-          // Insert after buildscript
-          const buildscriptEnd = contents.indexOf('}', contents.indexOf('buildscript'));
-          if (buildscriptEnd !== -1) {
-            contents = contents.slice(0, buildscriptEnd + 1) + '\n' + earlyResolutionConfig + contents.slice(buildscriptEnd + 1);
-          } else {
-            // Insert at the beginning if no buildscript found
-            contents = earlyResolutionConfig + '\n' + contents;
-          }
-        }
+        // Insert before dependencies block
+        contents = contents.replace('dependencies {', repositoriesConfig + 'dependencies {');
       }
 
       config.modResults.contents = contents;
