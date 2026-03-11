@@ -1,51 +1,40 @@
 
-const { withProjectBuildGradle, withAppBuildGradle } = require('@expo/config-plugins');
+const { withProjectBuildGradle, withAppBuildGradle, withSettingsGradle } = require('@expo/config-plugins');
 
 /**
  * Gradle configuration plugin to fix dependency resolution issues
- * Adds retry logic and alternative repository configurations
+ * Applies resolution strategy BEFORE configurations are resolved
  */
 function withGradleConfig(config) {
-  // Configure project-level build.gradle
-  config = withProjectBuildGradle(config, (config) => {
+  // Configure settings.gradle to set up repositories early
+  config = withSettingsGradle(config, (config) => {
     if (config.modResults.contents) {
       let contents = config.modResults.contents;
 
-      // Add retry configuration for dependency resolution
-      if (!contents.includes('gradle.projectsEvaluated')) {
-        const retryConfig = `
-// Retry configuration for dependency resolution
-gradle.projectsEvaluated {
-    allprojects {
-        repositories {
-            // Ensure Google Maven is first
-            google {
-                content {
-                    includeGroupByRegex "com\\\\.android.*"
-                    includeGroupByRegex "com\\\\.google.*"
-                    includeGroupByRegex "androidx.*"
-                }
-            }
-            mavenCentral()
-            
-            // Add JitPack as fallback
-            maven { url 'https://jitpack.io' }
-        }
-        
-        // Configure retry logic for failed downloads
-        configurations.all {
-            resolutionStrategy {
-                cacheChangingModulesFor 0, 'seconds'
-                cacheDynamicVersionsFor 0, 'seconds'
+      // Add dependency resolution management at the settings level
+      if (!contents.includes('dependencyResolutionManagement')) {
+        const dependencyManagement = `
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        google {
+            content {
+                includeGroupByRegex "com\\\\.android.*"
+                includeGroupByRegex "com\\\\.google.*"
+                includeGroupByRegex "androidx.*"
             }
         }
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
     }
 }
+
 `;
-        // Insert before the last closing brace
-        const lastBraceIndex = contents.lastIndexOf('}');
-        if (lastBraceIndex !== -1) {
-          contents = contents.slice(0, lastBraceIndex) + retryConfig + contents.slice(lastBraceIndex);
+        // Insert at the beginning after any existing pluginManagement block
+        if (contents.includes('pluginManagement')) {
+          contents = contents.replace(/pluginManagement\s*\{[^}]*\}\s*/, (match) => match + '\n' + dependencyManagement);
+        } else {
+          contents = dependencyManagement + contents;
         }
       }
 
@@ -54,23 +43,46 @@ gradle.projectsEvaluated {
     return config;
   });
 
-  // Configure app-level build.gradle
-  config = withAppBuildGradle(config, (config) => {
+  // Configure project-level build.gradle
+  config = withProjectBuildGradle(config, (config) => {
     if (config.modResults.contents) {
       let contents = config.modResults.contents;
 
-      // Ensure proper repository configuration
-      if (!contents.includes('repositories {') && contents.includes('dependencies {')) {
-        const repositoriesConfig = `
-repositories {
-    google()
-    mavenCentral()
-    maven { url 'https://jitpack.io' }
-}
+      // Remove any existing gradle.projectsEvaluated blocks to avoid conflicts
+      contents = contents.replace(/gradle\.projectsEvaluated\s*\{[\s\S]*?\n\}\s*\n/g, '');
 
+      // Add configuration that runs BEFORE resolution
+      if (!contents.includes('subprojects {')) {
+        const subprojectsConfig = `
+// Configure all subprojects before dependency resolution
+subprojects {
+    afterEvaluate { project ->
+        // Only configure if not already resolved
+        project.configurations.configureEach { configuration ->
+            if (configuration.state == Configuration.State.UNRESOLVED) {
+                configuration.resolutionStrategy {
+                    // Prefer project modules
+                    preferProjectModules()
+                    
+                    // Cache settings
+                    cacheChangingModulesFor 0, 'seconds'
+                    cacheDynamicVersionsFor 0, 'seconds'
+                    
+                    // Force consistent versions if needed
+                    eachDependency { DependencyResolveDetails details ->
+                        // Add any specific version forcing here if needed
+                    }
+                }
+            }
+        }
+    }
+}
 `;
-        // Insert before dependencies block
-        contents = contents.replace('dependencies {', repositoriesConfig + 'dependencies {');
+        // Insert before the last closing brace
+        const lastBraceIndex = contents.lastIndexOf('}');
+        if (lastBraceIndex !== -1) {
+          contents = contents.slice(0, lastBraceIndex) + subprojectsConfig + contents.slice(lastBraceIndex);
+        }
       }
 
       config.modResults.contents = contents;
