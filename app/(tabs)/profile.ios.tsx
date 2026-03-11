@@ -21,6 +21,7 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { api } from '@/utils/api';
 import { designColors, typography, spacing, radius, shadows } from '@/styles/designSystem';
 import { useOneSignal } from '@/contexts/OneSignalContext';
+import * as Device from 'expo-device';
 
 const { width } = Dimensions.get('window');
 
