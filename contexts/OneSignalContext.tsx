@@ -78,14 +78,14 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     
     const initializeOneSignal = async () => {
       try {
-        // Step 1: Initialize OneSignal SDK
-        console.log('🔔 OneSignal: Step 1/6 - Calling OneSignal.initialize()');
-        OneSignal.initialize(oneSignalAppId);
-        console.log('🔔 OneSignal: ✅ OneSignal.initialize() called successfully');
+        // Step 1: Initialize OneSignal SDK (v5 API)
+        console.log('🔔 OneSignal: Step 1/6 - Calling OneSignal.setAppId()');
+        OneSignal.setAppId(oneSignalAppId);
+        console.log('🔔 OneSignal: ✅ OneSignal.setAppId() called successfully');
         
-        // Step 2: Enable verbose logging
+        // Step 2: Enable verbose logging (v5 API)
         console.log('🔔 OneSignal: Step 2/6 - Setting log level to VERBOSE (6)');
-        OneSignal.Debug.setLogLevel(6);
+        OneSignal.setLogLevel(6, 0);
         console.log('🔔 OneSignal: ✅ Verbose logging enabled');
         
         // Step 3: Wait for SDK to initialize
@@ -93,19 +93,19 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         await new Promise(resolve => setTimeout(resolve, 3000));
         console.log('🔔 OneSignal: ✅ Wait complete');
         
-        // Step 4: Check permission status
+        // Step 4: Check permission status (v5 API)
         console.log('🔔 OneSignal: Step 4/6 - Checking notification permission status');
-        const permission = await OneSignal.Notifications.getPermissionAsync();
+        const permission = OneSignal.Notifications.hasPermission();
         console.log('🔔 OneSignal: Permission status:', permission ? '✅ GRANTED' : '❌ NOT GRANTED');
         
-        // Step 5: Get Player ID (Push Subscription ID)
+        // Step 5: Get Player ID (Push Subscription ID) - v5 API
         console.log('🔔 OneSignal: Step 5/6 - Getting Player ID (Push Subscription ID)');
-        const subscriptionId = await OneSignal.User.pushSubscription.getIdAsync();
+        const subscriptionId = OneSignal.User.pushSubscription.getPushSubscriptionId();
         console.log('🔔 OneSignal: Player ID:', subscriptionId || '⚠️ Not available yet (permission may be needed)');
         
-        // Step 5.5: Get Push Token (FCM/APNS token)
+        // Step 5.5: Get Push Token (FCM/APNS token) - v5 API
         console.log('🔔 OneSignal: Step 5.5/6 - Getting Push Token (FCM/APNS)');
-        const pushToken = await OneSignal.User.pushSubscription.getTokenAsync();
+        const pushToken = OneSignal.User.pushSubscription.getPushSubscriptionToken();
         console.log('🔔 OneSignal: Push Token:', pushToken ? `✅ ${pushToken.substring(0, 20)}...` : '❌ NOT AVAILABLE');
         
         if (!pushToken) {
@@ -119,9 +119,9 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           console.log('🔔 OneSignal: 5. OneSignal servers unreachable');
         }
         
-        // Step 6: Check subscription status
+        // Step 6: Check subscription status (v5 API)
         console.log('🔔 OneSignal: Step 6/6 - Checking subscription status');
-        const optedIn = await OneSignal.User.pushSubscription.getOptedInAsync();
+        const optedIn = OneSignal.User.pushSubscription.getOptedIn();
         console.log('🔔 OneSignal: Opted In:', optedIn ? '✅ YES' : '❌ NO');
         
         // Update state
@@ -155,10 +155,10 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           }
         }
         
-        // Set up event listeners
+        // Set up event listeners (v5 API)
         console.log('🔔 OneSignal: Setting up event listeners...');
         
-        // Permission change listener
+        // Permission change listener (v5 API)
         OneSignal.Notifications.addEventListener('permissionChange', (granted) => {
           console.log('🔔 OneSignal: ========================================');
           console.log('🔔 OneSignal: 📢 PERMISSION CHANGED EVENT');
@@ -168,24 +168,23 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           if (isMounted.current) {
             setHasPermission(granted);
             
-            // Get updated Player ID after permission change
+            // Get updated Player ID after permission change (v5 API)
             if (granted) {
               console.log('🔔 OneSignal: Permission granted! Getting Player ID...');
-              OneSignal.User.pushSubscription.getIdAsync().then(id => {
-                console.log('🔔 OneSignal: Updated Player ID:', id || '⚠️ Still not available');
-                if (isMounted.current && id) {
-                  setPlayerId(id);
-                  console.log('🔔 OneSignal: ✅ Player ID updated successfully');
-                  console.log('🔔 OneSignal: 🎉 Device is now registered with OneSignal!');
-                  console.log('🔔 OneSignal: Check OneSignal dashboard - device should appear');
-                }
-              });
+              const id = OneSignal.User.pushSubscription.getPushSubscriptionId();
+              console.log('🔔 OneSignal: Updated Player ID:', id || '⚠️ Still not available');
+              if (isMounted.current && id) {
+                setPlayerId(id);
+                console.log('🔔 OneSignal: ✅ Player ID updated successfully');
+                console.log('🔔 OneSignal: 🎉 Device is now registered with OneSignal!');
+                console.log('🔔 OneSignal: Check OneSignal dashboard - device should appear');
+              }
             }
           }
           console.log('🔔 OneSignal: ========================================');
         });
         
-        // Subscription change listener (CRITICAL for debugging)
+        // Subscription change listener (CRITICAL for debugging) - v5 API
         OneSignal.User.pushSubscription.addEventListener('change', (state) => {
           console.log('🔔 OneSignal: ========================================');
           console.log('🔔 OneSignal: 📢 SUBSCRIPTION CHANGED EVENT');
@@ -193,15 +192,19 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           console.log('🔔 OneSignal: Current state:', JSON.stringify(state.current, null, 2));
           console.log('🔔 OneSignal: Previous state:', JSON.stringify(state.previous, null, 2));
           
-          if (state.current.id) {
+          const currentId = state.current?.id || OneSignal.User.pushSubscription.getPushSubscriptionId();
+          const currentToken = state.current?.token || OneSignal.User.pushSubscription.getPushSubscriptionToken();
+          const currentOptedIn = state.current?.optedIn !== undefined ? state.current.optedIn : OneSignal.User.pushSubscription.getOptedIn();
+          
+          if (currentId) {
             console.log('🔔 OneSignal: 🎉🎉🎉 PLAYER ID RECEIVED 🎉🎉🎉');
-            console.log('🔔 OneSignal: Player ID:', state.current.id);
-            console.log('🔔 OneSignal: Token:', state.current.token ? '✅ Present' : '❌ Missing');
-            console.log('🔔 OneSignal: Opted In:', state.current.optedIn ? '✅ YES' : '❌ NO');
+            console.log('🔔 OneSignal: Player ID:', currentId);
+            console.log('🔔 OneSignal: Token:', currentToken ? '✅ Present' : '❌ Missing');
+            console.log('🔔 OneSignal: Opted In:', currentOptedIn ? '✅ YES' : '❌ NO');
             
             if (isMounted.current) {
-              setPlayerId(state.current.id);
-              setIsSubscribed(state.current.optedIn);
+              setPlayerId(currentId);
+              setIsSubscribed(currentOptedIn);
               console.log('🔔 OneSignal: ✅ State updated with Player ID');
               console.log('🔔 OneSignal: 🎉 Device should now appear in OneSignal dashboard!');
             }
@@ -211,7 +214,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           console.log('🔔 OneSignal: ========================================');
         });
         
-        // Notification click listener
+        // Notification click listener (v5 API)
         OneSignal.Notifications.addEventListener('click', (event) => {
           console.log('🔔 OneSignal: ========================================');
           console.log('🔔 OneSignal: 📢 NOTIFICATION CLICKED');
@@ -220,7 +223,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           console.log('🔔 OneSignal: ========================================');
         });
         
-        // Foreground notification listener
+        // Foreground notification listener (v5 API)
         OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event) => {
           console.log('🔔 OneSignal: ========================================');
           console.log('🔔 OneSignal: 📢 NOTIFICATION RECEIVED (FOREGROUND)');
@@ -238,7 +241,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
             [{ text: 'אישור' }]
           );
           
-          // Display the notification
+          // Display the notification (v5 API)
           event.preventDefault();
           event.getNotification();
         });
@@ -330,19 +333,18 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         console.log('🔔 OneSignal: Step 3/3 - Skipping email (not available)');
       }
       
-      // Get updated Player ID after login
+      // Get updated Player ID after login (v5 API)
       console.log('🔔 OneSignal: Getting Player ID after handshake...');
-      OneSignal.User.pushSubscription.getIdAsync().then(id => {
-        console.log('🔔 OneSignal: Player ID after handshake:', id || '⚠️ Not available yet');
-        if (isMounted.current && id) {
-          setPlayerId(id);
-          console.log('🔔 OneSignal: ✅ Player ID updated in state');
-        } else if (!id) {
-          console.log('🔔 OneSignal: ⚠️ Player ID not available yet');
-          console.log('🔔 OneSignal: This is normal if permission is not granted');
-          console.log('🔔 OneSignal: Grant permission to complete registration');
-        }
-      });
+      const id = OneSignal.User.pushSubscription.getPushSubscriptionId();
+      console.log('🔔 OneSignal: Player ID after handshake:', id || '⚠️ Not available yet');
+      if (isMounted.current && id) {
+        setPlayerId(id);
+        console.log('🔔 OneSignal: ✅ Player ID updated in state');
+      } else if (!id) {
+        console.log('🔔 OneSignal: ⚠️ Player ID not available yet');
+        console.log('🔔 OneSignal: This is normal if permission is not granted');
+        console.log('🔔 OneSignal: Grant permission to complete registration');
+      }
       
       console.log('🔔 OneSignal: ========================================');
       console.log('🔔 OneSignal: ✅✅✅ HANDSHAKE COMPLETE ✅✅✅');
@@ -378,18 +380,18 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       // SDK state
       console.log('🔔 OneSignal: SDK Initialized:', isInitialized ? '✅' : '❌');
       
-      // Permission state
-      const permission = await OneSignal.Notifications.getPermissionAsync();
+      // Permission state (v5 API)
+      const permission = OneSignal.Notifications.hasPermission();
       console.log('🔔 OneSignal: Permission Granted:', permission ? '✅' : '❌');
       
-      // Subscription state
-      const subscriptionId = await OneSignal.User.pushSubscription.getIdAsync();
+      // Subscription state (v5 API)
+      const subscriptionId = OneSignal.User.pushSubscription.getPushSubscriptionId();
       console.log('🔔 OneSignal: Player ID:', subscriptionId || '❌ NOT AVAILABLE');
       
-      const pushToken = await OneSignal.User.pushSubscription.getTokenAsync();
+      const pushToken = OneSignal.User.pushSubscription.getPushSubscriptionToken();
       console.log('🔔 OneSignal: Push Token:', pushToken ? `✅ ${pushToken.substring(0, 30)}...` : '❌ NOT AVAILABLE');
       
-      const optedIn = await OneSignal.User.pushSubscription.getOptedInAsync();
+      const optedIn = OneSignal.User.pushSubscription.getOptedIn();
       console.log('🔔 OneSignal: Opted In:', optedIn ? '✅' : '❌');
       
       // User state
@@ -452,10 +454,10 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       if (granted) {
         console.log('🔔 OneSignal: ✅ Permission granted! Waiting for Player ID...');
         
-        // CRITICAL: Force opt-in to push notifications
+        // CRITICAL: Force opt-in to push notifications (v5 API)
         console.log('🔔 OneSignal: 🔧 FORCING OPT-IN to push notifications...');
         try {
-          await OneSignal.User.pushSubscription.optIn();
+          OneSignal.User.pushSubscription.optIn();
           console.log('🔔 OneSignal: ✅ Opt-in successful');
         } catch (optInError) {
           console.error('🔔 OneSignal: ❌ Opt-in failed:', optInError);
@@ -465,16 +467,16 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         console.log('🔔 OneSignal: ⏳ Waiting 3 seconds for device registration...');
         await new Promise(resolve => setTimeout(resolve, 3000));
         
-        // Get Player ID
-        const id = await OneSignal.User.pushSubscription.getIdAsync();
+        // Get Player ID (v5 API)
+        const id = OneSignal.User.pushSubscription.getPushSubscriptionId();
         console.log('🔔 OneSignal: Player ID after permission:', id || '⚠️ Still not available');
         
-        // Get Push Token
-        const token = await OneSignal.User.pushSubscription.getTokenAsync();
+        // Get Push Token (v5 API)
+        const token = OneSignal.User.pushSubscription.getPushSubscriptionToken();
         console.log('🔔 OneSignal: Push Token after permission:', token ? `✅ ${token.substring(0, 20)}...` : '❌ NOT AVAILABLE');
         
-        // Get Opted In status
-        const optedIn = await OneSignal.User.pushSubscription.getOptedInAsync();
+        // Get Opted In status (v5 API)
+        const optedIn = OneSignal.User.pushSubscription.getOptedIn();
         console.log('🔔 OneSignal: Opted In status:', optedIn ? '✅ YES' : '❌ NO');
         
         if (id && token) {
