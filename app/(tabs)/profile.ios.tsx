@@ -256,7 +256,7 @@ function formatDate(dateString: string | null | undefined): string {
 
 export default function ProfileScreen() {
   const { user, session, refreshUser } = useUser();
-  const { isInitialized, hasPermission, playerId, externalUserId, isSubscribed, requestPermission } = useOneSignal();
+  const { isInitialized, hasPermission, playerId, externalUserId, isSubscribed, requestPermission, runDiagnostics } = useOneSignal();
   const router = useRouter();
   const colorScheme = useColorScheme();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -327,6 +327,12 @@ export default function ProfileScreen() {
     } finally {
       setIsRequestingPermission(false);
     }
+  };
+
+  const handleRunDiagnostics = async () => {
+    console.log('ProfileScreen: Running OneSignal diagnostics...');
+    await runDiagnostics();
+    console.log('ProfileScreen: Diagnostics complete - check console logs above');
   };
 
   if (!user) {
@@ -515,6 +521,17 @@ export default function ProfileScreen() {
                         {requestPermissionButtonText}
                       </Text>
                     )}
+                  </TouchableOpacity>
+                )}
+                
+                {Platform.OS !== 'web' && (
+                  <TouchableOpacity
+                    style={[styles.requestPermissionButton, { backgroundColor: '#6B7280', marginTop: spacing.sm }]}
+                    onPress={handleRunDiagnostics}
+                  >
+                    <Text style={styles.requestPermissionButtonText}>
+                      🔍 הרץ אבחון מלא (בדוק לוגים)
+                    </Text>
                   </TouchableOpacity>
                 )}
                 

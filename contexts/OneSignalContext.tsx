@@ -13,6 +13,7 @@ interface OneSignalContextType {
   externalUserId: string | null;
   isSubscribed: boolean;
   requestPermission: () => Promise<boolean>;
+  runDiagnostics: () => Promise<void>;
 }
 
 const OneSignalContext = createContext<OneSignalContextType>({
@@ -22,6 +23,7 @@ const OneSignalContext = createContext<OneSignalContextType>({
   externalUserId: null,
   isSubscribed: false,
   requestPermission: async () => false,
+  runDiagnostics: async () => {},
 });
 
 export function useOneSignal() {
@@ -100,6 +102,22 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         console.log('🔔 OneSignal: Step 5/6 - Getting Player ID (Push Subscription ID)');
         const subscriptionId = await OneSignal.User.pushSubscription.getIdAsync();
         console.log('🔔 OneSignal: Player ID:', subscriptionId || '⚠️ Not available yet (permission may be needed)');
+        
+        // Step 5.5: Get Push Token (FCM/APNS token)
+        console.log('🔔 OneSignal: Step 5.5/6 - Getting Push Token (FCM/APNS)');
+        const pushToken = await OneSignal.User.pushSubscription.getTokenAsync();
+        console.log('🔔 OneSignal: Push Token:', pushToken ? `✅ ${pushToken.substring(0, 20)}...` : '❌ NOT AVAILABLE');
+        
+        if (!pushToken) {
+          console.log('🔔 OneSignal: ⚠️⚠️⚠️ CRITICAL: NO PUSH TOKEN ⚠️⚠️⚠️');
+          console.log('🔔 OneSignal: This means the device cannot receive push notifications');
+          console.log('🔔 OneSignal: Possible causes:');
+          console.log('🔔 OneSignal: 1. APK not built with OneSignal native modules');
+          console.log('🔔 OneSignal: 2. Google Play Services not available (Android)');
+          console.log('🔔 OneSignal: 3. APNS not configured (iOS)');
+          console.log('🔔 OneSignal: 4. Network connectivity issues');
+          console.log('🔔 OneSignal: 5. OneSignal servers unreachable');
+        }
         
         // Step 6: Check subscription status
         console.log('🔔 OneSignal: Step 6/6 - Checking subscription status');
@@ -345,6 +363,62 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isInitialized, isUserLoading, user]);
 
+  const logFullDiagnostics = async () => {
+    console.log('🔔 OneSignal: ========================================');
+    console.log('🔔 OneSignal: 🔍 FULL DIAGNOSTIC REPORT');
+    console.log('🔔 OneSignal: ========================================');
+    
+    try {
+      // Platform info
+      console.log('🔔 OneSignal: Platform:', Platform.OS);
+      console.log('🔔 OneSignal: Is Physical Device:', Device.isDevice);
+      console.log('🔔 OneSignal: Device Model:', Device.modelName);
+      console.log('🔔 OneSignal: OS Version:', Device.osVersion);
+      
+      // SDK state
+      console.log('🔔 OneSignal: SDK Initialized:', isInitialized ? '✅' : '❌');
+      
+      // Permission state
+      const permission = await OneSignal.Notifications.getPermissionAsync();
+      console.log('🔔 OneSignal: Permission Granted:', permission ? '✅' : '❌');
+      
+      // Subscription state
+      const subscriptionId = await OneSignal.User.pushSubscription.getIdAsync();
+      console.log('🔔 OneSignal: Player ID:', subscriptionId || '❌ NOT AVAILABLE');
+      
+      const pushToken = await OneSignal.User.pushSubscription.getTokenAsync();
+      console.log('🔔 OneSignal: Push Token:', pushToken ? `✅ ${pushToken.substring(0, 30)}...` : '❌ NOT AVAILABLE');
+      
+      const optedIn = await OneSignal.User.pushSubscription.getOptedInAsync();
+      console.log('🔔 OneSignal: Opted In:', optedIn ? '✅' : '❌');
+      
+      // User state
+      console.log('🔔 OneSignal: External User ID:', externalUserId || '❌ NOT SET');
+      
+      // Overall status
+      if (subscriptionId && pushToken && permission && optedIn) {
+        console.log('🔔 OneSignal: ========================================');
+        console.log('🔔 OneSignal: ✅✅✅ ALL SYSTEMS OPERATIONAL ✅✅✅');
+        console.log('🔔 OneSignal: Device is fully registered and can receive notifications');
+        console.log('🔔 OneSignal: ========================================');
+      } else {
+        console.log('🔔 OneSignal: ========================================');
+        console.log('🔔 OneSignal: ⚠️⚠️⚠️ ISSUES DETECTED ⚠️⚠️⚠️');
+        if (!permission) console.log('🔔 OneSignal: - Permission not granted');
+        if (!subscriptionId) console.log('🔔 OneSignal: - No Player ID (device not registered)');
+        if (!pushToken) console.log('🔔 OneSignal: - No Push Token (FCM/APNS issue)');
+        if (!optedIn) console.log('🔔 OneSignal: - Not opted in to notifications');
+        if (!externalUserId) console.log('🔔 OneSignal: - No External User ID (handshake not complete)');
+        console.log('🔔 OneSignal: ========================================');
+      }
+      
+    } catch (error) {
+      console.error('🔔 OneSignal: ❌ Diagnostic error:', error);
+    }
+    
+    console.log('🔔 OneSignal: ========================================');
+  };
+
   const requestPermission = async (): Promise<boolean> => {
     try {
       console.log('🔔 OneSignal: ========================================');
@@ -377,24 +451,73 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       
       if (granted) {
         console.log('🔔 OneSignal: ✅ Permission granted! Waiting for Player ID...');
+        
+        // CRITICAL: Force opt-in to push notifications
+        console.log('🔔 OneSignal: 🔧 FORCING OPT-IN to push notifications...');
+        try {
+          await OneSignal.User.pushSubscription.optIn();
+          console.log('🔔 OneSignal: ✅ Opt-in successful');
+        } catch (optInError) {
+          console.error('🔔 OneSignal: ❌ Opt-in failed:', optInError);
+        }
+        
         // Wait a bit for OneSignal to register the device
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log('🔔 OneSignal: ⏳ Waiting 3 seconds for device registration...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Get Player ID
         const id = await OneSignal.User.pushSubscription.getIdAsync();
         console.log('🔔 OneSignal: Player ID after permission:', id || '⚠️ Still not available');
         
-        if (id) {
+        // Get Push Token
+        const token = await OneSignal.User.pushSubscription.getTokenAsync();
+        console.log('🔔 OneSignal: Push Token after permission:', token ? `✅ ${token.substring(0, 20)}...` : '❌ NOT AVAILABLE');
+        
+        // Get Opted In status
+        const optedIn = await OneSignal.User.pushSubscription.getOptedInAsync();
+        console.log('🔔 OneSignal: Opted In status:', optedIn ? '✅ YES' : '❌ NO');
+        
+        if (id && token) {
           console.log('🔔 OneSignal: 🎉🎉🎉 SUCCESS 🎉🎉🎉');
           console.log('🔔 OneSignal: Device is now registered with OneSignal!');
           console.log('🔔 OneSignal: Player ID:', id);
+          console.log('🔔 OneSignal: Push Token:', token.substring(0, 30) + '...');
           console.log('🔔 OneSignal: Check OneSignal dashboard - device should appear');
+          
+          if (isMounted.current) {
+            setPlayerId(id);
+            setIsSubscribed(true);
+          }
+        } else if (id && !token) {
+          console.log('🔔 OneSignal: ⚠️⚠️⚠️ PARTIAL SUCCESS ⚠️⚠️⚠️');
+          console.log('🔔 OneSignal: Player ID exists but NO PUSH TOKEN');
+          console.log('🔔 OneSignal: Device will appear in dashboard but CANNOT receive notifications');
+          console.log('🔔 OneSignal: This indicates a problem with FCM/APNS configuration');
           
           if (isMounted.current) {
             setPlayerId(id);
           }
         } else {
-          console.log('🔔 OneSignal: ⚠️ Player ID not available yet');
-          console.log('🔔 OneSignal: This may take a few seconds');
-          console.log('🔔 OneSignal: Check the subscription change event listener');
+          console.log('🔔 OneSignal: ❌❌❌ REGISTRATION FAILED ❌❌❌');
+          console.log('🔔 OneSignal: No Player ID or Push Token after permission granted');
+          console.log('🔔 OneSignal: ========================================');
+          console.log('🔔 OneSignal: CRITICAL ISSUE DETECTED:');
+          console.log('🔔 OneSignal: The OneSignal SDK is not properly integrated');
+          console.log('🔔 OneSignal: ========================================');
+          console.log('🔔 OneSignal: TROUBLESHOOTING:');
+          console.log('🔔 OneSignal: 1. Was the APK built with EAS Build?');
+          console.log('🔔 OneSignal: 2. Is onesignal-expo-plugin in app.json plugins?');
+          console.log('🔔 OneSignal: 3. Is the OneSignal App ID correct?');
+          console.log('🔔 OneSignal: 4. Is Google Play Services installed (Android)?');
+          console.log('🔔 OneSignal: 5. Is the device connected to the internet?');
+          console.log('🔔 OneSignal: 6. Check OneSignal dashboard for any errors');
+          console.log('🔔 OneSignal: ========================================');
+          console.log('🔔 OneSignal: NEXT STEPS:');
+          console.log('🔔 OneSignal: 1. Rebuild the APK with: eas build -p android --profile preview');
+          console.log('🔔 OneSignal: 2. Make sure app.json has onesignal-expo-plugin');
+          console.log('🔔 OneSignal: 3. Verify OneSignal App ID in app.json extra.oneSignalAppId');
+          console.log('🔔 OneSignal: 4. Check device has Google Play Services (Android)');
+          console.log('🔔 OneSignal: ========================================');
         }
       } else {
         console.log('🔔 OneSignal: ❌ Permission denied by user');
@@ -423,6 +546,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         externalUserId,
         isSubscribed,
         requestPermission,
+        runDiagnostics: logFullDiagnostics,
       }}
     >
       {children}
