@@ -219,6 +219,19 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.semibold as any,
     color: '#FFFFFF',
   },
+  debugWarning: {
+    marginTop: spacing.sm,
+    padding: spacing.sm,
+    backgroundColor: '#FEF3C7',
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  debugWarningText: {
+    fontSize: typography.sizes.xs,
+    color: '#92400E',
+    fontWeight: typography.weights.medium as any,
+  },
 });
 
 function formatDate(dateString: string | null | undefined): string {
@@ -243,7 +256,7 @@ function formatDate(dateString: string | null | undefined): string {
 
 export default function ProfileScreen() {
   const { user, session, refreshUser } = useUser();
-  const { isInitialized, hasPermission, playerId, requestPermission } = useOneSignal();
+  const { isInitialized, hasPermission, playerId, externalUserId, isSubscribed, requestPermission } = useOneSignal();
   const router = useRouter();
   const colorScheme = useColorScheme();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -349,8 +362,9 @@ export default function ProfileScreen() {
   const oneSignalTitle = 'מצב התראות (OneSignal)';
   const oneSignalInitializedLabel = 'מערכת מאותחלת';
   const oneSignalPermissionLabel = 'הרשאות';
-  const oneSignalPlayerIdLabel = 'מזהה מכשיר';
-  const oneSignalUserIdLabel = 'מזהה משתמש';
+  const oneSignalPlayerIdLabel = 'מזהה מכשיר (Player ID)';
+  const oneSignalUserIdLabel = 'מזהה משתמש (External ID)';
+  const oneSignalSubscribedLabel = 'מנוי להתראות';
   const oneSignalYesText = 'כן';
   const oneSignalNoText = 'לא';
   const oneSignalGrantedText = 'ניתנו';
@@ -361,9 +375,12 @@ export default function ProfileScreen() {
 
   const initializedText = isInitialized ? oneSignalYesText : oneSignalNoText;
   const permissionText = hasPermission ? oneSignalGrantedText : oneSignalNotGrantedText;
+  const subscribedText = isSubscribed ? oneSignalYesText : oneSignalNoText;
   const playerIdText = playerId || 'לא זמין';
-  const userIdText = user.authUserId || 'לא זמין';
-  const statusText = isInitialized && hasPermission ? 'פעיל' : 'לא פעיל';
+  const externalUserIdText = externalUserId || user.authUserId || 'לא זמין';
+  const statusText = isInitialized && hasPermission && playerId ? 'פעיל ✅' : 'לא פעיל ❌';
+
+  const isFullyConfigured = isInitialized && hasPermission && playerId && externalUserId;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -440,6 +457,17 @@ export default function ProfileScreen() {
                 </View>
                 
                 <View style={styles.oneSignalRow}>
+                  <Text style={styles.oneSignalLabel}>{oneSignalSubscribedLabel}:</Text>
+                  <Text style={[
+                    styles.oneSignalValue,
+                    styles.oneSignalStatus,
+                    isSubscribed ? styles.oneSignalStatusActive : styles.oneSignalStatusInactive
+                  ]}>
+                    {subscribedText}
+                  </Text>
+                </View>
+                
+                <View style={styles.oneSignalRow}>
                   <Text style={styles.oneSignalLabel}>{oneSignalPlayerIdLabel}:</Text>
                   <Text style={styles.oneSignalValue} numberOfLines={1}>
                     {playerIdText}
@@ -449,7 +477,7 @@ export default function ProfileScreen() {
                 <View style={styles.oneSignalRow}>
                   <Text style={styles.oneSignalLabel}>{oneSignalUserIdLabel}:</Text>
                   <Text style={styles.oneSignalValue} numberOfLines={1}>
-                    {userIdText}
+                    {externalUserIdText}
                   </Text>
                 </View>
                 
@@ -458,13 +486,21 @@ export default function ProfileScreen() {
                   <Text style={[
                     styles.oneSignalValue,
                     styles.oneSignalStatus,
-                    isInitialized && hasPermission ? styles.oneSignalStatusActive : styles.oneSignalStatusInactive
+                    isFullyConfigured ? styles.oneSignalStatusActive : styles.oneSignalStatusInactive
                   ]}>
                     {statusText}
                   </Text>
                 </View>
                 
                 <Text style={styles.oneSignalNote}>{oneSignalNoteText}</Text>
+                
+                {Platform.OS === 'web' && (
+                  <View style={styles.debugWarning}>
+                    <Text style={styles.debugWarningText}>
+                      ⚠️ אתה רואה את זה בדפדפן. OneSignal לא יעבוד כאן. השתמש במכשיר פיזי Android או iOS.
+                    </Text>
+                  </View>
+                )}
                 
                 {Platform.OS !== 'web' && !hasPermission && (
                   <TouchableOpacity
@@ -480,6 +516,14 @@ export default function ProfileScreen() {
                       </Text>
                     )}
                   </TouchableOpacity>
+                )}
+                
+                {Platform.OS !== 'web' && hasPermission && !playerId && (
+                  <View style={styles.debugWarning}>
+                    <Text style={styles.debugWarningText}>
+                      ⚠️ הרשאות ניתנו אבל Player ID חסר. בדוק את הלוגים בקונסול.
+                    </Text>
+                  </View>
                 )}
               </View>
             </View>
