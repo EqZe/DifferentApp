@@ -162,61 +162,35 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           setIsSubscribed(optedIn);
         }
 
-        // ── Auto-request permission on first launch ───────────────────────
-        // Always call requestPermission after init. On iOS this shows the OS
-        // dialog the first time; on subsequent launches it resolves immediately
-        // if already granted. optIn() is called inside requestPermission when
-        // permission is granted.
-        console.log('🔔 OneSignal: 🔔 Auto-requesting notification permission...');
-        try {
-          const granted = await OneSignal.Notifications.requestPermission(true);
-          console.log('🔔 OneSignal: Auto-permission result:', granted ? '✅ GRANTED' : '❌ DENIED/ALREADY SET');
-          if (isMounted.current) setHasPermission(granted);
+        // ── Event listeners MUST be registered BEFORE requestPermission ──
+        // If listeners are registered after the permission dialog resolves,
+        // permissionChange fires before the listener is attached and is missed.
 
-          if (granted) {
-            console.log('🔔 OneSignal: ✅ Calling optIn() after auto-permission grant');
-            OneSignal.User.pushSubscription.optIn();
-
-            // Wait for device registration to complete
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            const registeredId = getPushSubscriptionId();
-            const registeredOptedIn = getPushSubscriptionOptedIn();
-            console.log('🔔 OneSignal: Subscription ID after auto-optIn:', registeredId || '⚠️ not yet available');
-            console.log('🔔 OneSignal: Opted In after auto-optIn:', registeredOptedIn ? '✅' : '❌');
-            if (isMounted.current) {
-              if (registeredId) setPlayerId(registeredId);
-              setIsSubscribed(registeredOptedIn);
-            }
-          }
-        } catch (permErr) {
-          console.warn('🔔 OneSignal: ❌ Auto-permission request error:', permErr);
-        }
-
-        // ── Event listeners (v5 API) ──────────────────────────────────────
-
-        // Permission change
+        // Permission change — call optIn() exactly when the OS grants permission
         OneSignal.Notifications.addEventListener('permissionChange', (granted: boolean) => {
           console.log('🔔 OneSignal: 📢 permissionChange ->', granted ? '✅ GRANTED' : '❌ DENIED');
           if (isMounted.current) {
             setHasPermission(granted);
-            if (granted) {
-              const id = getPushSubscriptionId();
-              if (id && isMounted.current) {
-                setPlayerId(id);
-                console.log('🔔 OneSignal: Player ID after permission grant:', id);
-              }
+          }
+          if (granted) {
+            console.log('🔔 OneSignal: 📢 permissionChange — calling optIn() now that permission is granted');
+            try {
+              OneSignal.User.pushSubscription.optIn();
+              console.log('🔔 OneSignal: ✅ optIn() called from permissionChange listener');
+            } catch (e) {
+              console.warn('🔔 OneSignal: ❌ optIn() error in permissionChange listener:', e);
             }
           }
         });
 
-        // Subscription change — fires when device registers / token changes
+        // Subscription change — reactive update whenever optedIn / id / token changes.
+        // This is the authoritative source for isSubscribed state — no polling needed.
         OneSignal.User.pushSubscription.addEventListener('change', (state: any) => {
-          console.log('🔔 OneSignal: 📢 pushSubscription change event');
+          console.log('🔔 OneSignal: 📢 pushSubscription change event — raw state:', JSON.stringify(state));
           const currentId: string | null = state?.current?.id || getPushSubscriptionId();
           const currentOptedIn: boolean = state?.current?.optedIn ?? getPushSubscriptionOptedIn();
           console.log('🔔 OneSignal: Subscription ID:', currentId || '⚠️ none');
-          console.log('🔔 OneSignal: Opted In:', currentOptedIn ? '✅' : '❌');
+          console.log('🔔 OneSignal: Opted In:', currentOptedIn ? '✅ YES' : '❌ NO');
           if (isMounted.current) {
             if (currentId) setPlayerId(currentId);
             setIsSubscribed(currentOptedIn);
@@ -236,6 +210,21 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         });
 
         console.log('🔔 OneSignal: ✅ Event listeners registered');
+
+        // ── Auto-request permission on first launch ───────────────────────
+        // Listeners are now attached, so permissionChange will fire correctly
+        // when the OS dialog resolves. On subsequent launches this resolves
+        // immediately if already granted.
+        console.log('🔔 OneSignal: 🔔 About to call requestPermission(true) — listeners are ready');
+        try {
+          const granted = await OneSignal.Notifications.requestPermission(true);
+          console.log('🔔 OneSignal: ✅ requestPermission(true) returned:', granted ? '✅ GRANTED' : '❌ DENIED/SKIPPED');
+          // State updates are handled reactively by the permissionChange and
+          // pushSubscription change listeners above — no polling needed here.
+        } catch (permErr) {
+          console.warn('🔔 OneSignal: ❌ Auto-permission request error:', permErr);
+        }
+
         console.log('🔔 OneSignal: ========================================');
         console.log('🔔 OneSignal: ✅ INITIALIZATION COMPLETE');
         console.log('🔔 OneSignal: ========================================');
