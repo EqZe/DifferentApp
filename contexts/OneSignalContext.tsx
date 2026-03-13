@@ -300,53 +300,55 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     console.log('🔔 OneSignal: External User ID (auth_user_id):', userId);
     console.log('🔔 OneSignal: ========================================');
 
-    try {
-      // v5 API: OneSignal.login(externalId) links the device to this user
-      OneSignal.login(userId);
-      console.log('🔔 OneSignal: ✅ OneSignal.login() called with ID:', userId);
+    (async () => {
+      try {
+        // v5 API: OneSignal.login(externalId) links the device to this user
+        OneSignal.login(userId);
+        console.log('🔔 OneSignal: ✅ OneSignal.login() called with ID:', userId);
 
-      if (isMounted.current) setExternalUserId(userId);
+        if (isMounted.current) setExternalUserId(userId);
 
-      // Set tags for segmentation
-      const tags: Record<string, string> = {
-        user_id: userId,
-        full_name: user.fullName || '',
-        email: user.email || '',
-        city: user.city || '',
-        has_contract: user.hasContract ? 'true' : 'false',
-      };
-      OneSignal.User.addTags(tags);
-      console.log('🔔 OneSignal: ✅ User tags set:', JSON.stringify(tags));
+        // Set tags for segmentation
+        const tags: Record<string, string> = {
+          user_id: userId,
+          full_name: user.fullName || '',
+          email: user.email || '',
+          city: user.city || '',
+          has_contract: user.hasContract ? 'true' : 'false',
+        };
+        OneSignal.User.addTags(tags);
+        console.log('🔔 OneSignal: ✅ User tags set:', JSON.stringify(tags));
 
-      // Set email for cross-channel identification
-      if (user.email) {
-        OneSignal.User.addEmail(user.email);
-        console.log('🔔 OneSignal: ✅ Email linked:', user.email);
+        // Set email for cross-channel identification
+        if (user.email) {
+          OneSignal.User.addEmail(user.email);
+          console.log('🔔 OneSignal: ✅ Email linked:', user.email);
+        }
+
+        // Ensure device is opted-in after login (login can reset subscription state)
+        console.log('🔔 OneSignal: ✅ Calling optIn() after login to ensure subscription');
+        OneSignal.User.pushSubscription.optIn();
+
+        // Wait for registration to settle
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Refresh subscription state after login
+        const id = getPushSubscriptionId();
+        const optedInAfterLogin = getPushSubscriptionOptedIn();
+        console.log('🔔 OneSignal: Player ID after login:', id || '⚠️ not yet available');
+        console.log('🔔 OneSignal: Opted In after login:', optedInAfterLogin ? '✅' : '❌');
+        if (isMounted.current) {
+          if (id) setPlayerId(id);
+          setIsSubscribed(optedInAfterLogin);
+        }
+
+        console.log('🔔 OneSignal: ✅ USER HANDSHAKE COMPLETE — user should appear in dashboard');
+        console.log('🔔 OneSignal: ========================================');
+
+      } catch (error) {
+        console.warn('🔔 OneSignal: ❌ login/handshake error:', error);
       }
-
-      // Ensure device is opted-in after login (login can reset subscription state)
-      console.log('🔔 OneSignal: ✅ Calling optIn() after login to ensure subscription');
-      OneSignal.User.pushSubscription.optIn();
-
-      // Wait for registration to settle
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Refresh subscription state after login
-      const id = getPushSubscriptionId();
-      const optedInAfterLogin = getPushSubscriptionOptedIn();
-      console.log('🔔 OneSignal: Player ID after login:', id || '⚠️ not yet available');
-      console.log('🔔 OneSignal: Opted In after login:', optedInAfterLogin ? '✅' : '❌');
-      if (isMounted.current) {
-        if (id) setPlayerId(id);
-        setIsSubscribed(optedInAfterLogin);
-      }
-
-      console.log('🔔 OneSignal: ✅ USER HANDSHAKE COMPLETE — user should appear in dashboard');
-      console.log('🔔 OneSignal: ========================================');
-
-    } catch (error) {
-      console.warn('🔔 OneSignal: ❌ login/handshake error:', error);
-    }
+    })();
   }, [isInitialized, isUserLoading, user?.id]);
 
   // ─── Diagnostics ─────────────────────────────────────────────────────────
