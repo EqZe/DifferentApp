@@ -2,6 +2,7 @@
   "expo": {
     "name": "Different",
     "slug": "different",
+    "owner": "ilayrachkovski",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/different logo.png",
@@ -60,8 +61,7 @@
     "extra": {
       "router": {},
       "backendUrl": "https://8fazvn3hy8nmzjsg6kz2u68p6xpbp6gk.app.specular.dev",
-      "oneSignalAppId": "b732b467-6886-4c7b-b3d9-5010de1199d6",
-
+      "oneSignalAppId": "b732b467-6886-4c7b-b3d9-5010de1199d6"
     }
   }
 }
