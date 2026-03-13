@@ -1,10 +1,38 @@
 
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { Platform } from 'react-native';
-import OneSignal, { LogLevel } from 'react-native-onesignal';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { useUser } from './UserContext';
+
+// ─── Availability check ───────────────────────────────────────────────────────
+// react-native-onesignal requires native modules that are absent in Expo Go.
+// We probe for the module at startup so every call below can be safely guarded.
+let isOneSignalAvailable = false;
+try {
+  require('react-native-onesignal');
+  isOneSignalAvailable = true;
+} catch (e) {
+  console.warn('🔔 OneSignal: Native module not available (Expo Go). Push notifications disabled.');
+}
+
+// Lazy import — only resolved when the native module is confirmed present.
+// Using `any` here intentionally to avoid a top-level import that would throw
+// at module-evaluation time in Expo Go.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let OneSignal: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let LogLevel: any = null;
+if (isOneSignalAvailable) {
+  try {
+    const mod = require('react-native-onesignal');
+    OneSignal = mod.default ?? mod.OneSignal ?? mod;
+    LogLevel = mod.LogLevel;
+  } catch (e) {
+    console.warn('🔔 OneSignal: Failed to load module after availability check:', e);
+    isOneSignalAvailable = false;
+  }
+}
 
 interface OneSignalContextType {
   isInitialized: boolean;
@@ -32,6 +60,7 @@ export function useOneSignal() {
 
 // Helper to safely read push subscription properties (v5 uses getters, not methods)
 function getPushSubscriptionId(): string | null {
+  if (!isOneSignalAvailable || !OneSignal) return null;
   try {
     const id = OneSignal.User.pushSubscription.id;
     return id || null;
@@ -41,6 +70,7 @@ function getPushSubscriptionId(): string | null {
 }
 
 function getPushSubscriptionToken(): string | null {
+  if (!isOneSignalAvailable || !OneSignal) return null;
   try {
     const token = OneSignal.User.pushSubscription.token;
     return token || null;
@@ -50,6 +80,7 @@ function getPushSubscriptionToken(): string | null {
 }
 
 function getPushSubscriptionOptedIn(): boolean {
+  if (!isOneSignalAvailable || !OneSignal) return false;
   try {
     return OneSignal.User.pushSubscription.optedIn ?? false;
   } catch {
@@ -72,6 +103,11 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (Platform.OS === 'web' || !Device.isDevice) {
       console.log('🔔 OneSignal: Skipping — web or simulator (Platform:', Platform.OS, ', isDevice:', Device.isDevice, ')');
+      return;
+    }
+
+    if (!isOneSignalAvailable) {
+      console.warn('🔔 OneSignal: Skipping initialization — native module unavailable (Expo Go).');
       return;
     }
 
@@ -174,7 +210,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         console.log('🔔 OneSignal: ========================================');
 
       } catch (error) {
-        console.error('🔔 OneSignal: ❌ Initialization error:', error);
+        console.warn('🔔 OneSignal: ❌ Initialization error:', error);
         // Reset so a retry is possible
         hasInitialized.current = false;
       }
@@ -191,6 +227,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   // IMPORTANT: user.id === auth_user_id (see UserFrontend mapping in api.ts)
   useEffect(() => {
     if (Platform.OS === 'web' || !Device.isDevice) return;
+    if (!isOneSignalAvailable) return;
 
     const userId = user?.id; // user.id is the Supabase auth_user_id
 
@@ -213,7 +250,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           if (isMounted.current) setExternalUserId(null);
           console.log('🔔 OneSignal: ✅ OneSignal.logout() complete');
         } catch (err) {
-          console.error('🔔 OneSignal: ❌ logout error:', err);
+          console.warn('🔔 OneSignal: ❌ logout error:', err);
         }
       } else {
         console.log('🔔 OneSignal: ℹ️ No user logged in — skipping OneSignal.login()');
@@ -267,7 +304,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       console.log('🔔 OneSignal: ========================================');
 
     } catch (error) {
-      console.error('🔔 OneSignal: ❌ login/handshake error:', error);
+      console.warn('🔔 OneSignal: ❌ login/handshake error:', error);
     }
   }, [isInitialized, isUserLoading, user?.id]);
 
@@ -277,7 +314,14 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     console.log('🔔 OneSignal: 🔍 DIAGNOSTIC REPORT');
     console.log('🔔 OneSignal: ========================================');
     console.log('🔔 OneSignal: Platform:', Platform.OS, '| isDevice:', Device.isDevice);
+    console.log('🔔 OneSignal: Native module available:', isOneSignalAvailable ? '✅' : '❌ (Expo Go)');
     console.log('🔔 OneSignal: SDK Initialized:', isInitialized ? '✅' : '❌');
+
+    if (!isOneSignalAvailable) {
+      console.warn('🔔 OneSignal: Diagnostics skipped — native module unavailable (Expo Go).');
+      console.log('🔔 OneSignal: ========================================');
+      return;
+    }
 
     try {
       const permission = OneSignal.Notifications.hasPermission();
@@ -303,7 +347,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         if (!externalUserId) console.log('🔔 OneSignal:   - No External User ID (login not called)');
       }
     } catch (error) {
-      console.error('🔔 OneSignal: ❌ Diagnostic error:', error);
+      console.warn('🔔 OneSignal: ❌ Diagnostic error:', error);
     }
     console.log('🔔 OneSignal: ========================================');
   };
@@ -314,6 +358,11 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
 
     if (Platform.OS === 'web' || !Device.isDevice) {
       console.log('🔔 OneSignal: ❌ Not supported on web/simulator');
+      return false;
+    }
+
+    if (!isOneSignalAvailable) {
+      console.warn('🔔 OneSignal: ❌ requestPermission skipped — native module unavailable (Expo Go).');
       return false;
     }
 
@@ -359,7 +408,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
 
       return granted;
     } catch (error) {
-      console.error('🔔 OneSignal: ❌ requestPermission error:', error);
+      console.warn('🔔 OneSignal: ❌ requestPermission error:', error);
       return false;
     }
   };
