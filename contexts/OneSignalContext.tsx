@@ -162,6 +162,37 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           setIsSubscribed(optedIn);
         }
 
+        // ── Auto-request permission on first launch ───────────────────────
+        // Always call requestPermission after init. On iOS this shows the OS
+        // dialog the first time; on subsequent launches it resolves immediately
+        // if already granted. optIn() is called inside requestPermission when
+        // permission is granted.
+        console.log('🔔 OneSignal: 🔔 Auto-requesting notification permission...');
+        try {
+          const granted = await OneSignal.Notifications.requestPermission(true);
+          console.log('🔔 OneSignal: Auto-permission result:', granted ? '✅ GRANTED' : '❌ DENIED/ALREADY SET');
+          if (isMounted.current) setHasPermission(granted);
+
+          if (granted) {
+            console.log('🔔 OneSignal: ✅ Calling optIn() after auto-permission grant');
+            OneSignal.User.pushSubscription.optIn();
+
+            // Wait for device registration to complete
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            const registeredId = getPushSubscriptionId();
+            const registeredOptedIn = getPushSubscriptionOptedIn();
+            console.log('🔔 OneSignal: Subscription ID after auto-optIn:', registeredId || '⚠️ not yet available');
+            console.log('🔔 OneSignal: Opted In after auto-optIn:', registeredOptedIn ? '✅' : '❌');
+            if (isMounted.current) {
+              if (registeredId) setPlayerId(registeredId);
+              setIsSubscribed(registeredOptedIn);
+            }
+          }
+        } catch (permErr) {
+          console.warn('🔔 OneSignal: ❌ Auto-permission request error:', permErr);
+        }
+
         // ── Event listeners (v5 API) ──────────────────────────────────────
 
         // Permission change
@@ -293,11 +324,21 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         console.log('🔔 OneSignal: ✅ Email linked:', user.email);
       }
 
+      // Ensure device is opted-in after login (login can reset subscription state)
+      console.log('🔔 OneSignal: ✅ Calling optIn() after login to ensure subscription');
+      OneSignal.User.pushSubscription.optIn();
+
+      // Wait for registration to settle
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
       // Refresh subscription state after login
       const id = getPushSubscriptionId();
-      if (id && isMounted.current) {
-        setPlayerId(id);
-        console.log('🔔 OneSignal: Player ID after login:', id);
+      const optedInAfterLogin = getPushSubscriptionOptedIn();
+      console.log('🔔 OneSignal: Player ID after login:', id || '⚠️ not yet available');
+      console.log('🔔 OneSignal: Opted In after login:', optedInAfterLogin ? '✅' : '❌');
+      if (isMounted.current) {
+        if (id) setPlayerId(id);
+        setIsSubscribed(optedInAfterLogin);
       }
 
       console.log('🔔 OneSignal: ✅ USER HANDSHAKE COMPLETE — user should appear in dashboard');
