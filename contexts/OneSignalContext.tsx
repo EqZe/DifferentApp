@@ -101,8 +101,9 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         if (id) {
           setPlayerId(id);
           playerIdRef.current = id;
+          setIsSubscribed(true);
         }
-        setIsSubscribed(optedIn);
+        setIsSubscribed(optedIn || !!id);
       });
     } catch {}
 
@@ -118,8 +119,9 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       if (id) {
         setPlayerId(id);
         playerIdRef.current = id;
+        setIsSubscribed(true);
       }
-      if (optedIn) setIsSubscribed(true);
+      if (id || optedIn) setIsSubscribed(true);
       if (id || pollCount >= 6) {
         clearInterval(pollInterval);
       }
@@ -141,8 +143,9 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
             if (id) {
               setPlayerId(id);
               playerIdRef.current = id;
+              setIsSubscribed(true);
             }
-            if (optedIn) setIsSubscribed(true);
+            if (optedIn || !!id) setIsSubscribed(true);
           }, 3000);
         }
       } catch (e) {
@@ -192,8 +195,9 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         if (id) {
           setPlayerId(id);
           playerIdRef.current = id;
+          setIsSubscribed(true);
         }
-        if (optedIn) setIsSubscribed(true);
+        if (optedIn || !!id) setIsSubscribed(true);
       }, 2000);
 
       // Set tags
@@ -230,8 +234,9 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           if (id) {
             setPlayerId(id);
             playerIdRef.current = id;
+            setIsSubscribed(true);
           }
-          if (optedIn) setIsSubscribed(true);
+          if (optedIn || !!id) setIsSubscribed(true);
         }, 3000);
       }
       return granted;
