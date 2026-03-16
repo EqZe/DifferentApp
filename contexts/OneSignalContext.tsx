@@ -72,9 +72,16 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [externalUserId, setExternalUserId] = useState<string | null>(null);
   const initialized = useRef(false);
+  // Stores a userId that needs to be associated once the subscription ID arrives
   const loginPendingRef = useRef<string | null>(null);
+  // Tracks the last userId we successfully called OS.login() for, persisted across re-renders
+  const loggedInUserRef = useRef<string | null>(null);
 
-  // Initialize once on mount
+  // ─── Step 1: Initialize OneSignal on mount ───────────────────────────────────
+  // This MUST happen before any permission request or login call.
+  // requestPermission(false) is called immediately after initialize() so that
+  // Android shows the POST_NOTIFICATIONS dialog as early as possible — before
+  // the user even reaches the login/register screen.
   useEffect(() => {
     if (Platform.OS === 'web') return;
     if (!OS) return;
@@ -103,8 +110,9 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     // requests must happen AFTER this call
     setIsInitialized(true);
 
-    // --- Subscription change listener ---
-    // Fires when FCM/APNs registration completes and a subscription ID is assigned
+    // ── Subscription change listener ──────────────────────────────────────────
+    // Fires when FCM/APNs registration completes and a subscription ID is assigned.
+    // This is the primary trigger for the deferred-login path.
     try {
       OS.User.pushSubscription.addEventListener('change', (state: any) => {
         console.log('OneSignal: 🔔 pushSubscription change event fired');
@@ -127,9 +135,12 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         if (id && loginPendingRef.current) {
           const pendingUserId = loginPendingRef.current;
           loginPendingRef.current = null;
-          console.log('OneSignal: Retrying pending login for user:', pendingUserId);
+          console.log('OneSignal: 🔄 Subscription arrived — retrying deferred login for user:', pendingUserId);
           try {
             OS.login(pendingUserId);
+            // IMPORTANT: update both the ref and state so we don't re-login on next render
+            loggedInUserRef.current = pendingUserId;
+            setExternalUserId(pendingUserId);
             console.log('OneSignal: ✅ Deferred login() called for:', pendingUserId);
           } catch (loginErr) {
             console.warn('OneSignal: Deferred login() error:', loginErr);
@@ -141,7 +152,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       console.warn('OneSignal: Failed to register pushSubscription change listener:', e);
     }
 
-    // --- Permission change listener ---
+    // ── Permission change listener ────────────────────────────────────────────
     try {
       OS.Notifications.addEventListener('permissionChange', (granted: boolean) => {
         console.log('OneSignal: 🔔 permissionChange event — granted:', granted);
@@ -160,12 +171,15 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       console.warn('OneSignal: Failed to register permissionChange listener:', e);
     }
 
-    // --- Request permission AFTER initialize() and listener setup ---
-    // On Android, requestPermission() triggers FCM registration which produces the subscription ID.
-    // We must NOT pass `true` (fallback) on Android — it suppresses the dialog if previously denied.
+    // ── Request permission IMMEDIATELY after initialize() ─────────────────────
+    // Called here (app launch) so Android shows the POST_NOTIFICATIONS dialog
+    // BEFORE the user reaches the login/register screen. This ensures the FCM
+    // token is obtained early, so OS.login() can be called with a valid
+    // subscription ID when the user authenticates.
+    // false = do NOT use fallback — always show the native dialog.
     (async () => {
       try {
-        console.log('OneSignal: Requesting notification permission...');
+        console.log('OneSignal: Requesting notification permission on app launch...');
         const granted = await OS.Notifications.requestPermission(false);
         console.log('OneSignal: requestPermission result:', granted);
         setHasPermission(granted);
@@ -173,7 +187,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         if (granted) {
           try {
             OS.User.pushSubscription.optIn();
-            console.log('OneSignal: optIn() called after permission granted');
+            console.log('OneSignal: optIn() called after launch permission grant');
           } catch (e) {
             console.warn('OneSignal: optIn() error:', e);
           }
@@ -183,7 +197,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       }
     })();
 
-    // --- Polling fallback for Android ---
+    // ── Polling fallback for Android ──────────────────────────────────────────
     // The change event is unreliable on some Android versions/OEMs.
     // Poll every 5s for up to 60s to catch late FCM registrations.
     let pollCount = 0;
@@ -201,6 +215,21 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         console.log('OneSignal: ✅ Device is truly subscribed (has ID + token)');
       }
 
+      // If a login was pending and we now have a subscription ID, complete it
+      if (id && loginPendingRef.current) {
+        const pendingUserId = loginPendingRef.current;
+        loginPendingRef.current = null;
+        console.log('OneSignal: 🔄 Poll found subscription — completing deferred login for:', pendingUserId);
+        try {
+          OS.login(pendingUserId);
+          loggedInUserRef.current = pendingUserId;
+          setExternalUserId(pendingUserId);
+          console.log('OneSignal: ✅ Deferred login() (poll) called for:', pendingUserId);
+        } catch (e) {
+          console.warn('OneSignal: Deferred login() (poll) error:', e);
+        }
+      }
+
       if (id || pollCount >= MAX_POLLS) {
         clearInterval(pollInterval);
         if (!id && pollCount >= MAX_POLLS) {
@@ -213,9 +242,18 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(pollInterval);
   }, []);
 
-  // --- Login/logout when user changes ---
-  // IMPORTANT: OS.login() must be called AFTER the device has a subscription ID.
-  // If called too early (before FCM registration), the external user ID won't appear in the dashboard.
+  // ─── Step 2: Login/logout when user changes ───────────────────────────────
+  // This effect handles THREE scenarios:
+  //   A) New registration: user just signed up, setUser() was called in register.tsx
+  //   B) Existing user login: user signed in, setUser() was called in register.tsx
+  //   C) App reopen while already logged in: UserContext restores user from Supabase session
+  //
+  // In all cases, OS.login(userId) must be called to associate the device
+  // subscription with the user in the OneSignal dashboard.
+  //
+  // IMPORTANT: We use loggedInUserRef (not externalUserId state) as the guard
+  // to prevent duplicate logins, because state resets on every cold start but
+  // we want to re-login on every app open to ensure the association is fresh.
   useEffect(() => {
     if (Platform.OS === 'web') return;
     if (!OS) return;
@@ -225,11 +263,13 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     const userId = user?.id;
 
     if (!userId) {
-      if (externalUserId) {
+      // User logged out — clear OneSignal association
+      if (loggedInUserRef.current) {
         try {
           OS.logout();
-          setExternalUserId(null);
+          loggedInUserRef.current = null;
           loginPendingRef.current = null;
+          setExternalUserId(null);
           console.log('OneSignal: logout() called — user signed out');
         } catch (e) {
           console.warn('OneSignal: logout() error:', e);
@@ -238,53 +278,57 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (userId === externalUserId) return;
+    // Skip if we already called login() for this user in this session
+    if (userId === loggedInUserRef.current) {
+      console.log('OneSignal: login() already called for user:', userId, '— skipping');
+      return;
+    }
+
+    console.log('OneSignal: User changed to:', userId, '— checking subscription readiness');
 
     // Check if the device already has a subscription ID before calling login()
     const { id: currentId, token: currentToken } = readPushSubscriptionState();
 
     if (!currentId) {
-      // Subscription not ready yet — store the user ID and retry when the change event fires
+      // Subscription not ready yet — store the user ID and retry when:
+      //   1. The pushSubscription change event fires (primary path)
+      //   2. The polling loop finds a subscription ID (fallback)
+      //   3. The 10s safety-net timeout below fires (last resort)
       console.log('OneSignal: Subscription ID not yet available — deferring login() for user:', userId);
       loginPendingRef.current = userId;
 
-      // Also schedule a retry after 10s as a safety net
+      // Safety-net: after 10s, call login() optimistically even without a subscription ID.
+      // OneSignal will associate the user once FCM registration eventually completes.
       setTimeout(() => {
-        if (loginPendingRef.current === userId) {
-          const { id: retryId } = readPushSubscriptionState();
-          if (retryId) {
-            loginPendingRef.current = null;
-            try {
-              OS.login(userId);
-              setExternalUserId(userId);
-              console.log('OneSignal: ✅ Deferred login() (10s retry) called for:', userId);
-              applyUserTags(userId);
-            } catch (e) {
-              console.warn('OneSignal: Deferred login() (10s retry) error:', e);
-            }
-          } else {
-            // Still no ID — call login() anyway so OneSignal can associate when it registers
-            console.log('OneSignal: Still no subscription ID after 10s — calling login() optimistically for:', userId);
-            loginPendingRef.current = null;
-            try {
-              OS.login(userId);
-              setExternalUserId(userId);
-              console.log('OneSignal: ✅ Optimistic login() called for:', userId);
-              applyUserTags(userId);
-            } catch (e) {
-              console.warn('OneSignal: Optimistic login() error:', e);
-            }
-          }
+        if (loginPendingRef.current !== userId) {
+          // Already handled by change event or poll — nothing to do
+          return;
+        }
+        loginPendingRef.current = null;
+
+        const { id: retryId } = readPushSubscriptionState();
+        const logLabel = retryId ? '(subscription now ready)' : '(optimistic — no subscription yet)';
+        console.log(`OneSignal: 10s safety-net firing for user: ${userId} ${logLabel}`);
+
+        try {
+          OS.login(userId);
+          loggedInUserRef.current = userId;
+          setExternalUserId(userId);
+          console.log('OneSignal: ✅ Safety-net login() called for:', userId);
+          applyUserTagsForUser(userId);
+        } catch (e) {
+          console.warn('OneSignal: Safety-net login() error:', e);
         }
       }, 10000);
       return;
     }
 
     // Subscription is ready — call login() immediately
-    console.log('OneSignal: Subscription ready (id:', currentId, ') — calling login() for:', userId);
+    console.log('OneSignal: Subscription ready (id:', currentId, 'token:', currentToken ? 'present' : 'null', ') — calling login() for:', userId);
     loginPendingRef.current = null;
     try {
       OS.login(userId);
+      loggedInUserRef.current = userId;
       setExternalUserId(userId);
       console.log('OneSignal: ✅ login() called for:', userId);
 
@@ -292,13 +336,18 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         OS.User.pushSubscription.optIn();
       } catch {}
 
-      applyUserTags(userId);
+      applyUserTagsForUser(userId);
     } catch (e) {
       console.warn('OneSignal: login() error:', e);
     }
   }, [isInitialized, isUserLoading, user?.id]);
 
-  function applyUserTags(userId: string) {
+  // ─── Apply user tags ──────────────────────────────────────────────────────
+  // Separated from the effect so it can be called from both the immediate and
+  // deferred paths. Uses the current `user` from closure — safe because this
+  // is only called synchronously within the effect or the 10s timeout which
+  // captures the same render's `user` value.
+  function applyUserTagsForUser(userId: string) {
     try {
       OS.User.addTags({
         user_id: userId,
@@ -321,6 +370,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // ─── Manual permission request (e.g. from settings screen) ───────────────
   const requestPermission = async (): Promise<boolean> => {
     if (!OS || Platform.OS === 'web') return false;
     console.log('OneSignal: requestPermission() called by user action');
