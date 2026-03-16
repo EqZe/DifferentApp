@@ -38,15 +38,30 @@ export function useOneSignal() {
 
 const APP_ID = Constants.expoConfig?.extra?.oneSignalAppId ?? 'b732b467-6886-4c7b-b3d9-5010de1199d6';
 
+/**
+ * Read the current push subscription state from OneSignal.
+ * A device is truly subscribed only when BOTH id (subscription ID) AND token (FCM/APNs token) are present.
+ */
 function readPushSubscriptionState(): { id: string | null; optedIn: boolean; token: string | null } {
   try {
-    const id = OS.User.pushSubscription.id ?? null;
-    const optedIn = OS.User.pushSubscription.optedIn ?? false;
-    const token = OS.User.pushSubscription.token ?? null;
+    const id = OS?.User?.pushSubscription?.id ?? null;
+    const optedIn = OS?.User?.pushSubscription?.optedIn ?? false;
+    const token = OS?.User?.pushSubscription?.token ?? null;
+    console.log('OneSignal: readPushSubscriptionState — id:', id, 'optedIn:', optedIn, 'token:', token ? token.substring(0, 20) + '...' : null);
     return { id, optedIn, token };
-  } catch {
+  } catch (e) {
+    console.warn('OneSignal: readPushSubscriptionState error', e);
     return { id: null, optedIn: false, token: null };
   }
+}
+
+/**
+ * A device is truly registered in the OneSignal dashboard only when it has a subscription ID.
+ * optedIn alone is NOT sufficient — it just means the user hasn't opted out, but the device
+ * may not have completed FCM/APNs registration yet.
+ */
+function isTrulySubscribed(id: string | null, token: string | null): boolean {
+  return !!id && !!token;
 }
 
 export function OneSignalProvider({ children }: { children: React.ReactNode }) {
@@ -57,12 +72,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [externalUserId, setExternalUserId] = useState<string | null>(null);
   const initialized = useRef(false);
-  const playerIdRef = useRef<string | null>(null);
-
-  // Keep ref in sync so interval callbacks can read latest value without stale closure
-  useEffect(() => {
-    playerIdRef.current = playerId;
-  }, [playerId]);
+  const loginPendingRef = useRef<string | null>(null);
 
   // Initialize once on mount
   useEffect(() => {
@@ -71,92 +81,141 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     if (initialized.current) return;
     initialized.current = true;
 
+    console.log('OneSignal: ========== INITIALIZING ==========');
+    console.log('OneSignal: App ID:', APP_ID);
+    console.log('OneSignal: Platform:', Platform.OS);
+
     try {
-      if (LogLevel) OS.Debug.setLogLevel(LogLevel.Verbose);
+      // Enable verbose logging BEFORE initialize so we capture all SDK logs
+      if (LogLevel) {
+        OS.Debug.setLogLevel(LogLevel.Verbose);
+        console.log('OneSignal: Verbose logging enabled');
+      }
       OS.initialize(APP_ID);
-      console.log('OneSignal: initialized with', APP_ID);
+      console.log('OneSignal: ✅ initialize() called with App ID:', APP_ID);
     } catch (e) {
-      console.warn('OneSignal: initialize error', e);
+      console.error('OneSignal: ❌ initialize() threw an error:', e);
       initialized.current = false;
       return;
     }
 
-    // Listen for permission changes
-    try {
-      OS.Notifications.addEventListener('permissionChange', (granted: boolean) => {
-        console.log('OneSignal: permissionChange ->', granted);
-        setHasPermission(granted);
-        if (granted) {
-          try { OS.User.pushSubscription.optIn(); } catch {}
-        }
-      });
-    } catch {}
-
-    // Listen for subscription changes
-    try {
-      OS.User.pushSubscription.addEventListener('change', (state: any) => {
-        const id = state?.current?.id ?? null;
-        const optedIn = state?.current?.optedIn ?? false;
-        console.log('OneSignal: subscription change — id:', id, 'optedIn:', optedIn);
-        if (id) {
-          setPlayerId(id);
-          playerIdRef.current = id;
-          setIsSubscribed(true);
-        }
-        setIsSubscribed(optedIn || !!id);
-      });
-    } catch {}
-
+    // Mark initialized immediately after initialize() — listeners and permission
+    // requests must happen AFTER this call
     setIsInitialized(true);
 
-    // Periodic poll for the first 30 seconds (every 5s, up to 6 times)
-    // Catches registration on Android when change events don't fire
-    let pollCount = 0;
-    const pollInterval = setInterval(() => {
-      pollCount += 1;
-      const { id, optedIn } = readPushSubscriptionState();
-      console.log(`OneSignal: poll #${pollCount} — id: ${id}, optedIn: ${optedIn}`);
-      if (id) {
-        setPlayerId(id);
-        playerIdRef.current = id;
-        setIsSubscribed(true);
-      }
-      if (id || optedIn) setIsSubscribed(true);
-      if (id || pollCount >= 6) {
-        clearInterval(pollInterval);
-      }
-    }, 5000);
+    // --- Subscription change listener ---
+    // Fires when FCM/APNs registration completes and a subscription ID is assigned
+    try {
+      OS.User.pushSubscription.addEventListener('change', (state: any) => {
+        console.log('OneSignal: 🔔 pushSubscription change event fired');
+        console.log('OneSignal: state.current:', JSON.stringify(state?.current));
+        console.log('OneSignal: state.previous:', JSON.stringify(state?.previous));
 
-    // Auto-request permission
-    (async () => {
-      try {
-        const granted = await OS.Notifications.requestPermission(true);
-        console.log('OneSignal: requestPermission result ->', granted);
+        const id = state?.current?.id ?? null;
+        const token = state?.current?.token ?? null;
+        const optedIn = state?.current?.optedIn ?? false;
+
+        console.log('OneSignal: subscription change — id:', id, 'token:', token ? token.substring(0, 20) + '...' : null, 'optedIn:', optedIn);
+
+        if (id) {
+          setPlayerId(id);
+        }
+        // Only mark as subscribed when we have a real subscription ID
+        setIsSubscribed(isTrulySubscribed(id, token));
+
+        // If login was pending (user was set before subscription was ready), retry now
+        if (id && loginPendingRef.current) {
+          const pendingUserId = loginPendingRef.current;
+          loginPendingRef.current = null;
+          console.log('OneSignal: Retrying pending login for user:', pendingUserId);
+          try {
+            OS.login(pendingUserId);
+            console.log('OneSignal: ✅ Deferred login() called for:', pendingUserId);
+          } catch (loginErr) {
+            console.warn('OneSignal: Deferred login() error:', loginErr);
+          }
+        }
+      });
+      console.log('OneSignal: pushSubscription change listener registered');
+    } catch (e) {
+      console.warn('OneSignal: Failed to register pushSubscription change listener:', e);
+    }
+
+    // --- Permission change listener ---
+    try {
+      OS.Notifications.addEventListener('permissionChange', (granted: boolean) => {
+        console.log('OneSignal: 🔔 permissionChange event — granted:', granted);
         setHasPermission(granted);
         if (granted) {
-          try { OS.User.pushSubscription.optIn(); } catch {}
+          try {
+            OS.User.pushSubscription.optIn();
+            console.log('OneSignal: optIn() called after permission granted');
+          } catch (e) {
+            console.warn('OneSignal: optIn() error:', e);
+          }
+        }
+      });
+      console.log('OneSignal: permissionChange listener registered');
+    } catch (e) {
+      console.warn('OneSignal: Failed to register permissionChange listener:', e);
+    }
 
-          // Poll after 3s — change event is unreliable on Android
-          setTimeout(() => {
-            const { id, optedIn, token } = readPushSubscriptionState();
-            console.log('OneSignal: post-permission poll — id:', id, 'optedIn:', optedIn, 'token:', token);
-            if (id) {
-              setPlayerId(id);
-              playerIdRef.current = id;
-              setIsSubscribed(true);
-            }
-            if (optedIn || !!id) setIsSubscribed(true);
-          }, 3000);
+    // --- Request permission AFTER initialize() and listener setup ---
+    // On Android, requestPermission() triggers FCM registration which produces the subscription ID.
+    // We must NOT pass `true` (fallback) on Android — it suppresses the dialog if previously denied.
+    (async () => {
+      try {
+        console.log('OneSignal: Requesting notification permission...');
+        const granted = await OS.Notifications.requestPermission(false);
+        console.log('OneSignal: requestPermission result:', granted);
+        setHasPermission(granted);
+
+        if (granted) {
+          try {
+            OS.User.pushSubscription.optIn();
+            console.log('OneSignal: optIn() called after permission granted');
+          } catch (e) {
+            console.warn('OneSignal: optIn() error:', e);
+          }
         }
       } catch (e) {
-        console.warn('OneSignal: requestPermission error', e);
+        console.warn('OneSignal: requestPermission error:', e);
       }
     })();
+
+    // --- Polling fallback for Android ---
+    // The change event is unreliable on some Android versions/OEMs.
+    // Poll every 5s for up to 60s to catch late FCM registrations.
+    let pollCount = 0;
+    const MAX_POLLS = 12; // 12 × 5s = 60s
+    const pollInterval = setInterval(() => {
+      pollCount += 1;
+      const { id, optedIn, token } = readPushSubscriptionState();
+      console.log(`OneSignal: poll #${pollCount}/${MAX_POLLS} — id: ${id}, token: ${token ? 'present' : 'null'}, optedIn: ${optedIn}`);
+
+      if (id) {
+        setPlayerId(id);
+      }
+      if (isTrulySubscribed(id, token)) {
+        setIsSubscribed(true);
+        console.log('OneSignal: ✅ Device is truly subscribed (has ID + token)');
+      }
+
+      if (id || pollCount >= MAX_POLLS) {
+        clearInterval(pollInterval);
+        if (!id && pollCount >= MAX_POLLS) {
+          console.warn('OneSignal: ⚠️ Polling timed out — device never received a subscription ID.');
+          console.warn('OneSignal: Check: 1) google-services.json is correct, 2) App ID matches dashboard, 3) FCM is configured in OneSignal dashboard');
+        }
+      }
+    }, 5000);
 
     return () => clearInterval(pollInterval);
   }, []);
 
-  // Login/logout when user changes
+  // --- Login/logout when user changes ---
+  // IMPORTANT: OS.login() must be called AFTER the device has a subscription ID.
+  // If called too early (before FCM registration), the external user ID won't appear in the dashboard.
   useEffect(() => {
     if (Platform.OS === 'web') return;
     if (!OS) return;
@@ -170,9 +229,10 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         try {
           OS.logout();
           setExternalUserId(null);
-          console.log('OneSignal: logged out');
+          loginPendingRef.current = null;
+          console.log('OneSignal: logout() called — user signed out');
         } catch (e) {
-          console.warn('OneSignal: logout error', e);
+          console.warn('OneSignal: logout() error:', e);
         }
       }
       return;
@@ -180,67 +240,117 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
 
     if (userId === externalUserId) return;
 
+    // Check if the device already has a subscription ID before calling login()
+    const { id: currentId, token: currentToken } = readPushSubscriptionState();
+
+    if (!currentId) {
+      // Subscription not ready yet — store the user ID and retry when the change event fires
+      console.log('OneSignal: Subscription ID not yet available — deferring login() for user:', userId);
+      loginPendingRef.current = userId;
+
+      // Also schedule a retry after 10s as a safety net
+      setTimeout(() => {
+        if (loginPendingRef.current === userId) {
+          const { id: retryId } = readPushSubscriptionState();
+          if (retryId) {
+            loginPendingRef.current = null;
+            try {
+              OS.login(userId);
+              setExternalUserId(userId);
+              console.log('OneSignal: ✅ Deferred login() (10s retry) called for:', userId);
+              applyUserTags(userId);
+            } catch (e) {
+              console.warn('OneSignal: Deferred login() (10s retry) error:', e);
+            }
+          } else {
+            // Still no ID — call login() anyway so OneSignal can associate when it registers
+            console.log('OneSignal: Still no subscription ID after 10s — calling login() optimistically for:', userId);
+            loginPendingRef.current = null;
+            try {
+              OS.login(userId);
+              setExternalUserId(userId);
+              console.log('OneSignal: ✅ Optimistic login() called for:', userId);
+              applyUserTags(userId);
+            } catch (e) {
+              console.warn('OneSignal: Optimistic login() error:', e);
+            }
+          }
+        }
+      }, 10000);
+      return;
+    }
+
+    // Subscription is ready — call login() immediately
+    console.log('OneSignal: Subscription ready (id:', currentId, ') — calling login() for:', userId);
+    loginPendingRef.current = null;
     try {
       OS.login(userId);
       setExternalUserId(userId);
-      console.log('OneSignal: login ->', userId);
+      console.log('OneSignal: ✅ login() called for:', userId);
 
-      // Ensure opted in after login
-      try { OS.User.pushSubscription.optIn(); } catch {}
-
-      // Poll after 2s — change event is unreliable on Android after login
-      setTimeout(() => {
-        const { id, optedIn, token } = readPushSubscriptionState();
-        console.log('OneSignal: post-login poll — id:', id, 'optedIn:', optedIn, 'token:', token);
-        if (id) {
-          setPlayerId(id);
-          playerIdRef.current = id;
-          setIsSubscribed(true);
-        }
-        if (optedIn || !!id) setIsSubscribed(true);
-      }, 2000);
-
-      // Set tags
       try {
-        OS.User.addTags({
-          user_id: userId,
-          full_name: user?.fullName ?? '',
-          email: user?.email ?? '',
-        });
+        OS.User.pushSubscription.optIn();
       } catch {}
 
-      if (user?.email) {
-        try { OS.User.addEmail(user.email); } catch {}
-      }
+      applyUserTags(userId);
     } catch (e) {
-      console.warn('OneSignal: login error', e);
+      console.warn('OneSignal: login() error:', e);
     }
   }, [isInitialized, isUserLoading, user?.id]);
 
+  function applyUserTags(userId: string) {
+    try {
+      OS.User.addTags({
+        user_id: userId,
+        full_name: user?.fullName ?? '',
+        email: user?.email ?? '',
+        platform: Platform.OS,
+      });
+      console.log('OneSignal: addTags() called for user:', userId);
+    } catch (e) {
+      console.warn('OneSignal: addTags() error:', e);
+    }
+
+    if (user?.email) {
+      try {
+        OS.User.addEmail(user.email);
+        console.log('OneSignal: addEmail() called:', user.email);
+      } catch (e) {
+        console.warn('OneSignal: addEmail() error:', e);
+      }
+    }
+  }
+
   const requestPermission = async (): Promise<boolean> => {
     if (!OS || Platform.OS === 'web') return false;
-    console.log('OneSignal: requestPermission called');
+    console.log('OneSignal: requestPermission() called by user action');
     try {
-      const granted = await OS.Notifications.requestPermission(true);
-      console.log('OneSignal: requestPermission result ->', granted);
+      // false = do NOT use fallback — always show the native dialog
+      const granted = await OS.Notifications.requestPermission(false);
+      console.log('OneSignal: requestPermission result:', granted);
       setHasPermission(granted);
-      if (granted) {
-        try { OS.User.pushSubscription.optIn(); } catch {}
 
-        // Poll after 3s — change event is unreliable on Android
+      if (granted) {
+        try {
+          OS.User.pushSubscription.optIn();
+          console.log('OneSignal: optIn() called after user-triggered permission grant');
+        } catch (e) {
+          console.warn('OneSignal: optIn() error:', e);
+        }
+
+        // Poll after 5s — FCM registration takes time on Android
         setTimeout(() => {
-          const { id, optedIn, token } = readPushSubscriptionState();
-          console.log('OneSignal: post-requestPermission poll — id:', id, 'optedIn:', optedIn, 'token:', token);
-          if (id) {
-            setPlayerId(id);
-            playerIdRef.current = id;
+          const { id, token } = readPushSubscriptionState();
+          if (id) setPlayerId(id);
+          if (isTrulySubscribed(id, token)) {
             setIsSubscribed(true);
+            console.log('OneSignal: ✅ Subscribed after user-triggered permission (5s poll)');
           }
-          if (optedIn || !!id) setIsSubscribed(true);
-        }, 3000);
+        }, 5000);
       }
       return granted;
-    } catch {
+    } catch (e) {
+      console.warn('OneSignal: requestPermission() error:', e);
       return false;
     }
   };

@@ -37,15 +37,15 @@
       ]
     },
     "plugins": [
-      "expo-font",
-      "expo-router",
-      "expo-web-browser",
       [
         "onesignal-expo-plugin",
         {
-          "mode": "production"
+          "mode": "development"
         }
       ],
+      "expo-font",
+      "expo-router",
+      "expo-web-browser",
       "./plugins/onesignal-config.js",
       "./plugins/fix-material-theme.js",
       "./plugins/gradle-config.js"
