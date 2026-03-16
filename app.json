@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Different",
-    "slug": "different",
+    "slug": "differentapp",
     "owner": "ilayrachkovski",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -28,7 +28,7 @@
         "foregroundImage": "./assets/images/different logo.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.differentapp.com",
+      "package": "com.differentapp.co.il",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -40,7 +40,7 @@
       [
         "onesignal-expo-plugin",
         {
-          "mode": "development"
+          "mode": "production"
         }
       ],
       "expo-font",
