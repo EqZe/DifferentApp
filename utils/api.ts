@@ -924,6 +924,43 @@ export const api = {
   },
 };
 
+/**
+ * Persist a OneSignal subscription/player ID to the users table.
+ * Uses update() targeting auth_user_id so it never creates a duplicate row.
+ */
+export async function saveOneSignalPlayerId(authUserId: string, playerId: string): Promise<void> {
+  if (!authUserId || !playerId) {
+    console.warn('API: saveOneSignalPlayerId — skipped (missing authUserId or playerId)');
+    return;
+  }
+  console.log('API: ========== SAVING ONESIGNAL PLAYER ID ==========');
+  console.log('API: User ID:', authUserId);
+  console.log('API: Player ID:', playerId);
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ onesignal_player_id: playerId })
+      .eq('auth_user_id', authUserId)
+      .select();
+
+    if (error) {
+      console.error('API: ❌ saveOneSignalPlayerId failed:', error.message, error.code);
+      return; // Non-fatal — don't throw, just log
+    }
+
+    if (!data || data.length === 0) {
+      console.warn('API: ⚠️ saveOneSignalPlayerId — no rows updated (user not found?)');
+      return;
+    }
+
+    console.log('API: ✅ OneSignal player ID saved successfully');
+    console.log('API: ========== ONESIGNAL PLAYER ID SAVE COMPLETE ==========');
+  } catch (err: any) {
+    console.error('API: ❌ saveOneSignalPlayerId exception:', err?.message || err);
+    // Non-fatal — swallow so it never breaks the notification flow
+  }
+}
+
 // Export types for use in components
 export type { 
   UserFrontend as User, 

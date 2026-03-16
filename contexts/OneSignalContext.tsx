@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { useUser } from './UserContext';
+import { saveOneSignalPlayerId } from '@/utils/api';
 
 // Safely load OneSignal — it's a native module unavailable in Expo Go
 let OS: any = null;
@@ -142,6 +143,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
             loggedInUserRef.current = pendingUserId;
             setExternalUserId(pendingUserId);
             console.log('OneSignal: ✅ Deferred login() called for:', pendingUserId);
+            saveOneSignalPlayerId(pendingUserId, id);
           } catch (loginErr) {
             console.warn('OneSignal: Deferred login() error:', loginErr);
           }
@@ -225,6 +227,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           loggedInUserRef.current = pendingUserId;
           setExternalUserId(pendingUserId);
           console.log('OneSignal: ✅ Deferred login() (poll) called for:', pendingUserId);
+          saveOneSignalPlayerId(pendingUserId, id);
         } catch (e) {
           console.warn('OneSignal: Deferred login() (poll) error:', e);
         }
@@ -316,6 +319,9 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           setExternalUserId(userId);
           console.log('OneSignal: ✅ Safety-net login() called for:', userId);
           applyUserTagsForUser(userId);
+          if (retryId) {
+            saveOneSignalPlayerId(userId, retryId);
+          }
         } catch (e) {
           console.warn('OneSignal: Safety-net login() error:', e);
         }
@@ -337,6 +343,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       } catch {}
 
       applyUserTagsForUser(userId);
+      saveOneSignalPlayerId(userId, currentId);
     } catch (e) {
       console.warn('OneSignal: login() error:', e);
     }
