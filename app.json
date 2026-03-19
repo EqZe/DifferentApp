@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Different",
-    "slug": "differentapp",
+    "slug": "different",
     "owner": "ilayrachkovski",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -40,7 +40,8 @@
       [
         "onesignal-expo-plugin",
         {
-          "mode": "production"
+          "mode": "production",
+					"googleServicesFile": "./assets/google-services.json"
         }
       ],
       "expo-font",

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "328526151202",
+    "project_id": "differentapp-be4c3",
+    "storage_bucket": "differentapp-be4c3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:328526151202:android:eb99152db8d54a4e5f147b",
+        "android_client_info": {
+          "package_name": "com.differentapp.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCOsXGBoTKU2j0C2-Q9esvacvHI85tR9ms"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
