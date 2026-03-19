@@ -53,6 +53,7 @@ function pollAndSavePlayerIdAfterLogin(
 let OS: any = null;
 let LogLevel: any = null;
 try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const mod = require('react-native-onesignal');
   OS = mod.OneSignal ?? mod.default ?? mod;
   LogLevel = mod.LogLevel;
