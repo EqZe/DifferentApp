@@ -932,25 +932,45 @@ export const api = {
  * NOTE: Delivery itself relies on OS.login(auth_user_id) having been called on
  * the device. This call is for backend record-keeping only.
  */
+const SUPABASE_URL = 'https://pgrcmurwamszgjsdbgtq.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBncmNtdXJ3YW1zemdqc2RiZ3RxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTAxMTgsImV4cCI6MjA4NDA2NjExOH0.w0__VSxi7gxMcgd6q5ILlnCahGObfsC08qCiOpj4Vqg';
+
+/**
+ * Register a OneSignal player/subscription ID via the backend edge function.
+ * Endpoint: POST {SUPABASE_URL}/functions/v1/notifications
+ * Body: { player_id: string, user_id: string }
+ *
+ * Must be called AFTER OS.login(authUserId) and AFTER a valid subscription ID
+ * is confirmed. This saves the player ID to user_push_tokens so the backend
+ * edge functions can target this device when sending notifications.
+ */
 export async function registerOneSignalPlayer(playerId: string, authUserId: string): Promise<void> {
   if (!authUserId || !playerId) {
     console.warn('API: registerOneSignalPlayer — skipped (missing authUserId or playerId)');
     return;
   }
+
   console.log('API: ========== REGISTERING ONESIGNAL PLAYER ==========');
   console.log('API: User ID:', authUserId);
   console.log('API: Player ID:', playerId);
+  console.log('API: POST', `${SUPABASE_URL}/functions/v1/notifications`);
+
   try {
+    // Prefer the user's access token; fall back to the anon key so the edge
+    // function's Authorization check always passes.
     const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.access_token;
+    const bearerToken = session?.access_token ?? SUPABASE_ANON_KEY;
+
+    console.log('API: Using', session?.access_token ? 'user access token' : 'anon key', 'as Bearer');
 
     const response = await fetch(
-      'https://pgrcmurwamszgjsdbgtq.supabase.co/functions/v1/notifications/register',
+      `${SUPABASE_URL}/functions/v1/notifications`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+          'Authorization': `Bearer ${bearerToken}`,
+          'apikey': SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({ player_id: playerId, user_id: authUserId }),
       }
@@ -958,15 +978,18 @@ export async function registerOneSignalPlayer(playerId: string, authUserId: stri
 
     if (!response.ok) {
       const text = await response.text();
-      console.error('API: ❌ registerOneSignalPlayer failed — HTTP', response.status, text);
+      console.error('API: ❌ registerOneSignalPlayer failed — HTTP', response.status, response.statusText);
+      console.error('API: ❌ Response body:', text);
       return; // Non-fatal
     }
 
     const result = await response.json().catch(() => ({}));
-    console.log('API: ✅ OneSignal player registered successfully:', result);
+    console.log('API: ✅ OneSignal player registered successfully');
+    console.log('API: ✅ Response:', JSON.stringify(result));
     console.log('API: ========== ONESIGNAL PLAYER REGISTRATION COMPLETE ==========');
   } catch (err: any) {
     console.error('API: ❌ registerOneSignalPlayer exception:', err?.message || err);
+    console.error('API: ❌ Stack:', err?.stack);
     // Non-fatal — swallow so it never breaks the notification flow
   }
 }
