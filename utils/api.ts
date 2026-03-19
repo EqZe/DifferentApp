@@ -925,38 +925,48 @@ export const api = {
 };
 
 /**
- * Persist a OneSignal subscription/player ID to the users table.
- * Uses update() targeting auth_user_id so it never creates a duplicate row.
+ * Register a OneSignal player/subscription ID via the backend edge function.
+ * This saves the player ID to user_push_tokens — the table the backend edge
+ * functions actually read when sending notifications.
+ *
+ * NOTE: Delivery itself relies on OS.login(auth_user_id) having been called on
+ * the device. This call is for backend record-keeping only.
  */
-export async function saveOneSignalPlayerId(authUserId: string, playerId: string): Promise<void> {
+export async function registerOneSignalPlayer(playerId: string, authUserId: string): Promise<void> {
   if (!authUserId || !playerId) {
-    console.warn('API: saveOneSignalPlayerId — skipped (missing authUserId or playerId)');
+    console.warn('API: registerOneSignalPlayer — skipped (missing authUserId or playerId)');
     return;
   }
-  console.log('API: ========== SAVING ONESIGNAL PLAYER ID ==========');
+  console.log('API: ========== REGISTERING ONESIGNAL PLAYER ==========');
   console.log('API: User ID:', authUserId);
   console.log('API: Player ID:', playerId);
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .update({ onesignal_player_id: playerId })
-      .eq('auth_user_id', authUserId)
-      .select();
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
 
-    if (error) {
-      console.error('API: ❌ saveOneSignalPlayerId failed:', error.message, error.code);
-      return; // Non-fatal — don't throw, just log
+    const response = await fetch(
+      'https://pgrcmurwamszgjsdbgtq.supabase.co/functions/v1/notifications/register',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ player_id: playerId, user_id: authUserId }),
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('API: ❌ registerOneSignalPlayer failed — HTTP', response.status, text);
+      return; // Non-fatal
     }
 
-    if (!data || data.length === 0) {
-      console.warn('API: ⚠️ saveOneSignalPlayerId — no rows updated (user not found?)');
-      return;
-    }
-
-    console.log('API: ✅ OneSignal player ID saved successfully');
-    console.log('API: ========== ONESIGNAL PLAYER ID SAVE COMPLETE ==========');
+    const result = await response.json().catch(() => ({}));
+    console.log('API: ✅ OneSignal player registered successfully:', result);
+    console.log('API: ========== ONESIGNAL PLAYER REGISTRATION COMPLETE ==========');
   } catch (err: any) {
-    console.error('API: ❌ saveOneSignalPlayerId exception:', err?.message || err);
+    console.error('API: ❌ registerOneSignalPlayer exception:', err?.message || err);
     // Non-fatal — swallow so it never breaks the notification flow
   }
 }
