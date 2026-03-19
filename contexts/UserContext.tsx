@@ -1,8 +1,10 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
+import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { api, type User } from '@/utils/api';
+import { registerForPushNotificationsAsync } from '@/utils/notifications';
 
 interface UserContextType {
   user: User | null;
@@ -18,6 +20,72 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Track which user IDs we've already attempted push token registration for
+  // so we don't spam the registration on every re-render / token refresh
+  const pushRegisteredForRef = useRef<Set<string>>(new Set());
+
+  /**
+   * Register for Expo push notifications and persist the token to Supabase.
+   * Called once per authenticated user per app session.
+   * Non-fatal — errors are logged but never bubble up to break the auth flow.
+   */
+  const registerPushToken = useCallback(async (authUserId: string) => {
+    // Skip on web — push notifications require a native device
+    if (Platform.OS === 'web') return;
+    // Skip if we already registered for this user in this session
+    if (pushRegisteredForRef.current.has(authUserId)) {
+      console.log('UserContext: Push token already registered for user in this session — skipping');
+      return;
+    }
+    pushRegisteredForRef.current.add(authUserId);
+
+    try {
+      console.log('UserContext: ========== REGISTERING PUSH TOKEN ==========');
+      console.log('UserContext: User ID:', authUserId);
+
+      const token = await registerForPushNotificationsAsync();
+
+      if (!token) {
+        console.log('UserContext: ⚠️ No push token returned — skipping save');
+        return;
+      }
+
+      console.log('UserContext: ✅ Push token obtained:', token.substring(0, 30) + '...');
+
+      // 1. Save to users.push_token (used by edge functions to send notifications)
+      await api.savePushToken(authUserId, token);
+      console.log('UserContext: ✅ Push token saved to users table');
+
+      // 2. Also upsert into user_push_tokens for a reliable audit trail
+      //    This table has RLS: user_id = auth.uid()::text
+      const { error: upsertError } = await supabase
+        .from('user_push_tokens')
+        .upsert(
+          {
+            user_id: authUserId,
+            player_id: token, // reuse player_id column for the Expo token
+            push_token: token,
+            platform: Platform.OS,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' }
+        );
+
+      if (upsertError) {
+        // Non-fatal — the primary save to users.push_token already succeeded
+        console.warn('UserContext: ⚠️ user_push_tokens upsert failed (non-fatal):', upsertError.message, upsertError.code);
+      } else {
+        console.log('UserContext: ✅ Push token saved to user_push_tokens table');
+      }
+
+      console.log('UserContext: ========== PUSH TOKEN REGISTRATION COMPLETE ==========');
+    } catch (err: any) {
+      // Non-fatal — push notification registration failure must never break login
+      console.warn('UserContext: ⚠️ Push token registration failed (non-fatal):', err?.message || err);
+      // Remove from the set so we retry next time the user opens the app
+      pushRegisteredForRef.current.delete(authUserId);
+    }
+  }, []);
 
   const loadUserProfile = useCallback(async (authUserId: string) => {
     try {
@@ -25,13 +93,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const userData = await api.getUserByAuthId(authUserId);
       console.log('UserContext: ✅ User profile loaded -', userData.fullName, 'hasContract:', userData.hasContract);
       setUserState(userData);
+
+      // Register for push notifications after the profile is loaded.
+      // We do this here (not in a separate effect) so it runs on every
+      // sign-in AND on every cold-start where a session is restored.
+      // registerPushToken is idempotent — it skips if already done this session.
+      registerPushToken(authUserId);
     } catch (error) {
       console.error('UserContext: ❌ Error loading user profile:', error);
       setUserState(null);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [registerPushToken]);
 
   useEffect(() => {
     console.log('UserContext: ========== INITIALIZING AUTH ==========');
@@ -92,6 +166,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         console.log('UserContext: Session cleared, logging out user');
         setUserState(null);
         setIsLoading(false);
+        // Clear push registration tracking on logout so the next login re-registers
+        pushRegisteredForRef.current.clear();
       }
     });
 

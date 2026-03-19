@@ -4,6 +4,50 @@ import Constants from 'expo-constants';
 import { useUser } from './UserContext';
 import { saveOneSignalPlayerId } from '@/utils/api';
 
+/**
+ * After OS.login() is called, OneSignal may reassign the subscription ID as it
+ * associates the device with the external user. This helper polls for up to
+ * `maxMs` milliseconds (default 15s) and saves the ID to Supabase as soon as
+ * it becomes available (or updates if it changes post-login).
+ */
+function pollAndSavePlayerIdAfterLogin(
+  authUserId: string,
+  knownIdBeforeLogin: string | null,
+  onIdFound: (id: string) => void,
+  maxMs = 15000,
+  intervalMs = 1500
+): () => void {
+  let elapsed = 0;
+  let lastSavedId: string | null = knownIdBeforeLogin;
+
+  const timer = setInterval(() => {
+    elapsed += intervalMs;
+    try {
+      const id = OS?.User?.pushSubscription?.id ?? null;
+      const token = OS?.User?.pushSubscription?.token ?? null;
+      console.log(
+        `OneSignal: post-login poll (${elapsed}ms) — id: ${id}, token: ${token ? 'present' : 'null'}`
+      );
+
+      if (id && id !== lastSavedId) {
+        lastSavedId = id;
+        console.log('OneSignal: ✅ Post-login poll found new/updated player ID:', id);
+        onIdFound(id);
+        saveOneSignalPlayerId(authUserId, id);
+      }
+    } catch (e) {
+      console.warn('OneSignal: post-login poll error:', e);
+    }
+
+    if (elapsed >= maxMs) {
+      clearInterval(timer);
+      console.log('OneSignal: post-login poll finished after', elapsed, 'ms');
+    }
+  }, intervalMs);
+
+  return () => clearInterval(timer);
+}
+
 // Safely load OneSignal — it's a native module unavailable in Expo Go
 let OS: any = null;
 let LogLevel: any = null;
@@ -77,6 +121,8 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
   const loginPendingRef = useRef<string | null>(null);
   // Tracks the last userId we successfully called OS.login() for, persisted across re-renders
   const loggedInUserRef = useRef<string | null>(null);
+  // Cancels any in-flight post-login poll when a new login/logout occurs
+  const cancelPostLoginPollRef = useRef<(() => void) | null>(null);
 
   // ─── Step 1: Initialize OneSignal on mount ───────────────────────────────────
   // This MUST happen before any permission request or login call.
@@ -143,7 +189,14 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
             loggedInUserRef.current = pendingUserId;
             setExternalUserId(pendingUserId);
             console.log('OneSignal: ✅ Deferred login() called for:', pendingUserId);
+            // Save the current ID immediately, then poll for any post-login ID update
             saveOneSignalPlayerId(pendingUserId, id);
+            cancelPostLoginPollRef.current?.();
+            cancelPostLoginPollRef.current = pollAndSavePlayerIdAfterLogin(
+              pendingUserId,
+              id,
+              (newId) => setPlayerId(newId)
+            );
           } catch (loginErr) {
             console.warn('OneSignal: Deferred login() error:', loginErr);
           }
@@ -227,7 +280,14 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           loggedInUserRef.current = pendingUserId;
           setExternalUserId(pendingUserId);
           console.log('OneSignal: ✅ Deferred login() (poll) called for:', pendingUserId);
+          // Save the current ID immediately, then poll for any post-login ID update
           saveOneSignalPlayerId(pendingUserId, id);
+          cancelPostLoginPollRef.current?.();
+          cancelPostLoginPollRef.current = pollAndSavePlayerIdAfterLogin(
+            pendingUserId,
+            id,
+            (newId) => setPlayerId(newId)
+          );
         } catch (e) {
           console.warn('OneSignal: Deferred login() (poll) error:', e);
         }
@@ -269,6 +329,8 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       // User logged out — clear OneSignal association
       if (loggedInUserRef.current) {
         try {
+          cancelPostLoginPollRef.current?.();
+          cancelPostLoginPollRef.current = null;
           OS.logout();
           loggedInUserRef.current = null;
           loginPendingRef.current = null;
@@ -322,6 +384,13 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           if (retryId) {
             saveOneSignalPlayerId(userId, retryId);
           }
+          // Poll post-login to catch any ID assigned/updated after OS.login() resolves
+          cancelPostLoginPollRef.current?.();
+          cancelPostLoginPollRef.current = pollAndSavePlayerIdAfterLogin(
+            userId,
+            retryId,
+            (newId) => setPlayerId(newId)
+          );
         } catch (e) {
           console.warn('OneSignal: Safety-net login() error:', e);
         }
@@ -343,7 +412,14 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       } catch {}
 
       applyUserTagsForUser(userId);
+      // Save the current ID immediately, then poll for any post-login ID update
       saveOneSignalPlayerId(userId, currentId);
+      cancelPostLoginPollRef.current?.();
+      cancelPostLoginPollRef.current = pollAndSavePlayerIdAfterLogin(
+        userId,
+        currentId,
+        (newId) => setPlayerId(newId)
+      );
     } catch (e) {
       console.warn('OneSignal: login() error:', e);
     }
