@@ -19,7 +19,12 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { useOneSignal } from '@/contexts/OneSignalContext';
 import { designColors, typography, spacing, radius, shadows } from '@/styles/designSystem';
-import OneSignal from 'react-native-onesignal';
+
+function getOneSignal() {
+  if (Platform.OS === 'web') return null;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('react-native-onesignal').default;
+}
 
 interface NotificationPreferences {
   taskReminders: boolean;
@@ -55,6 +60,8 @@ export default function NotificationPreferencesScreen() {
       console.log('NotificationPreferences: Loading OneSignal tags');
       
       // Get current tags from OneSignal
+      const OneSignal = getOneSignal();
+      if (!OneSignal) return;
       const tags = await OneSignal.User.getTags();
       console.log('NotificationPreferences: Current tags:', tags);
       
@@ -75,6 +82,8 @@ export default function NotificationPreferencesScreen() {
       console.log('NotificationPreferences: Saving preferences:', newPreferences);
       
       // Update OneSignal tags
+      const OneSignal = getOneSignal();
+      if (!OneSignal) return;
       await OneSignal.User.addTags({
         task_reminders: newPreferences.taskReminders ? 'true' : 'false',
         container_updates: newPreferences.containerUpdates ? 'true' : 'false',
