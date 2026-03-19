@@ -49,16 +49,22 @@ function pollAndSavePlayerIdAfterLogin(
   return () => clearInterval(timer);
 }
 
-// Safely load OneSignal — it's a native module unavailable in Expo Go
+// OS and LogLevel are loaded lazily inside the provider to avoid crashing
+// on web/Expo Go where the native module is unavailable at module-eval time.
 let OS: any = null;
 let LogLevel: any = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const mod = require('react-native-onesignal');
-  OS = mod.OneSignal ?? mod.default ?? mod;
-  LogLevel = mod.LogLevel;
-} catch {
-  console.warn('OneSignal: native module not available (Expo Go)');
+
+function loadOneSignal(): void {
+  if (OS !== null) return; // already loaded
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('react-native-onesignal');
+    OS = mod.OneSignal ?? mod.default ?? mod;
+    LogLevel = mod.LogLevel;
+  } catch {
+    console.warn('OneSignal: native module not available (Expo Go / web)');
+    OS = undefined; // mark as attempted so we don't retry
+  }
 }
 
 interface OneSignalContextType {
@@ -112,6 +118,12 @@ function isTrulySubscribed(id: string | null, token: string | null): boolean {
 }
 
 export function OneSignalProvider({ children }: { children: React.ReactNode }) {
+  // Lazy-load the native module here, inside the component, so it never runs
+  // at module evaluation time (which crashes on web / Expo Go).
+  if (Platform.OS !== 'web') {
+    loadOneSignal();
+  }
+
   const { user, isLoading: isUserLoading } = useUser();
   const [isInitialized, setIsInitialized] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
