@@ -41,7 +41,7 @@
         "onesignal-expo-plugin",
         {
           "mode": "production",
-					"googleServicesFile": "./assets/google-services.json"
+          "googleServicesFile": "./assets/google-services.json"
         }
       ],
       "expo-font",
