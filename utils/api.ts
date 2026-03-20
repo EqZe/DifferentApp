@@ -939,20 +939,55 @@ export const api = {
 const SUPABASE_URL = 'https://pgrcmurwamszgjsdbgtq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBncmNtdXJ3YW1zemdqc2RiZ3RxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTAxMTgsImV4cCI6MjA4NDA2NjExOH0.w0__VSxi7gxMcgd6q5ILlnCahGObfsC08qCiOpj4Vqg';
 
-export async function registerOneSignalPlayer(playerId: string, authUserId: string): Promise<void> {
+export interface RegisterOneSignalPlayerResult {
+  success: boolean;
+  playerId: string | null;
+  userId: string | null;
+  error: string | null;
+  upsertRowCount: number | null;
+  selectRowCount: number | null;
+  sessionPresent: boolean | null;
+  sessionUserId: string | null;
+  edgeStatus: number | null;
+  edgeError: string | null;
+  timestamp: string;
+}
+
+export async function registerOneSignalPlayer(
+  playerId: string,
+  authUserId: string
+): Promise<RegisterOneSignalPlayerResult> {
+  const timestamp = new Date().toISOString();
+
   if (!authUserId || !playerId) {
     console.warn('API: registerOneSignalPlayer — skipped (missing authUserId or playerId)');
-    return;
+    return {
+      success: false,
+      playerId: playerId || null,
+      userId: authUserId || null,
+      error: 'Missing authUserId or playerId',
+      upsertRowCount: null,
+      selectRowCount: null,
+      sessionPresent: null,
+      sessionUserId: null,
+      edgeStatus: null,
+      edgeError: null,
+      timestamp,
+    };
   }
 
   console.log('API: ========== REGISTERING ONESIGNAL PLAYER ==========');
   console.log('[PushToken] registerOneSignalPlayer called');
   console.log('[PushToken] authUserId:', authUserId);
-  console.log('[PushToken] authUserId type:', typeof authUserId);
-  console.log('[PushToken] authUserId length:', authUserId.length);
   console.log('[PushToken] playerId:', playerId);
-  console.log('[PushToken] playerId type:', typeof playerId);
-  console.log('[PushToken] playerId length:', playerId.length);
+
+  let upsertError: string | null = null;
+  let upsertRowCount: number | null = null;
+  let selectRowCount: number | null = null;
+  let sessionPresent: boolean | null = null;
+  let sessionUserId: string | null = null;
+  let edgeStatus: number | null = null;
+  let edgeError: string | null = null;
 
   // ── Primary path: write directly to user_push_tokens via Supabase client ──
   try {
@@ -966,75 +1001,60 @@ export async function registerOneSignalPlayer(playerId: string, authUserId: stri
       updated_at: updatedAt,
     };
 
-    console.log('[PushToken] Supabase upsert arguments:');
-    console.log('[PushToken]   table: user_push_tokens');
-    console.log('[PushToken]   payload:', JSON.stringify(upsertPayload, null, 2));
-    console.log('[PushToken]   onConflict: user_id');
+    console.log('[PushToken] Supabase upsert payload:', JSON.stringify(upsertPayload));
 
     // Log current Supabase auth session so we can detect anon vs authenticated
     const { data: sessionData } = await supabase.auth.getSession();
     const currentSession = sessionData?.session;
-    console.log('[PushToken] Current Supabase session — present:', !!currentSession);
-    console.log('[PushToken] Session user id:', currentSession?.user?.id ?? 'none');
-    console.log('[PushToken] Session access token present:', !!currentSession?.access_token);
-    console.log('[PushToken] Session expires at:', currentSession?.expires_at
-      ? new Date(currentSession.expires_at * 1000).toISOString()
-      : 'n/a');
+    sessionPresent = !!currentSession;
+    sessionUserId = currentSession?.user?.id ?? null;
+    console.log('[PushToken] Session present:', sessionPresent, '| session user id:', sessionUserId);
 
-    const { data: upsertData, error: upsertError } = await supabase
+    const { data: upsertData, error: upsertErr } = await supabase
       .from('user_push_tokens')
       .upsert(upsertPayload, { onConflict: 'user_id' })
       .select();
 
-    console.log('[PushToken] Supabase upsert raw result — data:', JSON.stringify(upsertData), 'error:', JSON.stringify(upsertError));
+    console.log('[PushToken] Supabase upsert raw result — data:', JSON.stringify(upsertData), 'error:', JSON.stringify(upsertErr));
 
-    if (upsertError) {
-      console.error('[PushToken] ❌ upsert FAILED');
-      console.error('[PushToken] error.message:', upsertError.message);
-      console.error('[PushToken] error.code:', upsertError.code);
-      console.error('[PushToken] error.details:', upsertError.details);
-      console.error('[PushToken] error.hint:', upsertError.hint);
-      console.error('[PushToken] full error JSON:', JSON.stringify(upsertError, null, 2));
+    if (upsertErr) {
+      upsertError = `${upsertErr.message} (code: ${upsertErr.code}, hint: ${upsertErr.hint ?? 'none'})`;
+      console.error('[PushToken] ❌ upsert FAILED:', upsertError);
     } else {
-      console.log('[PushToken] ✅ upsert succeeded');
-      console.log('[PushToken] rows returned:', upsertData?.length ?? 0);
-      if (upsertData && upsertData.length > 0) {
-        console.log('[PushToken] saved row:', JSON.stringify(upsertData[0], null, 2));
-      } else {
+      upsertRowCount = upsertData?.length ?? 0;
+      console.log('[PushToken] ✅ upsert succeeded, rows returned:', upsertRowCount);
+      if (upsertRowCount === 0) {
         console.warn('[PushToken] ⚠️ upsert returned 0 rows — RLS may be silently blocking the write');
       }
     }
 
     // ── Post-upsert verification SELECT ──────────────────────────────────────
-    console.log('[PushToken] Running post-upsert SELECT check for user_id:', authUserId);
-    const { data: checkData, error: checkError } = await supabase
+    const { data: checkData, error: checkErr } = await supabase
       .from('user_push_tokens')
       .select('*')
       .eq('user_id', authUserId);
-    console.log('[PushToken] Post-upsert check:', JSON.stringify(checkData), JSON.stringify(checkError));
-    if (checkError) {
-      console.error('[PushToken] SELECT check error.message:', checkError.message);
-      console.error('[PushToken] SELECT check error.code:', checkError.code);
-      console.error('[PushToken] SELECT check error.details:', checkError.details);
-      console.error('[PushToken] SELECT check error.hint:', checkError.hint);
-    } else if (!checkData || checkData.length === 0) {
-      console.warn('[PushToken] ⚠️ SELECT returned 0 rows — row was NOT written (RLS policy likely rejecting the upsert)');
+
+    if (checkErr) {
+      console.error('[PushToken] SELECT check error:', checkErr.message);
+      if (!upsertError) {
+        upsertError = `SELECT check failed: ${checkErr.message}`;
+      }
     } else {
-      console.log('[PushToken] ✅ SELECT confirmed row exists:', JSON.stringify(checkData[0], null, 2));
+      selectRowCount = checkData?.length ?? 0;
+      console.log('[PushToken] Post-upsert SELECT row count:', selectRowCount);
+      if (selectRowCount === 0) {
+        console.warn('[PushToken] ⚠️ SELECT returned 0 rows — row was NOT written (RLS policy likely rejecting the upsert)');
+      }
     }
   } catch (directErr: any) {
-    console.error('[PushToken] ❌ Direct user_push_tokens write exception:', directErr?.message || directErr);
-    console.error('[PushToken] Exception stack:', directErr?.stack);
+    upsertError = directErr?.message ?? String(directErr);
+    console.error('[PushToken] ❌ Direct user_push_tokens write exception:', upsertError);
   }
 
   // ── Secondary path: notify edge function (best-effort, non-fatal) ──────────
   try {
     const { data: { session } } = await supabase.auth.getSession();
     const bearerToken = session?.access_token ?? SUPABASE_ANON_KEY;
-
-    console.log('API: Notifying edge function (secondary path)...');
-    console.log('API: POST', `${SUPABASE_URL}/functions/v1/notifications`);
-    console.log('API: Using', session?.access_token ? 'user access token' : 'anon key', 'as Bearer');
 
     const response = await fetch(
       `${SUPABASE_URL}/functions/v1/notifications`,
@@ -1049,19 +1069,35 @@ export async function registerOneSignalPlayer(playerId: string, authUserId: stri
       }
     );
 
+    edgeStatus = response.status;
     if (!response.ok) {
       const text = await response.text();
-      console.warn('API: ⚠️ Edge function notification failed — HTTP', response.status, '(non-fatal, direct write already succeeded)');
-      console.warn('API: ⚠️ Response body:', text);
+      edgeError = `HTTP ${response.status}: ${text.substring(0, 200)}`;
+      console.warn('API: ⚠️ Edge function failed (non-fatal):', edgeError);
     } else {
-      const result = await response.json().catch(() => ({}));
-      console.log('API: ✅ Edge function notified successfully:', JSON.stringify(result));
+      console.log('API: ✅ Edge function notified successfully');
     }
   } catch (edgeErr: any) {
-    console.warn('API: ⚠️ Edge function notification exception (non-fatal):', edgeErr?.message || edgeErr);
+    edgeError = edgeErr?.message ?? String(edgeErr);
+    console.warn('API: ⚠️ Edge function exception (non-fatal):', edgeError);
   }
 
-  console.log('API: ========== ONESIGNAL PLAYER REGISTRATION COMPLETE ==========');
+  const success = upsertError === null && (selectRowCount ?? 0) > 0;
+  console.log('API: ========== ONESIGNAL PLAYER REGISTRATION COMPLETE — success:', success, '==========');
+
+  return {
+    success,
+    playerId,
+    userId: authUserId,
+    error: upsertError,
+    upsertRowCount,
+    selectRowCount,
+    sessionPresent,
+    sessionUserId,
+    edgeStatus,
+    edgeError,
+    timestamp,
+  };
 }
 
 // Export types for use in components
