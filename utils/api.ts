@@ -946,42 +946,85 @@ export async function registerOneSignalPlayer(playerId: string, authUserId: stri
   }
 
   console.log('API: ========== REGISTERING ONESIGNAL PLAYER ==========');
-  console.log('API: User ID:', authUserId);
-  console.log('API: Player ID:', playerId);
+  console.log('[PushToken] registerOneSignalPlayer called');
+  console.log('[PushToken] authUserId:', authUserId);
+  console.log('[PushToken] authUserId type:', typeof authUserId);
+  console.log('[PushToken] authUserId length:', authUserId.length);
+  console.log('[PushToken] playerId:', playerId);
+  console.log('[PushToken] playerId type:', typeof playerId);
+  console.log('[PushToken] playerId length:', playerId.length);
 
   // ── Primary path: write directly to user_push_tokens via Supabase client ──
   try {
     const platform: string = Platform.OS === 'ios' ? 'ios' : 'android';
+    const updatedAt = new Date().toISOString();
 
-    console.log('API: Writing player_id to user_push_tokens (upsert on user_id)...');
-    console.log('API: Platform:', platform);
+    const upsertPayload = {
+      user_id: authUserId,
+      player_id: playerId,
+      platform,
+      updated_at: updatedAt,
+    };
+
+    console.log('[PushToken] Supabase upsert arguments:');
+    console.log('[PushToken]   table: user_push_tokens');
+    console.log('[PushToken]   payload:', JSON.stringify(upsertPayload, null, 2));
+    console.log('[PushToken]   onConflict: user_id');
+
+    // Log current Supabase auth session so we can detect anon vs authenticated
+    const { data: sessionData } = await supabase.auth.getSession();
+    const currentSession = sessionData?.session;
+    console.log('[PushToken] Current Supabase session — present:', !!currentSession);
+    console.log('[PushToken] Session user id:', currentSession?.user?.id ?? 'none');
+    console.log('[PushToken] Session access token present:', !!currentSession?.access_token);
+    console.log('[PushToken] Session expires at:', currentSession?.expires_at
+      ? new Date(currentSession.expires_at * 1000).toISOString()
+      : 'n/a');
 
     const { data: upsertData, error: upsertError } = await supabase
       .from('user_push_tokens')
-      .upsert(
-        {
-          user_id: authUserId,
-          player_id: playerId,
-          platform,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      )
+      .upsert(upsertPayload, { onConflict: 'user_id' })
       .select();
 
+    console.log('[PushToken] Supabase upsert raw result — data:', JSON.stringify(upsertData), 'error:', JSON.stringify(upsertError));
+
     if (upsertError) {
-      console.error('API: ❌ user_push_tokens upsert failed:', upsertError.message);
-      console.error('API: ❌ Error code:', upsertError.code);
-      console.error('API: ❌ Full error:', JSON.stringify(upsertError, null, 2));
+      console.error('[PushToken] ❌ upsert FAILED');
+      console.error('[PushToken] error.message:', upsertError.message);
+      console.error('[PushToken] error.code:', upsertError.code);
+      console.error('[PushToken] error.details:', upsertError.details);
+      console.error('[PushToken] error.hint:', upsertError.hint);
+      console.error('[PushToken] full error JSON:', JSON.stringify(upsertError, null, 2));
     } else {
-      console.log('API: ✅ user_push_tokens upsert succeeded');
-      console.log('API: ✅ Rows affected:', upsertData?.length ?? 0);
+      console.log('[PushToken] ✅ upsert succeeded');
+      console.log('[PushToken] rows returned:', upsertData?.length ?? 0);
       if (upsertData && upsertData.length > 0) {
-        console.log('API: ✅ Saved row — user_id:', upsertData[0].user_id, 'player_id:', upsertData[0].player_id);
+        console.log('[PushToken] saved row:', JSON.stringify(upsertData[0], null, 2));
+      } else {
+        console.warn('[PushToken] ⚠️ upsert returned 0 rows — RLS may be silently blocking the write');
       }
     }
+
+    // ── Post-upsert verification SELECT ──────────────────────────────────────
+    console.log('[PushToken] Running post-upsert SELECT check for user_id:', authUserId);
+    const { data: checkData, error: checkError } = await supabase
+      .from('user_push_tokens')
+      .select('*')
+      .eq('user_id', authUserId);
+    console.log('[PushToken] Post-upsert check:', JSON.stringify(checkData), JSON.stringify(checkError));
+    if (checkError) {
+      console.error('[PushToken] SELECT check error.message:', checkError.message);
+      console.error('[PushToken] SELECT check error.code:', checkError.code);
+      console.error('[PushToken] SELECT check error.details:', checkError.details);
+      console.error('[PushToken] SELECT check error.hint:', checkError.hint);
+    } else if (!checkData || checkData.length === 0) {
+      console.warn('[PushToken] ⚠️ SELECT returned 0 rows — row was NOT written (RLS policy likely rejecting the upsert)');
+    } else {
+      console.log('[PushToken] ✅ SELECT confirmed row exists:', JSON.stringify(checkData[0], null, 2));
+    }
   } catch (directErr: any) {
-    console.error('API: ❌ Direct user_push_tokens write exception:', directErr?.message || directErr);
+    console.error('[PushToken] ❌ Direct user_push_tokens write exception:', directErr?.message || directErr);
+    console.error('[PushToken] Exception stack:', directErr?.stack);
   }
 
   // ── Secondary path: notify edge function (best-effort, non-fatal) ──────────

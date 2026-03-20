@@ -32,9 +32,13 @@ function pollAndSavePlayerIdAfterLogin(
       if (id && id !== lastSavedId) {
         lastSavedId = id;
         console.log('OneSignal: ✅ Post-login poll found new/updated player ID:', id);
+        console.log('[PushToken] post-login poll — raw subscription id:', id);
         onIdFound(id);
         console.log('OneSignal: Saving updated player ID to backend after post-login poll');
-        registerOneSignalPlayer(id, authUserId);
+        console.log('[PushToken] calling registerOneSignalPlayer — userId:', authUserId, 'playerId:', id);
+        registerOneSignalPlayer(id, authUserId).catch((regErr: any) => {
+          console.error('[PushToken] registerOneSignalPlayer threw in post-login poll:', regErr?.message || regErr);
+        });
       }
     } catch (e) {
       console.warn('OneSignal: post-login poll error:', e);
@@ -195,7 +199,13 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
             console.log('OneSignal: ✅ Deferred OS.login() called for:', pendingUserId);
             // Save player ID to backend via correct endpoint
             console.log('OneSignal: Registering player ID with backend after deferred login:', id);
-            registerOneSignalPlayer(id, pendingUserId);
+            console.log('[PushToken] subscription-change deferred login — raw subscription id:', id);
+            console.log('[PushToken] calling registerOneSignalPlayer — userId:', pendingUserId, 'playerId:', id);
+            try {
+              await registerOneSignalPlayer(id, pendingUserId);
+            } catch (regErr: any) {
+              console.error('[PushToken] registerOneSignalPlayer threw in deferred login (subscription change):', regErr?.message || regErr);
+            }
             cancelPostLoginPollRef.current?.();
             cancelPostLoginPollRef.current = pollAndSavePlayerIdAfterLogin(
               pendingUserId,
@@ -281,7 +291,11 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           console.log('OneSignal: ✅ Deferred OS.login() (poll) called for:', pendingUserId);
           // Save player ID to backend via correct endpoint
           console.log('OneSignal: Registering player ID with backend after poll-deferred login:', id);
-          registerOneSignalPlayer(id, pendingUserId);
+          console.log('[PushToken] init-poll deferred login — raw subscription id:', id);
+          console.log('[PushToken] calling registerOneSignalPlayer — userId:', pendingUserId, 'playerId:', id);
+          registerOneSignalPlayer(id, pendingUserId).catch((regErr: any) => {
+            console.error('[PushToken] registerOneSignalPlayer threw in init-poll deferred login:', regErr?.message || regErr);
+          });
           cancelPostLoginPollRef.current?.();
           cancelPostLoginPollRef.current = pollAndSavePlayerIdAfterLogin(
             pendingUserId,
@@ -341,7 +355,11 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       const { id: existingId } = readPushSubscriptionState();
       if (existingId) {
         console.log('OneSignal: Startup re-registration check — saving player ID to backend:', existingId);
-        registerOneSignalPlayer(existingId, userId);
+        console.log('[PushToken] startup re-registration — raw subscription id:', existingId);
+        console.log('[PushToken] calling registerOneSignalPlayer — userId:', userId, 'playerId:', existingId);
+        registerOneSignalPlayer(existingId, userId).catch((regErr: any) => {
+          console.error('[PushToken] registerOneSignalPlayer threw in startup re-registration:', regErr?.message || regErr);
+        });
       }
       return;
     }
@@ -375,7 +393,11 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           applyUserTagsForUser(userId);
           if (retryId) {
             console.log('OneSignal: Registering player ID with backend after safety-net login:', retryId);
-            registerOneSignalPlayer(retryId, userId);
+            console.log('[PushToken] safety-net login — raw subscription id:', retryId);
+            console.log('[PushToken] calling registerOneSignalPlayer — userId:', userId, 'playerId:', retryId);
+            registerOneSignalPlayer(retryId, userId).catch((regErr: any) => {
+              console.error('[PushToken] registerOneSignalPlayer threw in safety-net login:', regErr?.message || regErr);
+            });
           }
           cancelPostLoginPollRef.current?.();
           cancelPostLoginPollRef.current = pollAndSavePlayerIdAfterLogin(
@@ -407,7 +429,11 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       applyUserTagsForUser(userId);
       // Register player ID with backend via correct endpoint
       console.log('OneSignal: Registering player ID with backend after immediate login:', currentId);
-      registerOneSignalPlayer(currentId, userId);
+      console.log('[PushToken] immediate login — raw subscription id:', currentId);
+      console.log('[PushToken] calling registerOneSignalPlayer — userId:', userId, 'playerId:', currentId);
+      registerOneSignalPlayer(currentId, userId).catch((regErr: any) => {
+        console.error('[PushToken] registerOneSignalPlayer threw in immediate login:', regErr?.message || regErr);
+      });
       cancelPostLoginPollRef.current?.();
       cancelPostLoginPollRef.current = pollAndSavePlayerIdAfterLogin(
         userId,
