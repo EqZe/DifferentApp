@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Different",
-    "slug": "different",
+    "slug": "differentapp",
     "owner": "ilayrachkovski",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -29,6 +29,7 @@
         "backgroundColor": "#000000"
       },
       "package": "com.differentapp.com",
+      "googleServicesFile": "./assets/google-services.json",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -40,8 +41,7 @@
       [
         "onesignal-expo-plugin",
         {
-          "mode": "production",
-          "googleServicesFile": "./assets/google-services.json"
+          "mode": "production"
         }
       ],
       "expo-font",
