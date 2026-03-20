@@ -1,4 +1,5 @@
 
+import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import type { User, Post, PostBlock, Task, UserContainer } from '@/lib/supabase';
 
@@ -925,25 +926,19 @@ export const api = {
 };
 
 /**
- * Register a OneSignal player/subscription ID via the backend edge function.
- * This saves the player ID to user_push_tokens — the table the backend edge
- * functions actually read when sending notifications.
+ * Register a OneSignal player/subscription ID by writing directly to the
+ * `user_push_tokens` table via the Supabase client (primary path), then also
+ * notifying the edge function as a secondary path.
  *
- * NOTE: Delivery itself relies on OS.login(auth_user_id) having been called on
- * the device. This call is for backend record-keeping only.
+ * The direct write is the reliable path — it does not depend on the edge
+ * function being deployed or healthy. The edge function call is kept as a
+ * best-effort secondary notification so the backend can do any extra work.
+ *
+ * Schema: user_push_tokens(id, user_id, player_id, push_token, platform, created_at, updated_at)
  */
 const SUPABASE_URL = 'https://pgrcmurwamszgjsdbgtq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBncmNtdXJ3YW1zemdqc2RiZ3RxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTAxMTgsImV4cCI6MjA4NDA2NjExOH0.w0__VSxi7gxMcgd6q5ILlnCahGObfsC08qCiOpj4Vqg';
 
-/**
- * Register a OneSignal player/subscription ID via the backend edge function.
- * Endpoint: POST {SUPABASE_URL}/functions/v1/notifications
- * Body: { player_id: string, user_id: string }
- *
- * Must be called AFTER OS.login(authUserId) and AFTER a valid subscription ID
- * is confirmed. This saves the player ID to user_push_tokens so the backend
- * edge functions can target this device when sending notifications.
- */
 export async function registerOneSignalPlayer(playerId: string, authUserId: string): Promise<void> {
   if (!authUserId || !playerId) {
     console.warn('API: registerOneSignalPlayer — skipped (missing authUserId or playerId)');
@@ -953,14 +948,49 @@ export async function registerOneSignalPlayer(playerId: string, authUserId: stri
   console.log('API: ========== REGISTERING ONESIGNAL PLAYER ==========');
   console.log('API: User ID:', authUserId);
   console.log('API: Player ID:', playerId);
-  console.log('API: POST', `${SUPABASE_URL}/functions/v1/notifications`);
 
+  // ── Primary path: write directly to user_push_tokens via Supabase client ──
   try {
-    // Prefer the user's access token; fall back to the anon key so the edge
-    // function's Authorization check always passes.
+    const platform: string = Platform.OS === 'ios' ? 'ios' : 'android';
+
+    console.log('API: Writing player_id to user_push_tokens (upsert on user_id)...');
+    console.log('API: Platform:', platform);
+
+    const { data: upsertData, error: upsertError } = await supabase
+      .from('user_push_tokens')
+      .upsert(
+        {
+          user_id: authUserId,
+          player_id: playerId,
+          platform,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      )
+      .select();
+
+    if (upsertError) {
+      console.error('API: ❌ user_push_tokens upsert failed:', upsertError.message);
+      console.error('API: ❌ Error code:', upsertError.code);
+      console.error('API: ❌ Full error:', JSON.stringify(upsertError, null, 2));
+    } else {
+      console.log('API: ✅ user_push_tokens upsert succeeded');
+      console.log('API: ✅ Rows affected:', upsertData?.length ?? 0);
+      if (upsertData && upsertData.length > 0) {
+        console.log('API: ✅ Saved row — user_id:', upsertData[0].user_id, 'player_id:', upsertData[0].player_id);
+      }
+    }
+  } catch (directErr: any) {
+    console.error('API: ❌ Direct user_push_tokens write exception:', directErr?.message || directErr);
+  }
+
+  // ── Secondary path: notify edge function (best-effort, non-fatal) ──────────
+  try {
     const { data: { session } } = await supabase.auth.getSession();
     const bearerToken = session?.access_token ?? SUPABASE_ANON_KEY;
 
+    console.log('API: Notifying edge function (secondary path)...');
+    console.log('API: POST', `${SUPABASE_URL}/functions/v1/notifications`);
     console.log('API: Using', session?.access_token ? 'user access token' : 'anon key', 'as Bearer');
 
     const response = await fetch(
@@ -978,20 +1008,17 @@ export async function registerOneSignalPlayer(playerId: string, authUserId: stri
 
     if (!response.ok) {
       const text = await response.text();
-      console.error('API: ❌ registerOneSignalPlayer failed — HTTP', response.status, response.statusText);
-      console.error('API: ❌ Response body:', text);
-      return; // Non-fatal
+      console.warn('API: ⚠️ Edge function notification failed — HTTP', response.status, '(non-fatal, direct write already succeeded)');
+      console.warn('API: ⚠️ Response body:', text);
+    } else {
+      const result = await response.json().catch(() => ({}));
+      console.log('API: ✅ Edge function notified successfully:', JSON.stringify(result));
     }
-
-    const result = await response.json().catch(() => ({}));
-    console.log('API: ✅ OneSignal player registered successfully');
-    console.log('API: ✅ Response:', JSON.stringify(result));
-    console.log('API: ========== ONESIGNAL PLAYER REGISTRATION COMPLETE ==========');
-  } catch (err: any) {
-    console.error('API: ❌ registerOneSignalPlayer exception:', err?.message || err);
-    console.error('API: ❌ Stack:', err?.stack);
-    // Non-fatal — swallow so it never breaks the notification flow
+  } catch (edgeErr: any) {
+    console.warn('API: ⚠️ Edge function notification exception (non-fatal):', edgeErr?.message || edgeErr);
   }
+
+  console.log('API: ========== ONESIGNAL PLAYER REGISTRATION COMPLETE ==========');
 }
 
 // Export types for use in components

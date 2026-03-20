@@ -335,6 +335,14 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     // Skip if we already called login() for this user in this session
     if (userId === loggedInUserRef.current) {
       console.log('OneSignal: OS.login() already called for user:', userId, '— skipping');
+      // Startup re-registration: even if login() was already called this session,
+      // ensure the player ID is saved to user_push_tokens in case it was missed
+      // on a previous session (e.g. the table was empty).
+      const { id: existingId } = readPushSubscriptionState();
+      if (existingId) {
+        console.log('OneSignal: Startup re-registration check — saving player ID to backend:', existingId);
+        registerOneSignalPlayer(existingId, userId);
+      }
       return;
     }
 
