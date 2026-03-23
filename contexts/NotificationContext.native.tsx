@@ -23,8 +23,18 @@ import React, {
   ReactNode,
 } from "react";
 import { Platform } from "react-native";
-import { OneSignal, NotificationWillDisplayEvent } from "react-native-onesignal";
 import Constants from "expo-constants";
+
+// Lazily require react-native-onesignal so the app doesn't crash when the
+// native module is not linked (e.g. Expo Go / development client without rebuild).
+let OneSignal: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require("react-native-onesignal");
+  OneSignal = mod.OneSignal ?? mod.default ?? mod;
+} catch (e) {
+  console.warn("[OneSignal] Native module not available (Expo Go / missing native build):", e);
+}
 
 // Read App ID from app.json (expo.extra)
 const extra = Constants.expoConfig?.extra || {};
@@ -69,6 +79,12 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   // Initialize OneSignal on mount
   useEffect(() => {
     if (isWeb) {
+      setLoading(false);
+      return;
+    }
+
+    if (!OneSignal) {
+      console.warn("[OneSignal] Native module unavailable — skipping initialization.");
       setLoading(false);
       return;
     }
