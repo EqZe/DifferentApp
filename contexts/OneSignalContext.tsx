@@ -1,23 +1,32 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
 import Constants from 'expo-constants';
 import { useUser } from './UserContext';
 import { registerOneSignalPlayer, RegisterOneSignalPlayerResult } from '@/utils/api';
 
 // OS and LogLevel are loaded lazily inside the provider to avoid crashing
 // on web/Expo Go where the native module is unavailable at module-eval time.
+// TurboModuleRegistry.getEnforcing throws synchronously even inside try/catch
+// in newer React Native, so we guard with NativeModules before requiring.
 let OS: any = null;
 let LogLevel: any = null;
 
 function loadOneSignal(): void {
   if (OS !== null) return; // already loaded
+  // Check native module presence before requiring to avoid TurboModule crash
+  if (!NativeModules.OneSignal && !NativeModules.RNOneSignal) {
+    console.warn('OneSignal: native module not found in NativeModules — skipping require (Expo Go / missing native build)');
+    OS = undefined; // mark as attempted so we don't retry
+    return;
+  }
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('react-native-onesignal');
     OS = mod.OneSignal ?? mod.default ?? mod;
     LogLevel = mod.LogLevel;
-  } catch {
-    console.warn('OneSignal: native module not available (Expo Go / web)');
+    console.log('OneSignal: native module loaded successfully');
+  } catch (e) {
+    console.warn('OneSignal: native module not available (Expo Go / web):', e);
     OS = undefined; // mark as attempted so we don't retry
   }
 }

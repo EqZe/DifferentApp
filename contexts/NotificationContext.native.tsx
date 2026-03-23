@@ -25,15 +25,23 @@ import React, {
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 
-// Lazily require react-native-onesignal so the app doesn't crash when the
-// native module is not linked (e.g. Expo Go / development client without rebuild).
+// Lazily require react-native-onesignal ONLY when the native module is present.
+// TurboModuleRegistry.getEnforcing throws synchronously even inside try/catch
+// in newer React Native, so we must guard with NativeModules first.
+import { NativeModules } from "react-native";
+
 let OneSignal: any = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const mod = require("react-native-onesignal");
-  OneSignal = mod.OneSignal ?? mod.default ?? mod;
-} catch (e) {
-  console.warn("[OneSignal] Native module not available (Expo Go / missing native build):", e);
+if (NativeModules.OneSignal || NativeModules.RNOneSignal) {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require("react-native-onesignal");
+    OneSignal = mod.OneSignal ?? mod.default ?? mod;
+    console.log("[OneSignal] Native module loaded successfully");
+  } catch (e) {
+    console.warn("[OneSignal] Native module not available (Expo Go / missing native build):", e);
+  }
+} else {
+  console.warn("[OneSignal] Native module not found in NativeModules — skipping require (Expo Go / missing native build)");
 }
 
 // Read App ID from app.json (expo.extra)
