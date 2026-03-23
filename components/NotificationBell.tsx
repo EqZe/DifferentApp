@@ -1,62 +1,98 @@
+/**
+ * NotificationBell Component
+ *
+ * A reusable notification bell icon that shows permission status.
+ * Prompts user to enable notifications if not yet granted.
+ *
+ * Usage:
+ *   import { NotificationBell } from "@/components/NotificationBell";
+ *
+ *   // In header
+ *   <NotificationBell />
+ *
+ *   // Compact for tight spaces
+ *   <NotificationBell variant="compact" />
+ */
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, useColorScheme } from 'react-native';
-import { useRouter } from 'expo-router';
-import { IconSymbol } from '@/components/IconSymbol';
-import { designColors, spacing, radius, shadows } from '@/styles/designSystem';
-import { useOneSignal } from '@/contexts/OneSignalContext';
+import React from "react";
+import {
+  TouchableOpacity,
+  Text,
+  View,
+  StyleSheet,
+  Alert,
+  Platform,
+  Linking,
+} from "react-native";
+import { useNotifications } from "@/contexts/NotificationContext";
 
-export function NotificationBell() {
-  const router = useRouter();
-  const { hasPermission } = useOneSignal();
-  const [unreadCount, setUnreadCount] = useState(0);
-  const colorScheme = useColorScheme();
-  
-  // Get the correct text color based on theme
-  const textSecondaryColor = colorScheme === 'dark' 
-    ? designColors.dark.textSecondary 
-    : designColors.light.textSecondary;
+interface NotificationBellProps {
+  /** Button style variant */
+  variant?: "default" | "compact";
+  /** Custom size for the bell icon */
+  size?: number;
+}
 
-  const handlePress = () => {
-    console.log('NotificationBell: User tapped notification bell');
-    
-    // Navigate to notification preferences
-    router.push('/notification-preferences');
+export function NotificationBell({
+  variant = "default",
+  size = 24,
+}: NotificationBellProps) {
+  const { hasPermission, permissionDenied, loading, isWeb, requestPermission } =
+    useNotifications();
+
+  if (loading || isWeb) return null;
+
+  const handlePress = async () => {
+    if (hasPermission) {
+      // Already has permission - could navigate to notification center
+      return;
+    }
+
+    if (permissionDenied) {
+      // Permission was denied - direct to settings
+      Alert.alert(
+        "Notifications Disabled",
+        "To receive notifications, please enable them in your device settings.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Open Settings",
+            onPress: () => {
+              if (Platform.OS === "ios") {
+                Linking.openURL("app-settings:");
+              } else {
+                Linking.openSettings();
+              }
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    // Request permission
+    await requestPermission();
   };
 
-  // Don't show on web
-  if (Platform.OS === 'web') {
-    return null;
+  if (variant === "compact") {
+    return (
+      <TouchableOpacity onPress={handlePress} style={styles.compactButton}>
+        <Text style={[styles.bellIcon, { fontSize: size * 0.75 }]}>
+          {hasPermission ? "🔔" : "🔕"}
+        </Text>
+      </TouchableOpacity>
+    );
   }
 
   return (
-    <TouchableOpacity
-      style={styles.container}
-      onPress={handlePress}
-      activeOpacity={0.7}
-    >
-      <View style={styles.iconContainer}>
-        <IconSymbol
-          ios_icon_name="bell.fill"
-          android_material_icon_name="notifications"
-          size={24}
-          color={hasPermission ? designColors.primary : textSecondaryColor}
-        />
+    <TouchableOpacity onPress={handlePress} style={styles.button}>
+      <View style={styles.bellContainer}>
+        <Text style={[styles.bellIcon, { fontSize: size }]}>
+          {hasPermission ? "🔔" : "🔕"}
+        </Text>
         {!hasPermission && (
-          <View style={styles.warningBadge}>
-            <IconSymbol
-              ios_icon_name="exclamationmark"
-              android_material_icon_name="warning"
-              size={10}
-              color="#FFFFFF"
-            />
-          </View>
-        )}
-        {unreadCount > 0 && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </Text>
+            <Text style={styles.badgeText}>!</Text>
           </View>
         )}
       </View>
@@ -65,48 +101,34 @@ export function NotificationBell() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: spacing.sm,
+  button: {
+    padding: 8,
   },
-  iconContainer: {
-    position: 'relative',
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+  compactButton: {
+    padding: 4,
+  },
+  bellContainer: {
+    position: "relative",
+  },
+  bellIcon: {
+    fontSize: 24,
   },
   badge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: designColors.error,
-    borderRadius: radius.full,
-    minWidth: 18,
-    height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    ...shadows.sm,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  warningBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: designColors.warning,
-    borderRadius: radius.full,
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: "#FF3B30",
+    borderRadius: 8,
     width: 16,
     height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    ...shadows.sm,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
   },
 });
+
+export default NotificationBell;

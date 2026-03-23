@@ -12,6 +12,7 @@ import {
 import { WidgetProvider } from "@/contexts/WidgetContext";
 import { UserProvider } from "@/contexts/UserContext";
 import { OneSignalProvider } from "@/contexts/OneSignalContext";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 import * as SplashScreen from "expo-splash-screen";
 import { useNetworkState } from "expo-network";
 import { StatusBar } from "expo-status-bar";
@@ -100,7 +101,8 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, direction: rtl ? 'rtl' : 'ltr' }}>
+    <NotificationProvider>
+  <GestureHandlerRootView style={{ flex: 1, direction: rtl ? 'rtl' : 'ltr' }}>
       <ThemeProvider value={colorScheme === "dark" ? CustomDarkTheme : LightTheme}>
         <UserProvider>
           <OneSignalProvider>
@@ -125,5 +127,6 @@ export default function RootLayout() {
         </UserProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
+    </NotificationProvider>
   );
 }

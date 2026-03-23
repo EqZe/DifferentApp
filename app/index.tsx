@@ -4,6 +4,7 @@ import { View, ActivityIndicator, StyleSheet, I18nManager, Platform } from 'reac
 import { useRouter } from 'expo-router';
 import { useUser } from '@/contexts/UserContext';
 import { useTheme } from '@react-navigation/native';
+import { NotificationBell } from "@/components/NotificationBell";
 
 // Ensure RTL is enabled - this is a safety check
 if (!I18nManager.isRTL) {
@@ -39,7 +40,9 @@ export default function IndexScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, direction: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
-      <ActivityIndicator size="large" color="#2784F5" />
+            <NotificationBell />
+      
+<ActivityIndicator size="large" color="#2784F5" />
     </View>
   );
 }

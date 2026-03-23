@@ -21,6 +21,12 @@
         "UIBackgroundModes": [
           "remote-notification"
         ]
+      },
+      "entitlements": {
+        "aps-environment": "production",
+        "com.apple.security.application-groups": [
+          "group.com.ilayrachkovski.different.onesignal"
+        ]
       }
     },
     "android": {
