@@ -1010,12 +1010,63 @@ export async function registerOneSignalPlayer(
     sessionUserId = currentSession?.user?.id ?? null;
     console.log('[PushToken] Session present:', sessionPresent, '| session user id:', sessionUserId);
 
-    const { data: upsertData, error: upsertErr } = await supabase
+    // FIX: Try upsert with onConflict:'user_id' first (one row per user).
+    // If that fails (e.g. the unique constraint is on player_id or a composite),
+    // fall back to a plain INSERT that ignores duplicates, then UPDATE.
+    let upsertData: any[] | null = null;
+    let upsertErr: any = null;
+
+    const { data: d1, error: e1 } = await supabase
       .from('user_push_tokens')
       .upsert(upsertPayload, { onConflict: 'user_id' })
       .select();
 
-    console.log('[PushToken] Supabase upsert raw result — data:', JSON.stringify(upsertData), 'error:', JSON.stringify(upsertErr));
+    console.log('[PushToken] upsert(onConflict:user_id) — data:', JSON.stringify(d1), 'error:', JSON.stringify(e1));
+
+    if (e1) {
+      // First attempt failed — try onConflict:'player_id' as fallback
+      console.warn('[PushToken] First upsert failed, retrying with onConflict:player_id');
+      const { data: d2, error: e2 } = await supabase
+        .from('user_push_tokens')
+        .upsert(upsertPayload, { onConflict: 'player_id' })
+        .select();
+
+      console.log('[PushToken] upsert(onConflict:player_id) — data:', JSON.stringify(d2), 'error:', JSON.stringify(e2));
+
+      if (e2) {
+        // Both upserts failed — try a direct UPDATE on user_id as last resort
+        console.warn('[PushToken] Both upserts failed, trying UPDATE fallback');
+        const { data: d3, error: e3 } = await supabase
+          .from('user_push_tokens')
+          .update({ player_id: playerId, platform, updated_at: updatedAt })
+          .eq('user_id', authUserId)
+          .select();
+
+        console.log('[PushToken] UPDATE fallback — data:', JSON.stringify(d3), 'error:', JSON.stringify(e3));
+
+        if (e3 || !d3 || d3.length === 0) {
+          // UPDATE found no row — try INSERT
+          console.warn('[PushToken] UPDATE found no row, trying INSERT');
+          const { data: d4, error: e4 } = await supabase
+            .from('user_push_tokens')
+            .insert(upsertPayload)
+            .select();
+
+          console.log('[PushToken] INSERT fallback — data:', JSON.stringify(d4), 'error:', JSON.stringify(e4));
+          upsertData = d4;
+          upsertErr = e4;
+        } else {
+          upsertData = d3;
+          upsertErr = null;
+        }
+      } else {
+        upsertData = d2;
+        upsertErr = e2;
+      }
+    } else {
+      upsertData = d1;
+      upsertErr = e1;
+    }
 
     if (upsertErr) {
       upsertError = `${upsertErr.message} (code: ${upsertErr.code}, hint: ${upsertErr.hint ?? 'none'})`;

@@ -128,7 +128,10 @@ function pollAndSavePlayerIdAfterLogin(
   intervalMs = 1500
 ): () => void {
   let elapsed = 0;
-  let lastSavedId: string | null = knownIdBeforeLogin;
+  // FIX: Start lastSavedId as null so the first poll always saves if an ID is
+  // present. Previously, if knownIdBeforeLogin equalled the current ID (the
+  // common case), the poll would skip saving entirely because id === lastSavedId.
+  let lastSavedId: string | null = null;
 
   const timer = setInterval(() => {
     elapsed += intervalMs;
@@ -248,6 +251,10 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     setIsInitialized(true);
 
     // ── Subscription change listener ──────────────────────────────────────────
+    // FIX: This is the primary reliable path for capturing the subscription ID.
+    // It fires whenever the subscription state changes (permission granted, optIn,
+    // post-login ID reassignment). We must attempt registration here for ALL cases,
+    // not just when loginPendingRef is set.
     try {
       OS.User.pushSubscription.addEventListener('change', (state: any) => {
         console.log('OneSignal: 🔔 pushSubscription change event fired');
@@ -257,7 +264,6 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         const id = state?.current?.id ?? null;
         const token = state?.current?.token ?? null;
         const optedIn = state?.current?.optedIn ?? false;
-        // Also read onesignalId from the User object (not in the event payload)
         const onesignalId = OS?.User?.onesignalId ?? null;
 
         console.log(
@@ -275,14 +281,27 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         }
         setIsSubscribed(isTrulySubscribed(id, token));
 
-        // If login was pending (user was set before subscription was ready), retry now
-        if (id && loginPendingRef.current) {
+        if (!id) return;
+
+        // Case 1: Login was pending (user set before subscription was ready)
+        if (loginPendingRef.current) {
           const pendingUserId = loginPendingRef.current;
           loginPendingRef.current = null;
           console.log('OneSignal: 🔄 Subscription arrived via change event — completing deferred login for user:', pendingUserId);
           cancelWaitForSubRef.current?.();
           cancelWaitForSubRef.current = null;
           performLogin(pendingUserId, id);
+          return;
+        }
+
+        // Case 2: User is already logged in (e.g. permission granted after login,
+        // or post-login ID reassignment). Register the new/updated token immediately.
+        const currentUserId = loggedInUserRef.current;
+        if (currentUserId) {
+          console.log('OneSignal: 🔄 Subscription change with logged-in user — registering token for:', currentUserId);
+          attemptRegistration(id, currentUserId, 'subscription-change-event', (result) => {
+            setPushTokenDebugInfo(result);
+          });
         }
       });
       console.log('OneSignal: pushSubscription change listener registered');
@@ -291,6 +310,9 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     }
 
     // ── Permission change listener ────────────────────────────────────────────
+    // FIX: After permission is granted and optIn() is called, the subscription ID
+    // may not be available immediately. Start a waitForSubscriptionId poll so we
+    // capture and save the token as soon as it arrives, regardless of timing.
     try {
       OS.Notifications.addEventListener('permissionChange', (granted: boolean) => {
         console.log('OneSignal: 🔔 permissionChange event — granted:', granted);
@@ -298,9 +320,25 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         if (granted) {
           try {
             OS.User.pushSubscription.optIn();
-            console.log('OneSignal: optIn() called after permission granted');
+            console.log('OneSignal: optIn() called after permissionChange event');
           } catch (e) {
             console.warn('OneSignal: optIn() error:', e);
+          }
+
+          // Immediately check if subscription ID is already available
+          const { id: immediateId, onesignalId: immediateOid, token: immediateToken } = readSubscriptionState();
+          if (immediateId && loggedInUserRef.current) {
+            console.log('OneSignal: permissionChange — subscription ID already available, registering immediately');
+            if (immediateOid) setOnesignalUserId(immediateOid);
+            setPlayerId(immediateId);
+            if (isTrulySubscribed(immediateId, immediateToken)) setIsSubscribed(true);
+            attemptRegistration(immediateId, loggedInUserRef.current, 'permission-change-immediate', (result) => {
+              setPushTokenDebugInfo(result);
+            });
+          } else if (!immediateId) {
+            // Subscription ID not yet available — the change event listener above will
+            // handle it when it fires. Start a safety-net poll as a backup.
+            console.log('OneSignal: permissionChange — subscription ID not yet available, change event will handle it');
           }
         }
       });
@@ -597,43 +635,53 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
           console.warn('OneSignal: optIn() error:', e);
         }
 
-        // Wait for subscription to become available after opt-in, then register
-        setTimeout(() => {
-          const { id, onesignalId, token } = readSubscriptionState();
-          if (id) {
-            setPlayerId(id);
-            if (onesignalId) setOnesignalUserId(onesignalId);
-            if (isTrulySubscribed(id, token)) {
-              setIsSubscribed(true);
-              console.log('OneSignal: ✅ Subscribed after user-triggered permission (5s check)');
-            }
-            // Re-register in case this is a fresh opt-in
+        // FIX: Do NOT rely on a fixed 5s timeout. The subscription change event
+        // listener (registered during init) is the primary path — it fires as soon
+        // as the subscription ID is assigned and will call attemptRegistration.
+        // We only need a safety-net poll here for the case where the change event
+        // was missed (e.g. the ID was already set before the listener was attached).
+        const { id: immediateId, onesignalId: immediateOid, token: immediateToken } = readSubscriptionState();
+        if (immediateId) {
+          // Subscription ID already available — register right now
+          setPlayerId(immediateId);
+          if (immediateOid) setOnesignalUserId(immediateOid);
+          if (isTrulySubscribed(immediateId, immediateToken)) setIsSubscribed(true);
+          const userId = loggedInUserRef.current;
+          if (userId) {
+            console.log('[PushToken] requestPermission — subscriptionId already available:', immediateId);
+            attemptRegistration(immediateId, userId, 'request-permission-immediate', (result) => {
+              setPushTokenDebugInfo(result);
+            });
+          } else {
+            // No logged-in user yet — set loginPendingRef so the user-change effect
+            // will register the token once the user is available.
+            console.log('OneSignal: requestPermission — subscription ready but no user yet, deferring registration');
+            loginPendingRef.current = null; // will be set by user-change effect
+          }
+        } else {
+          // Subscription ID not yet available.
+          // The pushSubscription change event listener will handle registration
+          // when the ID arrives. Start a safety-net poll as a backup in case the
+          // event is missed (e.g. ID was already set before listener attached).
+          console.log('OneSignal: requestPermission — subscription ID not yet available, change event will handle it');
+          cancelWaitForSubRef.current?.();
+          cancelWaitForSubRef.current = waitForSubscriptionId((newId) => {
+            cancelWaitForSubRef.current = null;
+            setPlayerId(newId);
+            const { onesignalId: oid, token: t } = readSubscriptionState();
+            if (oid) setOnesignalUserId(oid);
+            if (isTrulySubscribed(newId, t)) setIsSubscribed(true);
             const userId = loggedInUserRef.current;
             if (userId) {
-              console.log('[PushToken] requestPermission opt-in — subscriptionId:', id, '| onesignalId:', onesignalId);
-              attemptRegistration(id, userId, 'request-permission-opt-in', (result) => {
+              console.log('[PushToken] requestPermission safety-net poll — subscriptionId:', newId, '| onesignalId:', oid);
+              attemptRegistration(newId, userId, 'request-permission-safety-net', (result) => {
                 setPushTokenDebugInfo(result);
               });
+            } else {
+              console.log('OneSignal: requestPermission safety-net — subscription ready but no user, deferring');
             }
-          } else {
-            // Subscription not ready yet — wait for it
-            cancelWaitForSubRef.current?.();
-            cancelWaitForSubRef.current = waitForSubscriptionId((newId) => {
-              cancelWaitForSubRef.current = null;
-              setPlayerId(newId);
-              const { onesignalId: oid, token: t } = readSubscriptionState();
-              if (oid) setOnesignalUserId(oid);
-              if (isTrulySubscribed(newId, t)) setIsSubscribed(true);
-              const userId = loggedInUserRef.current;
-              if (userId) {
-                console.log('[PushToken] requestPermission delayed opt-in — subscriptionId:', newId, '| onesignalId:', oid);
-                attemptRegistration(newId, userId, 'request-permission-opt-in-delayed', (result) => {
-                  setPushTokenDebugInfo(result);
-                });
-              }
-            });
-          }
-        }, 5000);
+          });
+        }
       }
       return granted;
     } catch (e) {
