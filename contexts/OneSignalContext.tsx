@@ -363,18 +363,14 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     // Permission is requested only after a successful login/register — not on
     // app launch. Here we just sync the current OS permission state so the
     // rest of the app knows whether it was already granted in a prior session.
+    // NOTE: We do NOT call optIn() here. optIn() is called by Step 2 (the
+    // user-change effect) once the user is authenticated, preventing any
+    // subscription activity before auth state is known.
     try {
       const alreadyGranted: boolean = OS.Notifications.hasPermission ?? false;
       console.log('OneSignal: startup permission check — already granted:', alreadyGranted);
+      console.log('OneSignal: startup — NOT calling optIn() yet; waiting for authenticated user');
       setHasPermission(alreadyGranted);
-      if (alreadyGranted) {
-        try {
-          OS.User.pushSubscription.optIn();
-          console.log('OneSignal: optIn() called — permission was already granted from a previous session');
-        } catch (e) {
-          console.warn('OneSignal: optIn() error on startup:', e);
-        }
-      }
     } catch (e) {
       console.warn('OneSignal: startup hasPermission check error:', e);
     }
