@@ -955,7 +955,8 @@ export interface RegisterOneSignalPlayerResult {
 
 export async function registerOneSignalPlayer(
   playerId: string,
-  authUserId: string
+  authUserId: string,
+  pushToken: string
 ): Promise<RegisterOneSignalPlayerResult> {
   const timestamp = new Date().toISOString();
 
@@ -976,10 +977,28 @@ export async function registerOneSignalPlayer(
     };
   }
 
+  if (!pushToken || pushToken.trim() === '') {
+    console.warn('API: registerOneSignalPlayer — skipped (push token is null or empty)');
+    return {
+      success: false,
+      playerId,
+      userId: authUserId,
+      error: 'Push token is null or empty — registration deferred until token is available',
+      upsertRowCount: null,
+      selectRowCount: null,
+      sessionPresent: null,
+      sessionUserId: null,
+      edgeStatus: null,
+      edgeError: null,
+      timestamp,
+    };
+  }
+
   console.log('API: ========== REGISTERING ONESIGNAL PLAYER ==========');
   console.log('[PushToken] registerOneSignalPlayer called');
   console.log('[PushToken] authUserId:', authUserId);
   console.log('[PushToken] playerId:', playerId);
+  console.log('[PushToken] pushToken preview:', pushToken.substring(0, 20) + '...');
 
   let upsertError: string | null = null;
   let upsertRowCount: number | null = null;
@@ -991,12 +1010,16 @@ export async function registerOneSignalPlayer(
 
   // ── Primary path: write directly to user_push_tokens via Supabase client ──
   try {
-    const platform: string = Platform.OS === 'ios' ? 'ios' : 'android';
+    const os = Platform.OS;
+    const platform: string = os === 'ios' ? 'ios' : os === 'android' ? 'android' : 'web';
     const updatedAt = new Date().toISOString();
+
+    console.log('[PushToken] platform detected:', platform);
 
     const upsertPayload = {
       user_id: authUserId,
       player_id: playerId,
+      push_token: pushToken,
       platform,
       updated_at: updatedAt,
     };
