@@ -193,7 +193,7 @@ function attemptRegistration(
 function pollAndSavePlayerIdAfterLogin(
   authUserId: string,
   onIdFound: (id: string) => void,
-  maxMs = 15000,
+  maxMs = 30000,
   intervalMs = 1500
 ): () => void {
   let elapsed = 0;
@@ -242,7 +242,7 @@ function pollAndSavePlayerIdAfterLogin(
  */
 function waitForSubscriptionId(
   onReady: (id: string, token: string) => void,
-  maxMs = 20000,
+  maxMs = 30000,
   intervalMs = 1500
 ): () => void {
   let elapsed = 0;
@@ -321,6 +321,8 @@ export function OneSignalProvider({
   const cancelPostLoginPollRef = useRef<(() => void) | null>(null);
   /** Cancels any in-flight waitForSubscriptionId poll */
   const cancelWaitForSubRef = useRef<(() => void) | null>(null);
+  /** Buffers a token that arrived before the user was logged in */
+  const pendingTokenRef = useRef<{ id: string; token: string } | null>(null);
 
   // Keep a ref to the latest user so performLogin (called from event listeners)
   // can access it without stale closure issues.
@@ -339,6 +341,16 @@ export function OneSignalProvider({
       loggedInUserRef.current = userId;
       setExternalUserId(userId);
       console.log('[OneSignal] ✅ OS.login() called successfully for:', userId);
+
+      // Flush any buffered token that arrived before login
+      if (pendingTokenRef.current) {
+        const { id: bufferedId, token: bufferedToken } = pendingTokenRef.current;
+        pendingTokenRef.current = null;
+        console.log('[OneSignal] performLogin — flushing buffered token:', bufferedId);
+        attemptRegistration(bufferedId, bufferedToken, userId, 'perform-login-buffered', (result) => {
+          setPushTokenDebugInfo(result);
+        });
+      }
 
       // Ensure the device is opted in to push
       try {
@@ -360,9 +372,13 @@ export function OneSignalProvider({
         onesignalId,
         '| token:', loginToken ? loginToken.substring(0, 20) + '...' : 'null'
       );
-      attemptRegistration(subscriptionId, loginToken, userId, 'perform-login', (result) => {
-        setPushTokenDebugInfo(result);
-      });
+      if (loginToken) {
+        attemptRegistration(subscriptionId, loginToken, userId, 'perform-login', (result) => {
+          setPushTokenDebugInfo(result);
+        });
+      } else {
+        console.log('[OneSignal] performLogin — token not yet available at login time, poll/change event will handle it');
+      }
 
       // Start post-login poll to catch any subscription ID reassignment
       cancelPostLoginPollRef.current?.();
@@ -576,6 +592,10 @@ export function OneSignalProvider({
               }
             );
           }
+        } else if (id && token) {
+          // No user logged in yet — buffer the token so performLogin can flush it
+          console.log('[OneSignal] subscription change — buffering token, no user yet');
+          pendingTokenRef.current = { id, token };
         }
       });
       console.log('[OneSignal] pushSubscription change listener registered');
