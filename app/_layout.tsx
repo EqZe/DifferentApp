@@ -101,32 +101,34 @@ export default function RootLayout() {
   }
 
   return (
-    <NotificationProvider>
-  <GestureHandlerRootView style={{ flex: 1, direction: rtl ? 'rtl' : 'ltr' }}>
+    <GestureHandlerRootView style={{ flex: 1, direction: rtl ? 'rtl' : 'ltr' }}>
       <ThemeProvider value={colorScheme === "dark" ? CustomDarkTheme : LightTheme}>
         <UserProvider>
           <OneSignalProvider>
-            <WidgetProvider>
-              <SystemBars style={colorScheme === "dark" ? "light" : "dark"} />
-              <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="register" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen 
-                  name="notification-preferences" 
-                  options={{
-                    presentation: "modal",
-                    headerShown: true,
-                    title: "הגדרות התראות"
-                  }}
-                />
-              </Stack>
-            </WidgetProvider>
+            {/* NotificationProvider MUST be inside OneSignalProvider so that
+                NotificationContextBridge can call useOneSignal() safely */}
+            <NotificationProvider>
+              <WidgetProvider>
+                <SystemBars style={colorScheme === "dark" ? "light" : "dark"} />
+                <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="register" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen
+                    name="notification-preferences"
+                    options={{
+                      presentation: "modal",
+                      headerShown: true,
+                      title: "הגדרות התראות"
+                    }}
+                  />
+                </Stack>
+              </WidgetProvider>
+            </NotificationProvider>
           </OneSignalProvider>
         </UserProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
-    </NotificationProvider>
   );
 }

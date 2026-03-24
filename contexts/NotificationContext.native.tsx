@@ -1,72 +1,55 @@
 /**
- * OneSignal Push Notification Context (Anonymous Mode)
+ * OneSignal Push Notification Context — Native (iOS / Android)
  *
- * Provides push notification management for Expo + React Native apps.
- * Reads OneSignal App ID from app.json (expo.extra) automatically.
+ * Thin bridge over OneSignalContext. The rest of the app uses
+ * <NotificationProvider> / useNotifications() without knowing about OneSignal.
  *
- * NOTE: Running in anonymous mode - notifications won't be linked to a user ID.
- * To enable user targeting:
- * 1. Set up authentication with setup_auth
- * 2. Re-run setup_onesignal to upgrade this file
+ * IMPORTANT: OneSignal is initialised ONLY inside OneSignalContext.
+ * This file must NOT call OneSignal.initialize() — double-init corrupts the
+ * subscription state and prevents the player ID from being saved to Supabase.
  *
- * SETUP:
- * 1. Wrap your app with <NotificationProvider>
- * 2. Run: npx expo install onesignal-expo-plugin react-native-onesignal && npx expo prebuild
+ * Token saving flow:
+ *   1. User presses "Allow" → OneSignalContext permissionChange listener fires
+ *   2. OneSignalContext calls optIn() then waits for pushSubscription change event
+ *   3. pushSubscription change event fires with the subscription ID
+ *   4. OneSignalContext calls registerOneSignalPlayer(subscriptionId, authUserId)
+ *   5. registerOneSignalPlayer upserts the row into user_push_tokens in Supabase
+ *
+ * Provider nesting in _layout.tsx (order matters):
+ *   <OneSignalProvider>          ← initialises OneSignal, owns all token state
+ *     <NotificationProvider>     ← reads OneSignal state, exposes useNotifications()
+ *       ...app screens...
+ *     </NotificationProvider>
+ *   </OneSignalProvider>
  */
 
 import React, {
   createContext,
   useContext,
-  useState,
-  useEffect,
   useCallback,
   ReactNode,
 } from "react";
 import { Platform } from "react-native";
-import Constants from "expo-constants";
+import { useOneSignal } from "./OneSignalContext";
 
-// Lazily require react-native-onesignal ONLY when the native module is present.
-// TurboModuleRegistry.getEnforcing throws synchronously even inside try/catch
-// in newer React Native, so we must guard with NativeModules first.
-import { NativeModules } from "react-native";
-
-let OneSignal: any = null;
-if (NativeModules.OneSignal || NativeModules.RNOneSignal) {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require("react-native-onesignal");
-    OneSignal = mod.OneSignal ?? mod.default ?? mod;
-    console.log("[OneSignal] Native module loaded successfully");
-  } catch (e) {
-    console.warn("[OneSignal] Native module not available (Expo Go / missing native build):", e);
-  }
-} else {
-  console.warn("[OneSignal] Native module not found in NativeModules — skipping require (Expo Go / missing native build)");
-}
-
-// Read App ID from app.json (expo.extra)
-const extra = Constants.expoConfig?.extra || {};
-const ONESIGNAL_APP_ID = extra.oneSignalAppId || "";
-
-// Check if running on web
 const isWeb = Platform.OS === "web";
 
 interface NotificationContextType {
   /** Whether the user has granted notification permission */
   hasPermission: boolean;
-  /** Whether permission has been requested but not yet granted */
+  /** Whether OneSignal is initialised but permission was not granted */
   permissionDenied: boolean;
-  /** Loading state during initialization */
+  /** True while OneSignal is still initialising */
   loading: boolean;
-  /** Whether running on web (notifications not available) */
+  /** Always false on native */
   isWeb: boolean;
-  /** Request notification permission from the user */
+  /** Request notification permission — delegates to OneSignalContext */
   requestPermission: () => Promise<boolean>;
-  /** Set a tag for user segmentation */
+  /** Set a OneSignal tag (no-op here; tags are managed by OneSignalContext) */
   sendTag: (key: string, value: string) => void;
-  /** Remove a tag */
+  /** Remove a OneSignal tag (no-op here) */
   deleteTag: (key: string) => void;
-  /** Last received notification data */
+  /** Last received notification payload (not wired — always null) */
   lastNotification: Record<string, unknown> | null;
 }
 
@@ -78,123 +61,47 @@ interface NotificationProviderProps {
   children: ReactNode;
 }
 
+/**
+ * Must be rendered INSIDE <OneSignalProvider> so that useOneSignal() works.
+ * See _layout.tsx for the correct nesting order.
+ */
 export function NotificationProvider({ children }: NotificationProviderProps) {
-  const [hasPermission, setHasPermission] = useState(false);
-  const [permissionDenied, setPermissionDenied] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [lastNotification, setLastNotification] = useState<Record<string, unknown> | null>(null);
-
-  // Initialize OneSignal on mount
-  useEffect(() => {
-    if (isWeb) {
-      setLoading(false);
-      return;
-    }
-
-    if (!OneSignal) {
-      console.warn("[OneSignal] Native module unavailable — skipping initialization.");
-      setLoading(false);
-      return;
-    }
-
-    if (!ONESIGNAL_APP_ID) {
-      console.warn(
-        "[OneSignal] App ID not provided. " +
-        "Please add oneSignalAppId to app.json extra."
-      );
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Initialize OneSignal
-      OneSignal.initialize(ONESIGNAL_APP_ID);
-
-      if (__DEV__) {
-        console.log("[OneSignal] Initialized with App ID:", ONESIGNAL_APP_ID.substring(0, 8) + "...");
-      }
-
-      // Check current permission status
-      const permissionStatus = OneSignal.Notifications.hasPermission();
-      setHasPermission(permissionStatus);
-
-      // Listen for notification events
-      const foregroundHandler = (event: NotificationWillDisplayEvent) => {
-        // Display the notification
-        event.getNotification().display();
-
-        const notification = event.getNotification();
-        setLastNotification({
-          title: notification.title,
-          body: notification.body,
-          additionalData: notification.additionalData,
-        });
-      };
-      OneSignal.Notifications.addEventListener("foregroundWillDisplay", foregroundHandler);
-
-      // Listen for permission changes
-      const permissionHandler = (granted: boolean) => {
-        setHasPermission(granted);
-        setPermissionDenied(!granted);
-      };
-      OneSignal.Notifications.addEventListener("permissionChange", permissionHandler);
-
-      return () => {
-        OneSignal.Notifications.removeEventListener("foregroundWillDisplay", foregroundHandler);
-        OneSignal.Notifications.removeEventListener("permissionChange", permissionHandler);
-      };
-    } catch (error) {
-      console.error("[OneSignal] Failed to initialize:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // useOneSignal() is safe here because OneSignalProvider is an ancestor.
+  // On web, OneSignalProvider returns safe defaults (isInitialized=false, etc.).
+  const oneSignal = useOneSignal();
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (isWeb) return false;
+    console.log('[NotificationContext] requestPermission() — delegating to OneSignalContext');
+    const granted = await oneSignal.requestPermission();
+    console.log('[NotificationContext] requestPermission() result:', granted);
+    return granted;
+  }, [oneSignal]);
 
-    try {
-      const granted = await OneSignal.Notifications.requestPermission(true);
-      setHasPermission(granted);
-      setPermissionDenied(!granted);
-      return granted;
-    } catch (error) {
-      console.error("[OneSignal] Permission request failed:", error);
-      return false;
-    }
-  }, []);
-
+  // Tags are managed centrally by OneSignalContext.applyUserTagsForUser().
+  // Exposing sendTag/deleteTag as no-ops prevents double-tagging.
   const sendTag = useCallback((key: string, value: string) => {
     if (isWeb) return;
-    try {
-      OneSignal.User.addTag(key, value);
-    } catch (error) {
-      console.error("[OneSignal] Failed to send tag:", error);
-    }
+    console.log('[NotificationContext] sendTag (no-op — managed by OneSignalContext):', key, '=', value);
   }, []);
 
-  const deleteTag = useCallback((key: string) => {
-    if (isWeb) return;
-    try {
-      OneSignal.User.removeTag(key);
-    } catch (error) {
-      console.error("[OneSignal] Failed to delete tag:", error);
-    }
+  const deleteTag = useCallback((_key: string) => {
+    // no-op — tag removal handled by OneSignalContext on logout
   }, []);
+
+  const value: NotificationContextType = {
+    hasPermission: oneSignal.hasPermission,
+    permissionDenied: oneSignal.isInitialized && !oneSignal.hasPermission,
+    loading: !oneSignal.isInitialized,
+    isWeb,
+    requestPermission,
+    sendTag,
+    deleteTag,
+    lastNotification: null,
+  };
 
   return (
-    <NotificationContext.Provider
-      value={{
-        hasPermission,
-        permissionDenied,
-        loading,
-        isWeb,
-        requestPermission,
-        sendTag,
-        deleteTag,
-        lastNotification,
-      }}
-    >
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );
@@ -205,10 +112,6 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
  *
  * @example
  * const { hasPermission, requestPermission } = useNotifications();
- *
- * if (!hasPermission) {
- *   return <Button onPress={requestPermission}>Enable Notifications</Button>;
- * }
  */
 export function useNotifications() {
   const context = useContext(NotificationContext);
