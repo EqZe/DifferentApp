@@ -171,7 +171,6 @@ export const api = {
           email: email,
           has_contract: false,
           travel_date: null,
-          push_token: null,
         }, {
           onConflict: 'auth_user_id',
           ignoreDuplicates: false, // Update existing row if it exists
@@ -347,45 +346,23 @@ export const api = {
   },
 
   savePushToken: async (authUserId: string, pushToken: string): Promise<void> => {
-    try {
-      console.log('API: ========== SAVING PUSH TOKEN ==========');
-      console.log('API: User ID:', authUserId);
-      console.log('API: Token to save:', pushToken);
-      console.log('API: Token length:', pushToken.length);
-      console.log('API: Token preview:', pushToken.substring(0, 30) + '...');
-      
-      // Validate token before saving
-      if (!pushToken || pushToken.trim() === '') {
-        console.log('API: ❌ Cannot save empty or null push token');
-        throw new Error('Push token is empty or null');
-      }
-
-      const { data, error } = await supabase
-        .from('users')
-        .update({ push_token: pushToken })
-        .eq('auth_user_id', authUserId)
-        .select();
-
-      if (error) {
-        console.log('API: ❌ Save push token failed:', error.message);
-        console.log('API: Error code:', error.code);
-        console.log('API: Error details:', JSON.stringify(error, null, 2));
-        throw new Error(error.message || 'שגיאה בשמירת טוקן התראות');
-      }
-
-      if (!data || data.length === 0) {
-        console.log('API: ⚠️ No rows updated - user not found?');
-        throw new Error('User not found when saving push token');
-      }
-
-      console.log('API: ✅ Push token saved successfully');
-      console.log('API: Updated user data:', data[0]);
-      console.log('API: Saved token preview:', data[0].push_token ? data[0].push_token.substring(0, 30) + '...' : 'NULL');
-      console.log('API: ========== PUSH TOKEN SAVE COMPLETE ==========');
-    } catch (error: any) {
-      console.log('API: ⚠️ Push token save error:', error?.message || error);
-      console.log('API: Error stack:', error?.stack);
-      throw error;
+    if (!pushToken || pushToken.trim() === '') {
+      console.warn('[PushToken] savePushToken called with empty token, skipping');
+      return;
+    }
+    console.log('[PushToken] savePushToken writing to user_push_tokens for user:', authUserId);
+    const { error } = await supabase
+      .from('user_push_tokens')
+      .upsert({
+        user_id: authUserId,
+        push_token: pushToken,
+        platform: Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+    if (error) {
+      console.error('[PushToken] savePushToken failed:', error.message, error);
+    } else {
+      console.log('[PushToken] savePushToken succeeded');
     }
   },
 
@@ -925,32 +902,10 @@ export const api = {
   },
 };
 
-/**
- * Register a OneSignal player/subscription ID by writing directly to the
- * `user_push_tokens` table via the Supabase client (primary path), then also
- * notifying the edge function as a secondary path.
- *
- * The direct write is the reliable path — it does not depend on the edge
- * function being deployed or healthy. The edge function call is kept as a
- * best-effort secondary notification so the backend can do any extra work.
- *
- * Schema: user_push_tokens(id, user_id, player_id, push_token, platform, created_at, updated_at)
- */
-const SUPABASE_URL = 'https://pgrcmurwamszgjsdbgtq.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBncmNtdXJ3YW1zemdqc2RiZ3RxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0OTAxMTgsImV4cCI6MjA4NDA2NjExOH0.w0__VSxi7gxMcgd6q5ILlnCahGObfsC08qCiOpj4Vqg';
-
 export interface RegisterOneSignalPlayerResult {
   success: boolean;
-  playerId: string | null;
-  userId: string | null;
+  data?: any;
   error: string | null;
-  upsertRowCount: number | null;
-  selectRowCount: number | null;
-  sessionPresent: boolean | null;
-  sessionUserId: string | null;
-  edgeStatus: number | null;
-  edgeError: string | null;
-  timestamp: string;
 }
 
 export async function registerOneSignalPlayer(
@@ -958,223 +913,42 @@ export async function registerOneSignalPlayer(
   authUserId: string,
   pushToken: string
 ): Promise<RegisterOneSignalPlayerResult> {
-  const timestamp = new Date().toISOString();
+  console.log('[PushToken] registerOneSignalPlayer called', { playerId, authUserId, tokenPreview: pushToken?.substring(0, 20) });
 
-  if (!authUserId || !playerId) {
-    console.warn('API: registerOneSignalPlayer — skipped (missing authUserId or playerId)');
-    return {
-      success: false,
-      playerId: playerId || null,
-      userId: authUserId || null,
-      error: 'Missing authUserId or playerId',
-      upsertRowCount: null,
-      selectRowCount: null,
-      sessionPresent: null,
-      sessionUserId: null,
-      edgeStatus: null,
-      edgeError: null,
-      timestamp,
-    };
+  if (!authUserId) {
+    console.warn('[PushToken] No authUserId, skipping registration');
+    return { success: false, error: 'No authUserId' };
   }
-
+  if (!playerId) {
+    console.warn('[PushToken] No playerId, skipping registration');
+    return { success: false, error: 'No playerId' };
+  }
   if (!pushToken || pushToken.trim() === '') {
-    console.warn('API: registerOneSignalPlayer — skipped (push token is null or empty)');
-    return {
-      success: false,
-      playerId,
-      userId: authUserId,
-      error: 'Push token is null or empty — registration deferred until token is available',
-      upsertRowCount: null,
-      selectRowCount: null,
-      sessionPresent: null,
-      sessionUserId: null,
-      edgeStatus: null,
-      edgeError: null,
-      timestamp,
-    };
+    console.warn('[PushToken] No pushToken, skipping registration');
+    return { success: false, error: 'No pushToken' };
   }
 
-  console.log('API: ========== REGISTERING ONESIGNAL PLAYER ==========');
-  console.log('[PushToken] registerOneSignalPlayer called');
-  console.log('[PushToken] authUserId:', authUserId);
-  console.log('[PushToken] playerId:', playerId);
-  console.log('[PushToken] pushToken preview:', pushToken.substring(0, 20) + '...');
+  const platform = Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web';
 
-  let upsertError: string | null = null;
-  let upsertRowCount: number | null = null;
-  let selectRowCount: number | null = null;
-  let sessionPresent: boolean | null = null;
-  let sessionUserId: string | null = null;
-  let edgeStatus: number | null = null;
-  let edgeError: string | null = null;
-
-  // ── Primary path: write directly to user_push_tokens via Supabase client ──
-  try {
-    const os = Platform.OS;
-    const platform: string = os === 'ios' ? 'ios' : os === 'android' ? 'android' : 'web';
-    const updatedAt = new Date().toISOString();
-
-    console.log('[PushToken] platform detected:', platform);
-
-    const upsertPayload = {
+  const { data, error } = await supabase
+    .from('user_push_tokens')
+    .upsert({
       user_id: authUserId,
       player_id: playerId,
       push_token: pushToken,
       platform,
-      updated_at: updatedAt,
-    };
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' })
+    .select()
+    .single();
 
-    console.log('[PushToken] Supabase upsert payload:', JSON.stringify(upsertPayload));
-
-    // Log current Supabase auth session so we can detect anon vs authenticated
-    const { data: sessionData } = await supabase.auth.getSession();
-    const currentSession = sessionData?.session;
-    sessionPresent = !!currentSession;
-    sessionUserId = currentSession?.user?.id ?? null;
-    console.log('[PushToken] Session present:', sessionPresent, '| session user id:', sessionUserId);
-
-    // Strategy: try the three most likely unique-constraint columns in order.
-    // We stop at the first attempt that does NOT return a Postgres error.
-    // Note: Supabase upsert returning 0 rows is NOT an error — it can happen
-    // when RLS blocks the SELECT after a successful write, so we must NOT treat
-    // 0 rows as a failure for the upsert step itself.
-    let upsertData: any[] | null = null;
-    let upsertErr: any = null;
-
-    // Attempt 1: onConflict:'player_id' — most common unique constraint
-    console.log('[PushToken] Attempt 1: upsert onConflict:player_id');
-    const { data: d1, error: e1 } = await supabase
-      .from('user_push_tokens')
-      .upsert(upsertPayload, { onConflict: 'player_id' })
-      .select();
-    console.log('[PushToken] Attempt 1 result — data:', JSON.stringify(d1), 'error:', JSON.stringify(e1));
-
-    if (!e1) {
-      upsertData = d1;
-      upsertErr = null;
-    } else {
-      // Attempt 2: onConflict:'user_id' — one-row-per-user constraint
-      console.warn('[PushToken] Attempt 1 failed (', e1.message, '), trying onConflict:user_id');
-      const { data: d2, error: e2 } = await supabase
-        .from('user_push_tokens')
-        .upsert(upsertPayload, { onConflict: 'user_id' })
-        .select();
-      console.log('[PushToken] Attempt 2 result — data:', JSON.stringify(d2), 'error:', JSON.stringify(e2));
-
-      if (!e2) {
-        upsertData = d2;
-        upsertErr = null;
-      } else {
-        // Attempt 3: UPDATE existing row, then INSERT if no row matched
-        console.warn('[PushToken] Attempt 2 failed (', e2.message, '), trying UPDATE then INSERT');
-        const { data: d3, error: e3 } = await supabase
-          .from('user_push_tokens')
-          .update({ player_id: playerId, platform, updated_at: updatedAt })
-          .eq('user_id', authUserId)
-          .select();
-        console.log('[PushToken] Attempt 3 UPDATE result — data:', JSON.stringify(d3), 'error:', JSON.stringify(e3));
-
-        if (!e3 && d3 && d3.length > 0) {
-          upsertData = d3;
-          upsertErr = null;
-        } else {
-          // No existing row — INSERT fresh
-          console.warn('[PushToken] UPDATE matched 0 rows, falling back to INSERT');
-          const { data: d4, error: e4 } = await supabase
-            .from('user_push_tokens')
-            .insert(upsertPayload)
-            .select();
-          console.log('[PushToken] Attempt 4 INSERT result — data:', JSON.stringify(d4), 'error:', JSON.stringify(e4));
-          upsertData = d4;
-          upsertErr = e4;
-        }
-      }
-    }
-
-    if (upsertErr) {
-      upsertError = `${upsertErr.message} (code: ${upsertErr.code}, hint: ${upsertErr.hint ?? 'none'})`;
-      console.error('[PushToken] ❌ All upsert attempts FAILED:', upsertError);
-    } else {
-      upsertRowCount = upsertData?.length ?? 0;
-      // 0 rows returned is NOT a failure — RLS may block the SELECT after a
-      // successful write. We treat any non-error response as success.
-      console.log('[PushToken] ✅ Upsert succeeded (rows returned by SELECT:', upsertRowCount, '— 0 is OK if RLS blocks read)');
-    }
-
-    // ── Post-upsert verification SELECT (diagnostic only — does NOT affect success) ──
-    const { data: checkData, error: checkErr } = await supabase
-      .from('user_push_tokens')
-      .select('player_id, user_id, platform, updated_at')
-      .eq('user_id', authUserId);
-
-    if (checkErr) {
-      // RLS likely blocking the read — this is expected in some configurations.
-      // Log it but do NOT override upsertError.
-      console.warn('[PushToken] Post-upsert SELECT blocked (likely RLS — write may still have succeeded):', checkErr.message);
-      selectRowCount = null;
-    } else {
-      selectRowCount = checkData?.length ?? 0;
-      console.log('[PushToken] Post-upsert SELECT row count:', selectRowCount);
-      if (selectRowCount === 0) {
-        console.warn('[PushToken] ⚠️ SELECT returned 0 rows — either RLS is blocking the read or the write was silently rejected');
-      } else {
-        console.log('[PushToken] ✅ Verified row in DB:', JSON.stringify(checkData?.[0]));
-      }
-    }
-  } catch (directErr: any) {
-    upsertError = directErr?.message ?? String(directErr);
-    console.error('[PushToken] ❌ Direct user_push_tokens write exception:', upsertError);
+  if (error) {
+    console.error('[PushToken] registerOneSignalPlayer upsert failed:', error.message, error);
+    return { success: false, error: error.message };
   }
 
-  // ── Secondary path: notify edge function (best-effort, non-fatal) ──────────
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    const bearerToken = session?.access_token ?? SUPABASE_ANON_KEY;
-
-    const response = await fetch(
-      `${SUPABASE_URL}/functions/v1/notifications`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${bearerToken}`,
-          'apikey': SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({ player_id: playerId, user_id: authUserId }),
-      }
-    );
-
-    edgeStatus = response.status;
-    if (!response.ok) {
-      const text = await response.text();
-      edgeError = `HTTP ${response.status}: ${text.substring(0, 200)}`;
-      console.warn('API: ⚠️ Edge function failed (non-fatal):', edgeError);
-    } else {
-      console.log('API: ✅ Edge function notified successfully');
-    }
-  } catch (edgeErr: any) {
-    edgeError = edgeErr?.message ?? String(edgeErr);
-    console.warn('API: ⚠️ Edge function exception (non-fatal):', edgeError);
-  }
-
-  // Success = no Postgres error on the write path. The SELECT verification is
-  // diagnostic only — RLS can block it even after a successful write.
-  const success = upsertError === null;
-  console.log('API: ========== ONESIGNAL PLAYER REGISTRATION COMPLETE — success:', success, '==========');
-
-  return {
-    success,
-    playerId,
-    userId: authUserId,
-    error: upsertError,
-    upsertRowCount,
-    selectRowCount,
-    sessionPresent,
-    sessionUserId,
-    edgeStatus,
-    edgeError,
-    timestamp,
-  };
+  console.log('[PushToken] registerOneSignalPlayer succeeded:', data);
+  return { success: true, data };
 }
 
 // Export types for use in components
