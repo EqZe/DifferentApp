@@ -19,6 +19,7 @@ import { useTheme } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@/contexts/UserContext';
+import { useOneSignal } from '@/contexts/OneSignalContext';
 import { IconSymbol } from '@/components/IconSymbol';
 import { api } from '@/utils/api';
 import { isRTL } from '@/constants/Colors';
@@ -38,6 +39,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { setUser } = useUser();
+  const { requestPermissionIfNeeded } = useOneSignal();
   const rtl = isRTL();
   
   const [step, setStep] = useState(1);
@@ -147,7 +149,14 @@ export default function RegisterScreen() {
       
       await setUser(userData);
       console.log('RegisterScreen: ✅ User set in context');
-      
+
+      // Request notification permission now that the user is authenticated.
+      // Skips the OS prompt if permission was already granted in a prior session.
+      console.log('RegisterScreen: Requesting notification permission after successful auth...');
+      requestPermissionIfNeeded().then((granted) => {
+        console.log('RegisterScreen: Notification permission result after auth:', granted);
+      });
+
       console.log('RegisterScreen: 🚀 Navigating to home screen...');
       setTimeout(() => {
         router.replace('/(tabs)/(home)');

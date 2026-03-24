@@ -40,6 +40,8 @@ interface OneSignalContextType {
   externalUserId: string | null;
   pushTokenDebugInfo: RegisterOneSignalPlayerResult | null;
   requestPermission: () => Promise<boolean>;
+  /** Request permission only if not already granted. Safe to call after login/register. */
+  requestPermissionIfNeeded: () => Promise<boolean>;
 }
 
 const OneSignalContext = createContext<OneSignalContextType>({
@@ -51,6 +53,7 @@ const OneSignalContext = createContext<OneSignalContextType>({
   externalUserId: null,
   pushTokenDebugInfo: null,
   requestPermission: async () => false,
+  requestPermissionIfNeeded: async () => false,
 });
 
 export function useOneSignal() {
@@ -356,26 +359,25 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
       console.warn('OneSignal: Failed to register permissionChange listener:', e);
     }
 
-    // ── Request permission IMMEDIATELY after initialize() ─────────────────────
-    (async () => {
-      try {
-        console.log('OneSignal: Requesting notification permission on app launch...');
-        const granted = await OS.Notifications.requestPermission(false);
-        console.log('OneSignal: requestPermission result:', granted);
-        setHasPermission(granted);
-
-        if (granted) {
-          try {
-            OS.User.pushSubscription.optIn();
-            console.log('OneSignal: optIn() called after launch permission grant');
-          } catch (e) {
-            console.warn('OneSignal: optIn() error:', e);
-          }
+    // ── Startup: read current permission state (no prompt) ───────────────────
+    // Permission is requested only after a successful login/register — not on
+    // app launch. Here we just sync the current OS permission state so the
+    // rest of the app knows whether it was already granted in a prior session.
+    try {
+      const alreadyGranted: boolean = OS.Notifications.hasPermission ?? false;
+      console.log('OneSignal: startup permission check — already granted:', alreadyGranted);
+      setHasPermission(alreadyGranted);
+      if (alreadyGranted) {
+        try {
+          OS.User.pushSubscription.optIn();
+          console.log('OneSignal: optIn() called — permission was already granted from a previous session');
+        } catch (e) {
+          console.warn('OneSignal: optIn() error on startup:', e);
         }
-      } catch (e) {
-        console.warn('OneSignal: requestPermission error:', e);
       }
-    })();
+    } catch (e) {
+      console.warn('OneSignal: startup hasPermission check error:', e);
+    }
 
     // ── Startup poll: read subscription state once it stabilises ─────────────
     // This handles the case where the subscription is already active from a
@@ -627,6 +629,46 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // ─── Request permission only if not already granted ──────────────────────
+  // Call this after a successful login or registration. Skips the OS prompt if
+  // the user already granted permission; still ensures optIn() is called so the
+  // subscription ID is saved to the backend.
+  const requestPermissionIfNeeded = async (): Promise<boolean> => {
+    if (!OS || Platform.OS === 'web') return false;
+    console.log('OneSignal: requestPermissionIfNeeded() called');
+    try {
+      const alreadyGranted: boolean = OS.Notifications.hasPermission ?? false;
+      console.log('OneSignal: requestPermissionIfNeeded — hasPermission:', alreadyGranted);
+      if (alreadyGranted) {
+        console.log('OneSignal: permission already granted — skipping prompt, ensuring optIn()');
+        setHasPermission(true);
+        try {
+          OS.User.pushSubscription.optIn();
+        } catch (e) {
+          console.warn('OneSignal: optIn() error in requestPermissionIfNeeded:', e);
+        }
+        // Ensure token is registered if subscription ID is already available
+        const { id, onesignalId, token } = readSubscriptionState();
+        if (id && loggedInUserRef.current) {
+          console.log('OneSignal: requestPermissionIfNeeded — subscription already ready, re-registering token');
+          if (onesignalId) setOnesignalUserId(onesignalId);
+          setPlayerId(id);
+          if (isTrulySubscribed(id, token)) setIsSubscribed(true);
+          attemptRegistration(id, loggedInUserRef.current, 'permission-if-needed-already-granted', (result) => {
+            setPushTokenDebugInfo(result);
+          });
+        }
+        return true;
+      }
+      // Permission not yet granted — show the OS prompt
+      console.log('OneSignal: requestPermissionIfNeeded — permission not granted, showing OS prompt');
+      return requestPermission();
+    } catch (e) {
+      console.warn('OneSignal: requestPermissionIfNeeded() error:', e);
+      return false;
+    }
+  };
+
   // ─── Manual permission request (e.g. from settings screen) ───────────────
   const requestPermission = async (): Promise<boolean> => {
     if (!OS || Platform.OS === 'web') return false;
@@ -710,6 +752,7 @@ export function OneSignalProvider({ children }: { children: React.ReactNode }) {
         externalUserId,
         pushTokenDebugInfo,
         requestPermission,
+        requestPermissionIfNeeded,
       }}
     >
       {children}
