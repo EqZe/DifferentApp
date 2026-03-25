@@ -3,7 +3,6 @@ import LottieView from 'lottie-react-native';
 import { api, type CategoryWithPosts } from '@/utils/api';
 import React, { useState, useEffect, useCallback } from 'react';
 import { IconSymbol } from '@/components/IconSymbol';
-import { NotificationBell } from '@/components/NotificationBell';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -192,8 +191,7 @@ export default function HomeScreen() {
                 {personalizedGreeting}
               </Text>
             </View>
-            {/* Notification Bell */}
-            <NotificationBell />
+
           </View>
         </SafeAreaView>
       </View>
