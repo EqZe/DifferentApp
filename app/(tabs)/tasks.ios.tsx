@@ -433,13 +433,7 @@ export default function TasksScreen() {
     
     const { taskId, requiresPending, currentStatus } = pendingTaskAction;
     
-    console.log('✅ User confirmed (iOS) - INSTANT confetti and UI update', taskId);
-    
-    // 🎉 FIRE CONFETTI IMMEDIATELY - No waiting for anything!
-    if (confettiRef.current) {
-      console.log('🎉 CONFETTI FIRED INSTANTLY (iOS) on confirmation');
-      confettiRef.current.start();
-    }
+    console.log('✅ User confirmed (iOS) - closing modal and firing confetti', taskId);
     
     // Calculate new status
     const newStatus: 'YET' | 'PENDING' | 'DONE' = 
@@ -451,9 +445,17 @@ export default function TasksScreen() {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     console.log('🚀 UI UPDATED INSTANTLY (iOS) to status:', newStatus);
     
-    // Close modal
+    // Close modal first so its dismiss animation doesn't block confetti rendering
     setShowConfirmModal(false);
     setPendingTaskAction(null);
+    
+    // 🎉 Fire confetti on the next frame — after modal is dismissed, no animation competition
+    requestAnimationFrame(() => {
+      if (confettiRef.current) {
+        console.log('🎉 CONFETTI FIRED (iOS) on next frame after modal close');
+        confettiRef.current.start();
+      }
+    });
     
     // 📡 BACKGROUND API CALL - Fire and forget (non-blocking)
     api.completeTask(taskId, requiresPending)

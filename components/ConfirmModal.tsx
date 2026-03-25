@@ -33,7 +33,7 @@ export function ConfirmModal({
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={onCancel}
     >
       <View style={styles.overlay}>
