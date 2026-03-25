@@ -221,24 +221,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   assignedPersonBadge: {
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    borderRadius: radius.sm,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 32,
+    alignSelf: 'stretch',
     marginBottom: spacing.xs,
     ...shadows.sm,
   },
   assignedPersonText: {
-    fontSize: 11,
-    fontWeight: '700' as any,
+    fontSize: 12,
+    fontWeight: '800' as any,
     color: '#FFFFFF',
     textAlign: 'center',
-    letterSpacing: 0.3,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    letterSpacing: 0.5,
+    writingDirection: 'rtl',
   },
   eventBadge: {
     paddingVertical: 8,
@@ -369,21 +367,25 @@ const dayViewStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   heroAgentDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
     backgroundColor: '#FFFFFF',
   },
   heroAgentText: {
-    fontSize: 12,
-    fontWeight: '700' as any,
+    fontSize: 13,
+    fontWeight: '800' as any,
     color: '#FFFFFF',
+    letterSpacing: 0.4,
+    writingDirection: 'rtl',
   },
   /* Bottom row: big date (right) + event count (left) */
   heroBottomRow: {
@@ -595,7 +597,7 @@ const getAgentBadgeColors = (agentText: string | null): [string, string] => {
   const normalizedAgent = agentText.trim().toLowerCase();
   
   // Check if it's "סוכנת" (agent) - gets green
-  if (normalizedAgent.includes('סוכנת') || normalizedAgent === 'agent') {
+  if (normalizedAgent.includes('סוכנת') || normalizedAgent.includes('agent')) {
     return ['#4CAF50', '#66BB6A']; // Green for agent
   }
   
@@ -685,9 +687,10 @@ const AnimatedCalendarCell = React.memo(({
   if (!calendarDay.scheduleDay) return null;
 
   const filteredEvents = filterEventsByLanguage(calendarDay.scheduleDay.events);
-  const agentText = languageFilter === 'hebrew'
+  const rawAgentText = languageFilter === 'hebrew'
     ? calendarDay.scheduleDay.agent_he
     : calendarDay.scheduleDay.agent_en;
+  const agentText = rawAgentText ? rawAgentText.replace(/\s*\(female\)/i, '').trim() : rawAgentText;
   const hasAgent = agentText && agentText.trim() !== '';
   const agentBadgeColors = getAgentBadgeColors(agentText);
 
@@ -956,10 +959,10 @@ export default function ScheduleScreen() {
   const calculateCellHeight = useCallback((calendarDay: CalendarDay): number => {
     if (!calendarDay.scheduleDay) return 50;
     const filteredEvents = filterEventsByLanguage(calendarDay.scheduleDay.events);
-    const agentText = languageFilter === 'hebrew'
+    const rawAgentText2 = languageFilter === 'hebrew'
       ? calendarDay.scheduleDay.agent_he
       : calendarDay.scheduleDay.agent_en;
-    const hasAgent = agentText && agentText.trim() !== '';
+    const hasAgent = rawAgentText2 && rawAgentText2.trim() !== '';
     
     const baseHeight = 50;
     const agentHeight = hasAgent ? 48 : 0;
@@ -1046,7 +1049,8 @@ export default function ScheduleScreen() {
     const filteredEvents = filterEventsByLanguage(selectedDay.events);
     const hasEvents = filteredEvents.length > 0;
 
-    const agentText = languageFilter === 'hebrew' ? selectedDay.agent_he : selectedDay.agent_en;
+    const rawAgentText = languageFilter === 'hebrew' ? selectedDay.agent_he : selectedDay.agent_en;
+    const agentText = rawAgentText ? rawAgentText.replace(/\s*\(female\)/i, '').trim() : rawAgentText;
     const hasAgent = agentText && agentText.trim() !== '';
     const agentBadgeColors = getAgentBadgeColors(agentText);
     const fullDayName = getFullDayName(selectedDay.day_of_week, languageFilter);

@@ -218,24 +218,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   assignedPersonBadge: {
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    borderRadius: radius.sm,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 32,
+    alignSelf: 'stretch',
     marginBottom: spacing.xs,
     ...shadows.sm,
   },
   assignedPersonText: {
-    fontSize: 11,
-    fontWeight: '700' as any,
+    fontSize: 12,
+    fontWeight: '800' as any,
     color: '#FFFFFF',
     textAlign: 'center',
-    letterSpacing: 0.3,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    letterSpacing: 0.5,
+    writingDirection: 'rtl',
   },
   eventBadge: {
     paddingVertical: 8,
@@ -321,19 +319,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   dayViewAgentBadge: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.lg,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
     ...shadows.sm,
   },
   dayViewAgentText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold as any,
+    fontSize: 13,
+    fontWeight: '800' as any,
     color: '#FFFFFF',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
+    writingDirection: 'rtl',
   },
   daySelector: {
     marginBottom: spacing.lg,
@@ -510,7 +511,7 @@ const getAgentBadgeColors = (agentText: string | null): [string, string] => {
   const normalizedAgent = agentText.trim().toLowerCase();
   
   // Check if it's "סוכנת" (agent) - gets green
-  if (normalizedAgent.includes('סוכנת') || normalizedAgent === 'agent') {
+  if (normalizedAgent.includes('סוכנת') || normalizedAgent.includes('agent')) {
     return ['#4CAF50', '#66BB6A']; // Green for agent
   }
   
@@ -589,9 +590,10 @@ const AnimatedCalendarCell = React.memo(({
   
   const filteredEvents = filterEventsByLanguage(calendarDay.scheduleDay.events);
   
-  const agentText = languageFilter === 'hebrew'
+  const rawAgentText = languageFilter === 'hebrew'
     ? calendarDay.scheduleDay.agent_he
     : calendarDay.scheduleDay.agent_en;
+  const agentText = rawAgentText ? rawAgentText.replace(/\s*\(female\)/i, '').trim() : rawAgentText;
   
   const hasAgent = agentText && agentText.trim() !== '';
   const agentBadgeColors = getAgentBadgeColors(agentText);
@@ -902,10 +904,10 @@ export default function ScheduleScreen() {
     }
     
     const filteredEvents = filterEventsByLanguage(calendarDay.scheduleDay.events);
-    const agentText = languageFilter === 'hebrew'
+    const rawAgentText2 = languageFilter === 'hebrew'
       ? calendarDay.scheduleDay.agent_he
       : calendarDay.scheduleDay.agent_en;
-    const hasAgent = agentText && agentText.trim() !== '';
+    const hasAgent = rawAgentText2 && rawAgentText2.trim() !== '';
     
     const baseHeight = 50;
     const agentHeight = hasAgent ? 48 : 0;
@@ -1024,7 +1026,8 @@ export default function ScheduleScreen() {
     const selectedDay = daysWithEvents[selectedDayIndex];
     const filteredEvents = filterEventsByLanguage(selectedDay.events);
     const hasEvents = filteredEvents.length > 0;
-    const agentText = languageFilter === 'hebrew' ? selectedDay.agent_he : selectedDay.agent_en;
+    const rawAgentText = languageFilter === 'hebrew' ? selectedDay.agent_he : selectedDay.agent_en;
+    const agentText = rawAgentText ? rawAgentText.replace(/\s*\(female\)/i, '').trim() : rawAgentText;
     const agentBadgeColors = getAgentBadgeColors(agentText);
     const noEventsMessage = languageFilter === 'hebrew'
       ? 'אין אירועים בעברית ליום זה'
