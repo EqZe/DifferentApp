@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '@/contexts/UserContext';
 import { designColors, typography, spacing, radius, shadows } from '@/styles/designSystem';
@@ -13,6 +13,8 @@ import {
   ActivityIndicator,
   useColorScheme,
   Dimensions,
+  PanResponder,
+  Animated as RNAnimated,
 } from 'react-native';
 import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -506,22 +508,17 @@ const getFullDayName = (dayOfWeekString: string, language: 'hebrew' | 'english')
 
 // Helper to get agent badge colors (gradient)
 const getAgentBadgeColors = (agentText: string | null): [string, string] => {
-  if (!agentText) return ['#9C27B0', '#BA68C8']; // Purple for empty/null
-  
+  if (!agentText) return ['#9C27B0', '#BA68C8'];
+
   const normalizedAgent = agentText.trim().toLowerCase();
-  
-  // Check if it's "סוכנת" (agent) - gets green
+
+  // Green for "סוכנת" / "agent"
   if (normalizedAgent.includes('סוכנת') || normalizedAgent.includes('agent')) {
-    return ['#4CAF50', '#66BB6A']; // Green for agent
+    return ['#4CAF50', '#66BB6A'];
   }
-  
-  // Check if it's Avishai or Roni - gets orange
-  if (normalizedAgent.includes('אבישי') || normalizedAgent.includes('רוני')) {
-    return ['#FF9800', '#FFB74D']; // Orange for Avishai/Roni
-  }
-  
-  // Everyone else gets purple
-  return ['#9C27B0', '#BA68C8']; // Purple for others
+
+  // Purple for everyone else (including avishai / אבישי / roni / רוני)
+  return ['#9C27B0', '#BA68C8'];
 };
 
 // Animated Calendar Cell Component
@@ -780,6 +777,56 @@ export default function ScheduleScreen() {
   const toggleIndicatorPosition = useSharedValue(viewMode === 'full' ? 0 : 1);
   const languageIndicatorPosition = useSharedValue(languageFilter === 'hebrew' ? 0 : 1);
 
+  const swipeAnim = useRef(new RNAnimated.Value(0)).current;
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dy) < 40,
+      onPanResponderMove: (_, gestureState) => {
+        swipeAnim.setValue(gestureState.dx);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const SWIPE_THRESHOLD = 50;
+        if (gestureState.dx < -SWIPE_THRESHOLD) {
+          console.log('ScheduleScreen: Swipe left → next day');
+          RNAnimated.timing(swipeAnim, {
+            toValue: -400,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            swipeAnim.setValue(400);
+            setSelectedDayIndex(prev => Math.min(prev + 1, daysWithEvents.length - 1));
+            RNAnimated.timing(swipeAnim, {
+              toValue: 0,
+              duration: 200,
+              useNativeDriver: true,
+            }).start();
+          });
+        } else if (gestureState.dx > SWIPE_THRESHOLD) {
+          console.log('ScheduleScreen: Swipe right → previous day');
+          RNAnimated.timing(swipeAnim, {
+            toValue: 400,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            swipeAnim.setValue(-400);
+            setSelectedDayIndex(prev => Math.max(prev - 1, 0));
+            RNAnimated.timing(swipeAnim, {
+              toValue: 0,
+              duration: 200,
+              useNativeDriver: true,
+            }).start();
+          });
+        } else {
+          RNAnimated.spring(swipeAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
   const loadSchedule = useCallback(async () => {
     if (!user?.id) {
       console.log('ScheduleScreen: No user ID, skipping schedule load');
@@ -1036,6 +1083,10 @@ export default function ScheduleScreen() {
     const fullDayName = getFullDayName(selectedDay.day_of_week, languageFilter);
 
     return (
+      <RNAnimated.View
+        style={{ flex: 1, transform: [{ translateX: swipeAnim }] }}
+        {...panResponder.panHandlers}
+      >
       <Animated.View 
         style={styles.dayViewContainer}
         entering={FadeIn.duration(300)}
@@ -1149,6 +1200,7 @@ export default function ScheduleScreen() {
           </Animated.View>
         )}
       </Animated.View>
+      </RNAnimated.View>
     );
   };
 
