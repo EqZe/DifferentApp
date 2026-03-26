@@ -161,12 +161,21 @@ export default function PostDetailScreen() {
           title: '',
           headerShown: true,
           headerTransparent: true,
-          headerBackTitle: 'חזור',
           headerStyle: {
             backgroundColor: 'transparent',
           },
           headerTintColor: '#FFFFFF',
           headerShadowVisible: false,
+          headerLeft: () => (
+            <TouchableOpacity onPress={handleBackPress} style={{ paddingHorizontal: 8 }}>
+              <IconSymbol
+                ios_icon_name="chevron.left"
+                android_material_icon_name="arrow-back"
+                size={24}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
+          ),
         }}
       />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
