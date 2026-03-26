@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
-  Alert,
   Image,
   ScrollView,
 } from 'react-native';
@@ -50,6 +49,7 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const inputRef = useRef<TextInput>(null);
   
@@ -69,16 +69,22 @@ export default function RegisterScreen() {
 
   const handleNext = () => {
     console.log('User tapped Continue button on step', step);
-    
+    setErrorMessage(null);
+
     if (isLogin) {
       if (step === 1) {
         if (!email.trim() || !email.includes('@')) {
+          setErrorMessage('יש להזין כתובת אימייל תקינה');
           return;
         }
         setStep(2);
         progress.value = 50;
         setTimeout(() => inputRef.current?.focus(), 300);
       } else if (step === 2) {
+        if (password.trim().length < 6) {
+          setErrorMessage('הסיסמה חייבת להכיל לפחות 6 תווים');
+          return;
+        }
         handleAuth();
       }
     } else {
@@ -105,33 +111,36 @@ export default function RegisterScreen() {
         setTimeout(() => inputRef.current?.focus(), 300);
       } else if (step === 4) {
         if (!email.trim() || !email.includes('@')) {
+          setErrorMessage('יש להזין כתובת אימייל תקינה');
           return;
         }
         setStep(5);
         progress.value = 80;
         setTimeout(() => inputRef.current?.focus(), 300);
       } else if (step === 5) {
+        if (password.trim().length < 6) {
+          setErrorMessage('הסיסמה חייבת להכיל לפחות 6 תווים');
+          return;
+        }
         handleAuth();
       }
     }
   };
 
   const handleAuth = async () => {
+    if (isLoading) return;
+
     console.log('RegisterScreen: ========== STARTING AUTHENTICATION ==========');
     console.log('RegisterScreen: Mode:', isLogin ? 'LOGIN' : 'SIGNUP');
     console.log('RegisterScreen: Email:', email);
-    
-    if (!email.trim() || !password.trim()) {
-      console.log('RegisterScreen: ⚠️ Email or password is empty');
-      return;
-    }
 
     setIsLoading(true);
+    setErrorMessage(null);
     progress.value = 100;
-    
+
     try {
       let userData;
-      
+
       if (isLogin) {
         console.log('RegisterScreen: 🔐 Attempting to sign in user...');
         userData = await api.signIn(email, password);
@@ -142,16 +151,14 @@ export default function RegisterScreen() {
         userData = await api.signUp(email, password, fullName, city, phoneNumber);
         console.log('RegisterScreen: ✅ Sign up successful');
       }
-      
+
       console.log('RegisterScreen: ✅ Authentication successful for:', userData.fullName);
       console.log('RegisterScreen: User ID:', userData.id);
       console.log('RegisterScreen: Has contract:', userData.hasContract);
-      
+
       await setUser(userData);
       console.log('RegisterScreen: ✅ User set in context');
 
-      // Request notification permission now that the user is authenticated.
-      // Skips the OS prompt if permission was already granted in a prior session.
       console.log('RegisterScreen: Requesting notification permission after successful auth...');
       requestPermissionIfNeeded().then((granted) => {
         console.log('RegisterScreen: Notification permission result after auth:', granted);
@@ -161,29 +168,44 @@ export default function RegisterScreen() {
       setTimeout(() => {
         router.replace('/(tabs)/(home)');
       }, 500);
-    } catch (error: any) {
+    } catch (e: any) {
       console.error('RegisterScreen: ❌ Authentication failed');
-      console.error('RegisterScreen: Error message:', error?.message || 'Unknown error');
-      console.error('RegisterScreen: Error details:', JSON.stringify(error, null, 2));
-      console.error('RegisterScreen: Error stack:', error?.stack);
-      
-      let errorMessage = isLogin 
-        ? 'שגיאה בהתחברות. אנא בדוק את הפרטים ונסה שוב.'
-        : 'שגיאה בהרשמה. אנא נסה שוב.';
-      
-      // Add specific error details if available
-      if (error?.message) {
-        errorMessage += '\n\nפרטים טכניים: ' + error.message;
-      }
-      
-      if (Platform.OS === 'web') {
-        alert(errorMessage);
+      console.error('RegisterScreen: Error message:', e?.message || 'Unknown error');
+      console.error('RegisterScreen: Error stack:', e?.stack);
+
+      const msg: string = e?.message || '';
+
+      if (isLogin) {
+        if (
+          msg.includes('Invalid login credentials') ||
+          msg.includes('invalid_credentials') ||
+          msg.includes('אימייל או סיסמה שגויים')
+        ) {
+          setErrorMessage('אימייל או סיסמה שגויים');
+        } else if (msg.includes('Email not confirmed')) {
+          setErrorMessage('יש לאמת את כתובת המייל לפני התחברות');
+        } else if (msg) {
+          setErrorMessage(msg);
+        } else {
+          setErrorMessage('שגיאה בהתחברות, נסה שוב');
+        }
       } else {
-        Alert.alert('שגיאה', errorMessage);
+        if (
+          msg.includes('already registered') ||
+          msg.includes('already exists') ||
+          msg.includes('כבר רשום')
+        ) {
+          setErrorMessage('כתובת האימייל כבר קיימת');
+        } else if (msg) {
+          setErrorMessage(msg);
+        } else {
+          setErrorMessage('שגיאה בהרשמה, נסה שוב');
+        }
       }
-      
-      setIsLoading(false);
+
       progress.value = isLogin ? 50 : 80;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -278,7 +300,7 @@ export default function RegisterScreen() {
                       placeholder="example@email.com"
                       placeholderTextColor={colors.text + '66'}
                       value={email}
-                      onChangeText={setEmail}
+                      onChangeText={(v) => { setEmail(v); setErrorMessage(null); }}
                       keyboardType="email-address"
                       autoCapitalize="none"
                       textAlign="center"
@@ -322,7 +344,7 @@ export default function RegisterScreen() {
                       placeholder="סיסמה"
                       placeholderTextColor={colors.text + '66'}
                       value={password}
-                      onChangeText={setPassword}
+                      onChangeText={(v) => { setPassword(v); setErrorMessage(null); }}
                       secureTextEntry
                       textAlign="center"
                       onSubmitEditing={handleNext}
@@ -369,7 +391,7 @@ export default function RegisterScreen() {
                       placeholder="שם מלא"
                       placeholderTextColor={colors.text + '66'}
                       value={fullName}
-                      onChangeText={setFullName}
+                      onChangeText={(v) => { setFullName(v); setErrorMessage(null); }}
                       autoCapitalize="words"
                       textAlign="center"
                       autoFocus
@@ -412,7 +434,7 @@ export default function RegisterScreen() {
                       placeholder="עיר"
                       placeholderTextColor={colors.text + '66'}
                       value={city}
-                      onChangeText={setCity}
+                      onChangeText={(v) => { setCity(v); setErrorMessage(null); }}
                       autoCapitalize="words"
                       textAlign="center"
                       onSubmitEditing={handleNext}
@@ -454,7 +476,7 @@ export default function RegisterScreen() {
                       placeholder="05X-XXXXXXX"
                       placeholderTextColor={colors.text + '66'}
                       value={phoneNumber}
-                      onChangeText={setPhoneNumber}
+                      onChangeText={(v) => { setPhoneNumber(v); setErrorMessage(null); }}
                       keyboardType="phone-pad"
                       textAlign="center"
                       onSubmitEditing={handleNext}
@@ -496,7 +518,7 @@ export default function RegisterScreen() {
                       placeholder="example@email.com"
                       placeholderTextColor={colors.text + '66'}
                       value={email}
-                      onChangeText={setEmail}
+                      onChangeText={(v) => { setEmail(v); setErrorMessage(null); }}
                       keyboardType="email-address"
                       autoCapitalize="none"
                       textAlign="center"
@@ -539,7 +561,7 @@ export default function RegisterScreen() {
                       placeholder="סיסמה"
                       placeholderTextColor={colors.text + '66'}
                       value={password}
-                      onChangeText={setPassword}
+                      onChangeText={(v) => { setPassword(v); setErrorMessage(null); }}
                       secureTextEntry
                       textAlign="center"
                       onSubmitEditing={handleNext}
@@ -560,6 +582,13 @@ export default function RegisterScreen() {
               </Text>
             </Text>
           </TouchableOpacity>
+
+          {/* Error Message */}
+          {errorMessage ? (
+            <Text style={styles.errorText}>
+              {errorMessage}
+            </Text>
+          ) : null}
 
           {/* Continue Button */}
           <View style={styles.buttonContainer}>
@@ -715,5 +744,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '700',
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 24,
   },
 });
