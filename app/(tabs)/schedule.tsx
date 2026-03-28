@@ -778,6 +778,10 @@ export default function ScheduleScreen() {
   const languageIndicatorPosition = useSharedValue(languageFilter === 'hebrew' ? 0 : 1);
 
   const swipeAnim = useRef(new RNAnimated.Value(0)).current;
+  // Keep a ref to the current daysWithEvents length so the panResponder
+  // (created once) always reads the up-to-date boundary value.
+  const daysWithEventsLengthRef = useRef(0);
+  const selectedDayIndexRef = useRef(0);
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) =>
@@ -787,7 +791,15 @@ export default function ScheduleScreen() {
       },
       onPanResponderRelease: (_, gestureState) => {
         const SWIPE_THRESHOLD = 50;
+        const totalDays = daysWithEventsLengthRef.current;
+        const currentIndex = selectedDayIndexRef.current;
         if (gestureState.dx < -SWIPE_THRESHOLD) {
+          // At last day — bounce back, no navigation
+          if (currentIndex >= totalDays - 1) {
+            console.log('ScheduleScreen: Swipe left blocked — already at last day');
+            RNAnimated.spring(swipeAnim, { toValue: 0, useNativeDriver: true }).start();
+            return;
+          }
           console.log('ScheduleScreen: Swipe left → next day');
           RNAnimated.timing(swipeAnim, {
             toValue: -400,
@@ -795,7 +807,11 @@ export default function ScheduleScreen() {
             useNativeDriver: true,
           }).start(() => {
             swipeAnim.setValue(400);
-            setSelectedDayIndex(prev => Math.min(prev + 1, daysWithEvents.length - 1));
+            setSelectedDayIndex(prev => {
+              const next = Math.min(prev + 1, daysWithEventsLengthRef.current - 1);
+              selectedDayIndexRef.current = next;
+              return next;
+            });
             RNAnimated.timing(swipeAnim, {
               toValue: 0,
               duration: 200,
@@ -803,6 +819,12 @@ export default function ScheduleScreen() {
             }).start();
           });
         } else if (gestureState.dx > SWIPE_THRESHOLD) {
+          // At first day — bounce back, no navigation
+          if (currentIndex <= 0) {
+            console.log('ScheduleScreen: Swipe right blocked — already at first day');
+            RNAnimated.spring(swipeAnim, { toValue: 0, useNativeDriver: true }).start();
+            return;
+          }
           console.log('ScheduleScreen: Swipe right → previous day');
           RNAnimated.timing(swipeAnim, {
             toValue: 400,
@@ -810,7 +832,11 @@ export default function ScheduleScreen() {
             useNativeDriver: true,
           }).start(() => {
             swipeAnim.setValue(-400);
-            setSelectedDayIndex(prev => Math.max(prev - 1, 0));
+            setSelectedDayIndex(prev => {
+              const next = Math.max(prev - 1, 0);
+              selectedDayIndexRef.current = next;
+              return next;
+            });
             RNAnimated.timing(swipeAnim, {
               toValue: 0,
               duration: 200,
@@ -905,6 +931,15 @@ export default function ScheduleScreen() {
       return filteredEvents.length > 0 || hasAgent;
     });
   }, [scheduleData, filterEventsByLanguage, languageFilter]);
+
+  // Keep refs in sync so the stale-closure-safe panResponder can read current values
+  useEffect(() => {
+    daysWithEventsLengthRef.current = daysWithEvents.length;
+  }, [daysWithEvents.length]);
+
+  useEffect(() => {
+    selectedDayIndexRef.current = selectedDayIndex;
+  }, [selectedDayIndex]);
 
   const allDaysWithEvents = useMemo(() => {
     const today = new Date();
@@ -1083,14 +1118,11 @@ export default function ScheduleScreen() {
     const fullDayName = getFullDayName(selectedDay.day_of_week, languageFilter);
 
     return (
-      <RNAnimated.View
-        style={{ flex: 1, transform: [{ translateX: swipeAnim }] }}
-        {...panResponder.panHandlers}
-      >
       <Animated.View 
         style={styles.dayViewContainer}
         entering={FadeIn.duration(300)}
       >
+        {/* Day selector is NOT part of the swipeable area */}
         <View style={styles.daySelector}>
           <ScrollView
             horizontal
@@ -1138,69 +1170,74 @@ export default function ScheduleScreen() {
           </ScrollView>
         </View>
 
-        <Animated.View 
-          style={styles.dayViewHeader}
-          entering={ZoomIn.springify()}
+        {/* Swipe gesture wraps ONLY the content below the day selector */}
+        <RNAnimated.View
+          style={{ flex: 1, transform: [{ translateX: swipeAnim }] }}
+          {...panResponder.panHandlers}
         >
-          <View style={styles.dayViewHeaderTop}>
-            <View style={styles.dayViewDateSection}>
-              <Text style={styles.dayViewDayOfWeek}>{fullDayName}</Text>
-              <Text style={styles.dayViewDate}>{selectedDay.date}</Text>
-            </View>
-            
-            {agentText && agentText.trim() !== '' && (
-              <AnimatedLinearGradient
-                colors={agentBadgeColors}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.dayViewAgentBadge}
-                entering={FadeIn.delay(200)}
-              >
-                <IconSymbol
-                  ios_icon_name="person.fill"
-                  android_material_icon_name="person"
-                  size={16}
-                  color="#FFFFFF"
-                />
-                <Text style={styles.dayViewAgentText}>
-                  {agentText}
-                </Text>
-              </AnimatedLinearGradient>
-            )}
-          </View>
-        </Animated.View>
-
-        {hasEvents ? (
-          <View style={styles.eventsSection}>
-            {filteredEvents.map((event, eventIndex) => (
-              <AnimatedEventCard
-                key={eventIndex}
-                event={event}
-                index={eventIndex}
-                languageFilter={languageFilter}
-              />
-            ))}
-          </View>
-        ) : (
           <Animated.View 
-            style={styles.noEventsContainer}
-            entering={FadeInUp.delay(300).springify()}
+            style={styles.dayViewHeader}
+            entering={ZoomIn.springify()}
           >
-            <View style={styles.noEventsIcon}>
-              <IconSymbol
-                ios_icon_name="calendar"
-                android_material_icon_name="calendar-today"
-                size={48}
-                color={designColors.text.secondary}
-              />
+            <View style={styles.dayViewHeaderTop}>
+              <View style={styles.dayViewDateSection}>
+                <Text style={styles.dayViewDayOfWeek}>{fullDayName}</Text>
+                <Text style={styles.dayViewDate}>{selectedDay.date}</Text>
+              </View>
+              
+              {agentText && agentText.trim() !== '' && (
+                <AnimatedLinearGradient
+                  colors={agentBadgeColors}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.dayViewAgentBadge}
+                  entering={FadeIn.delay(200)}
+                >
+                  <IconSymbol
+                    ios_icon_name="person.fill"
+                    android_material_icon_name="person"
+                    size={16}
+                    color="#FFFFFF"
+                  />
+                  <Text style={styles.dayViewAgentText}>
+                    {agentText}
+                  </Text>
+                </AnimatedLinearGradient>
+              )}
             </View>
-            <Text style={styles.noEventsText}>
-              {noEventsMessage}
-            </Text>
           </Animated.View>
-        )}
+
+          {hasEvents ? (
+            <View style={styles.eventsSection}>
+              {filteredEvents.map((event, eventIndex) => (
+                <AnimatedEventCard
+                  key={eventIndex}
+                  event={event}
+                  index={eventIndex}
+                  languageFilter={languageFilter}
+                />
+              ))}
+            </View>
+          ) : (
+            <Animated.View 
+              style={styles.noEventsContainer}
+              entering={FadeInUp.delay(300).springify()}
+            >
+              <View style={styles.noEventsIcon}>
+                <IconSymbol
+                  ios_icon_name="calendar"
+                  android_material_icon_name="calendar-today"
+                  size={48}
+                  color={designColors.text.secondary}
+                />
+              </View>
+              <Text style={styles.noEventsText}>
+                {noEventsMessage}
+              </Text>
+            </Animated.View>
+          )}
+        </RNAnimated.View>
       </Animated.View>
-      </RNAnimated.View>
     );
   };
 

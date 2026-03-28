@@ -435,38 +435,34 @@ export default function TasksScreen() {
     
     const { taskId, requiresPending, currentStatus } = pendingTaskAction;
     
-    console.log('✅ User confirmed - firing confetti and closing modal', taskId);
+    console.log('✅ User confirmed - closing modal immediately', taskId);
 
-    // 🎉 Fire confetti FIRST, synchronously on the same JS tick as the button press
+    // 1️⃣ Close modal IMMEDIATELY — first thing, no delays, no awaits
+    setShowConfirmModal(false);
+    setPendingTaskAction(null);
+
+    // 2️⃣ Fire confetti immediately after closing
     if (confettiRef.current) {
       console.log('🎉 CONFETTI FIRED synchronously');
       confettiRef.current.start();
     }
 
-    // Calculate new status
+    // 3️⃣ Optimistic UI update
     const newStatus: 'YET' | 'PENDING' | 'DONE' = 
       requiresPending 
         ? (currentStatus === 'YET' ? 'PENDING' : 'DONE')
         : 'DONE';
-    
-    // 🚀 UPDATE UI INSTANTLY - Optimistic update
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     console.log('🚀 UI UPDATED INSTANTLY to status:', newStatus);
     
-    // Close modal
-    setShowConfirmModal(false);
-    setPendingTaskAction(null);
-    
-    // 📡 BACKGROUND API CALL - Fire and forget (non-blocking)
+    // 4️⃣ BACKGROUND API CALL - Fire and forget (non-blocking)
     api.completeTask(taskId, requiresPending)
       .then(updatedTask => {
         console.log('✅ Backend confirmed:', updatedTask.status);
-        // Sync with server response silently
         setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
       })
       .catch(error => {
         console.error('❌ Backend failed, reverting:', error);
-        // Revert on error
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: currentStatus } : t));
       });
   }, [pendingTaskAction, confettiRef]);
