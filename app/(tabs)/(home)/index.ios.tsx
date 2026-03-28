@@ -168,8 +168,16 @@ export default function HomeScreen() {
           source={require('@/assets/images/Plane.json')}
           autoPlay
           loop
-          style={styles.lottieAnimation}
           resizeMode="cover"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: SCREEN_WIDTH,
+            height: 240,
+            zIndex: 11,
+            opacity: 0.6,
+          }}
         />
 
         {/* Logo — absolute, bottom-anchored, LEFT side (same as iOS) */}
@@ -346,17 +354,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
     overflow: 'visible',
   },
-  lottieAnimation: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: 11,
-    opacity: 0.6,
-  },
+
   header: {
     flex: 1,
     paddingHorizontal: layout.screenPadding,
