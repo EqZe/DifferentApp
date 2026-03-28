@@ -165,7 +165,7 @@ export default function HomeScreen() {
 
         {/* Lottie animation layer */}
         <LottieView
-          source={{ uri: 'https://lottie.host/fcc59560-b2cd-4dad-85d1-02d5cf35c039/OcOTugphwV.json' }}
+          source={require('@/assets/images/Plane.json')}
           autoPlay
           loop
           style={styles.lottieAnimation}

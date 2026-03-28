@@ -287,56 +287,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  /* ── Day view ── */
   dayViewContainer: {
     paddingHorizontal: spacing.lg,
-  },
-  dayViewHeader: {
-    backgroundColor: designColors.surface,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    ...shadows.md,
-    borderWidth: 1,
-    borderColor: designColors.border,
-  },
-  dayViewHeaderTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
-  },
-  dayViewDateSection: {
-    flex: 1,
-  },
-  dayViewDayOfWeek: {
-    fontSize: typography.sizes.xxxl,
-    fontWeight: typography.weights.bold as any,
-    color: designColors.primary,
-    marginBottom: spacing.xs,
-    letterSpacing: 0.5,
-  },
-  dayViewDate: {
-    fontSize: typography.sizes.md,
-    color: designColors.text.secondary,
-    letterSpacing: 0.3,
-  },
-  dayViewAgentBadge: {
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    ...shadows.sm,
-  },
-  dayViewAgentText: {
-    fontSize: 13,
-    fontWeight: '800' as any,
-    color: '#FFFFFF',
-    letterSpacing: 0.4,
-    writingDirection: 'rtl',
   },
   daySelector: {
     marginBottom: spacing.lg,
@@ -369,84 +322,214 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  daySelectorDayOfWeekActive: {
-    color: '#FFFFFF',
-  },
+  daySelectorDayOfWeekActive: { color: '#FFFFFF' },
   daySelectorDate: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold as any,
     color: designColors.text.primary,
   },
-  daySelectorDateActive: {
-    color: '#FFFFFF',
-  },
-  eventsSection: {
-    gap: spacing.md,
-  },
-  eventCard: {
-    backgroundColor: designColors.surface,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    ...shadows.md,
-    borderWidth: 1,
-    borderColor: designColors.border,
+  daySelectorDateActive: { color: '#FFFFFF' },
+
+  /* Hero card */
+  heroCard: {
+    borderRadius: 18,
+    marginBottom: spacing.lg,
     overflow: 'hidden',
+    ...shadows.md,
   },
-  eventCardInner: {
+  heroGradient: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  heroDayOfWeek: {
+    fontSize: 17,
+    fontWeight: '700' as any,
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+    textAlign: 'right',
+  },
+  heroAgentPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  heroAgentDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+  },
+  heroAgentText: {
+    fontSize: 13,
+    fontWeight: '800' as any,
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
+    writingDirection: 'rtl',
+  },
+  heroBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  heroDate: {
+    fontSize: 32,
+    fontWeight: '800' as any,
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+    lineHeight: 34,
+  },
+  heroEventCountWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingBottom: 2,
+  },
+  heroEventCountText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500' as any,
+  },
+
+  /* Timeline */
+  timeline: {
+    paddingBottom: spacing.xxl,
+  },
+  timelineItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.md,
+    marginBottom: spacing.md,
   },
-  eventIconContainer: {
+  timelineRail: {
     width: 56,
-    height: 56,
-    borderRadius: radius.full,
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingTop: 4,
+    flexShrink: 0,
+  },
+  timelineDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: designColors.primary,
+    borderWidth: 3,
+    borderColor: designColors.background,
+    zIndex: 2,
     ...shadows.sm,
   },
-  eventContent: {
+  timelineDotNoTime: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: designColors.text.secondary,
+    borderWidth: 2,
+    borderColor: designColors.background,
+    zIndex: 2,
+    marginTop: 2,
+  },
+  timelineConnector: {
+    width: 2,
     flex: 1,
+    backgroundColor: designColors.border,
+    marginTop: 4,
+    minHeight: 30,
   },
-  eventTime: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold as any,
+  timelineTimeLabel: {
+    fontSize: 11,
+    fontWeight: '700' as any,
     color: designColors.primary,
-    marginBottom: spacing.xs,
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
+    marginTop: 6,
+    textAlign: 'center',
   },
-  eventDescription: {
-    fontSize: typography.sizes.md,
-    color: designColors.text.primary,
-    lineHeight: typography.sizes.md * 1.6,
-    letterSpacing: 0.2,
+  timelineTimeLabelEmpty: {
+    fontSize: 11,
+    color: 'transparent',
+    marginTop: 6,
   },
-  eventAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    borderTopLeftRadius: radius.xl,
-    borderBottomLeftRadius: radius.xl,
-  },
-  noEventsContainer: {
+  timelineCard: {
+    flex: 1,
+    marginLeft: spacing.sm,
     backgroundColor: designColors.surface,
-    borderRadius: radius.xl,
-    padding: spacing.xl,
-    alignItems: 'center',
-    ...shadows.sm,
+    borderRadius: 16,
+    padding: 16,
+    paddingVertical: 16,
     borderWidth: 1,
     borderColor: designColors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+    marginBottom: 2,
   },
-  noEventsIcon: {
+  timelineCardWithTime: {
+    borderLeftWidth: 4,
+    borderLeftColor: designColors.primary,
+  },
+  timelineCardType: {
+    fontSize: 10,
+    fontWeight: '700' as any,
+    color: designColors.primary,
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+    textAlign: 'right',
+    opacity: 0.75,
+  },
+  timelineCardDescription: {
+    fontSize: 15,
+    fontWeight: '600' as any,
+    color: designColors.text.primary,
+    lineHeight: 22,
+    letterSpacing: 0.1,
+    textAlign: 'right',
+  },
+  timelineCardTime: {
+    fontSize: 12,
+    fontWeight: '700' as any,
+    color: designColors.primary,
+    textAlign: 'right',
+    marginTop: 8,
+    letterSpacing: 0.5,
+    opacity: 0.85,
+  },
+
+  /* No events */
+  noEventsContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: designColors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: designColors.border,
+    ...shadows.sm,
+  },
+  noEventsCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: designColors.primaryBg,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.md,
   },
   noEventsText: {
     fontSize: typography.sizes.md,
     color: designColors.text.secondary,
     textAlign: 'center',
-    fontStyle: 'italic',
     letterSpacing: 0.2,
     lineHeight: typography.sizes.md * 1.5,
   },
@@ -679,87 +762,84 @@ const AnimatedCalendarCell = React.memo(({
   );
 });
 
-// Animated Event Card Component
-const AnimatedEventCard = React.memo(({ event, index, languageFilter }: any) => {
+// Helper to get event type label
+const getEventTypeLabel = (type: string, language: 'hebrew' | 'english'): string => {
+  if (language === 'hebrew') {
+    const map: Record<string, string> = {
+      flight: 'טיסה', business: 'עסקי', meeting: 'פגישה',
+      accommodation: 'לינה', personal: 'אישי', other: '',
+    };
+    return map[type] ?? '';
+  } else {
+    const map: Record<string, string> = {
+      flight: 'FLIGHT', business: 'BUSINESS', meeting: 'MEETING',
+      accommodation: 'STAY', personal: 'PERSONAL', other: '',
+    };
+    return map[type] ?? '';
+  }
+};
+
+// Timeline Event Card Component
+const TimelineEventCard = React.memo(({ event, index, isLast, languageFilter }: {
+  event: Event;
+  index: number;
+  isLast: boolean;
+  languageFilter: 'hebrew' | 'english';
+}) => {
   const scale = useSharedValue(1);
-  const iconScale = useSharedValue(1);
-  
-  useEffect(() => {
-    iconScale.value = withRepeat(
-      withSequence(
-        withTiming(1.1, { duration: 1200 }),
-        withTiming(1, { duration: 1200 })
-      ),
-      -1,
-      false
-    );
-  }, [iconScale]);
-  
-  const animatedCardStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: scale.value }],
-    };
-  });
-  
-  const animatedIconStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: iconScale.value }],
-    };
-  });
-  
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   const handlePressIn = () => {
-    scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
+    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
-  
   const handlePressOut = () => {
     scale.value = withSpring(1, { damping: 15, stiffness: 300 });
   };
-  
+
   const hasTime = Boolean(event.time);
-  const eventTimeText = event.time || '';
-  const eventDescriptionText = languageFilter === 'hebrew' ? event.description_he : event.description_en;
-  
+  const description = languageFilter === 'hebrew' ? event.description_he : event.description_en;
+  const typeLabel = getEventTypeLabel(event.type ?? 'other', languageFilter);
+
   return (
-    <AnimatedTouchable
-      entering={FadeInUp.delay(index * 100).springify()}
-      style={[styles.eventCard, animatedCardStyle]}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      activeOpacity={1}
+    <Animated.View
+      entering={FadeInDown.delay(150 + index * 80).springify()}
+      style={styles.timelineItem}
     >
-      <AnimatedLinearGradient
-        colors={[designColors.primary, designColors.primaryDark]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.eventAccent}
-      />
-      <View style={styles.eventCardInner}>
-        <AnimatedLinearGradient
-          colors={[designColors.primary + '20', designColors.primary + '10']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.eventIconContainer, animatedIconStyle]}
-        >
-          <IconSymbol
-            ios_icon_name={hasTime ? 'clock.fill' : 'circle.fill'}
-            android_material_icon_name={hasTime ? 'access-time' : 'circle'}
-            size={28}
-            color={designColors.primary}
-          />
-        </AnimatedLinearGradient>
-        <View style={styles.eventContent}>
-          {hasTime && (
-            <Text style={styles.eventTime}>
-              {eventTimeText}
-            </Text>
-          )}
-          <Text style={styles.eventDescription}>
-            {eventDescriptionText}
-          </Text>
-        </View>
+      {/* Rail */}
+      <View style={styles.timelineRail}>
+        <View style={hasTime ? styles.timelineDot : styles.timelineDotNoTime} />
+        {!isLast && <View style={styles.timelineConnector} />}
+        {hasTime ? (
+          <Text style={styles.timelineTimeLabel}>{event.time}</Text>
+        ) : (
+          <Text style={styles.timelineTimeLabelEmpty}>{'  '}</Text>
+        )}
       </View>
-    </AnimatedTouchable>
+
+      {/* Card */}
+      <AnimatedTouchable
+        style={[
+          styles.timelineCard,
+          hasTime && styles.timelineCardWithTime,
+          animatedStyle,
+        ]}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={1}
+      >
+        {typeLabel !== '' && (
+          <Text style={styles.timelineCardType}>{typeLabel}</Text>
+        )}
+        <Text style={styles.timelineCardDescription}>{description}</Text>
+        {hasTime && (
+          <Text style={styles.timelineCardTime}>{event.time}</Text>
+        )}
+      </AnimatedTouchable>
+    </Animated.View>
   );
 });
 
@@ -1110,17 +1190,21 @@ export default function ScheduleScreen() {
     const hasEvents = filteredEvents.length > 0;
     const rawAgentText = languageFilter === 'hebrew' ? selectedDay.agent_he : selectedDay.agent_en;
     const agentText = rawAgentText ? rawAgentText.replace(/\s*\(female\)/i, '').trim() : rawAgentText;
+    const hasAgent = agentText && agentText.trim() !== '';
     const agentBadgeColors = getAgentBadgeColors(agentText);
-    const noEventsMessage = languageFilter === 'hebrew'
-      ? 'אין אירועים בעברית ליום זה'
-      : 'No events in English for this day';
-    
     const fullDayName = getFullDayName(selectedDay.day_of_week, languageFilter);
+    const noEventsTitle = languageFilter === 'hebrew' ? 'אין אירועים' : 'No Events';
+    const noEventsSub = languageFilter === 'hebrew'
+      ? 'אין אירועים ביום זה.'
+      : 'Nothing scheduled for this day.';
+    const eventCountLabel = languageFilter === 'hebrew'
+      ? `${filteredEvents.length} אירועים`
+      : `${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}`;
 
     return (
-      <Animated.View 
+      <Animated.View
         style={styles.dayViewContainer}
-        entering={FadeIn.duration(300)}
+        entering={FadeIn.duration(250)}
       >
         {/* Day selector is NOT part of the swipeable area */}
         <View style={styles.daySelector}>
@@ -1131,9 +1215,6 @@ export default function ScheduleScreen() {
           >
             {daysWithEvents.map((day, index) => {
               const isActive = index === selectedDayIndex;
-              const dayOfWeekShort = day.day_of_week.substring(0, 3);
-              const dayNumberOnly = day.date.split('.')[0];
-              
               return (
                 <AnimatedTouchable
                   key={index}
@@ -1148,21 +1229,11 @@ export default function ScheduleScreen() {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.daySelectorDayOfWeek,
-                      isActive && styles.daySelectorDayOfWeekActive,
-                    ]}
-                  >
-                    {dayOfWeekShort}
+                  <Text style={[styles.daySelectorDayOfWeek, isActive && styles.daySelectorDayOfWeekActive]}>
+                    {day.day_of_week.substring(0, 3)}
                   </Text>
-                  <Text
-                    style={[
-                      styles.daySelectorDate,
-                      isActive && styles.daySelectorDateActive,
-                    ]}
-                  >
-                    {dayNumberOnly}
+                  <Text style={[styles.daySelectorDate, isActive && styles.daySelectorDateActive]}>
+                    {day.date.split('.')[0]}
                   </Text>
                 </AnimatedTouchable>
               );
@@ -1175,65 +1246,71 @@ export default function ScheduleScreen() {
           style={{ flex: 1, transform: [{ translateX: swipeAnim }] }}
           {...panResponder.panHandlers}
         >
-          <Animated.View 
-            style={styles.dayViewHeader}
-            entering={ZoomIn.springify()}
-          >
-            <View style={styles.dayViewHeaderTop}>
-              <View style={styles.dayViewDateSection}>
-                <Text style={styles.dayViewDayOfWeek}>{fullDayName}</Text>
-                <Text style={styles.dayViewDate}>{selectedDay.date}</Text>
+          {/* Hero card */}
+          <Animated.View style={styles.heroCard} entering={FadeInDown.delay(50).springify()}>
+            <AnimatedLinearGradient
+              colors={agentBadgeColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroGradient}
+            >
+              {/* Top row: day name + agent pill */}
+              <View style={styles.heroTopRow}>
+                <Text style={styles.heroDayOfWeek}>{fullDayName}</Text>
+                {hasAgent && (
+                  <View style={styles.heroAgentPill}>
+                    <View style={styles.heroAgentDot} />
+                    <Text style={styles.heroAgentText}>{agentText}</Text>
+                  </View>
+                )}
               </View>
-              
-              {agentText && agentText.trim() !== '' && (
-                <AnimatedLinearGradient
-                  colors={agentBadgeColors}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.dayViewAgentBadge}
-                  entering={FadeIn.delay(200)}
-                >
-                  <IconSymbol
-                    ios_icon_name="person.fill"
-                    android_material_icon_name="person"
-                    size={16}
-                    color="#FFFFFF"
-                  />
-                  <Text style={styles.dayViewAgentText}>
-                    {agentText}
-                  </Text>
-                </AnimatedLinearGradient>
-              )}
-            </View>
+              {/* Bottom row: big date + event count */}
+              <View style={styles.heroBottomRow}>
+                <Text style={styles.heroDate}>{selectedDay.date}</Text>
+                {hasEvents && (
+                  <View style={styles.heroEventCountWrap}>
+                    <IconSymbol
+                      ios_icon_name="calendar"
+                      android_material_icon_name="calendar-today"
+                      size={12}
+                      color="rgba(255,255,255,0.8)"
+                    />
+                    <Text style={styles.heroEventCountText}>{eventCountLabel}</Text>
+                  </View>
+                )}
+              </View>
+            </AnimatedLinearGradient>
           </Animated.View>
 
           {hasEvents ? (
-            <View style={styles.eventsSection}>
+            <View style={styles.timeline}>
               {filteredEvents.map((event, eventIndex) => (
-                <AnimatedEventCard
+                <TimelineEventCard
                   key={eventIndex}
                   event={event}
                   index={eventIndex}
+                  isLast={eventIndex === filteredEvents.length - 1}
                   languageFilter={languageFilter}
                 />
               ))}
             </View>
           ) : (
-            <Animated.View 
+            <Animated.View
               style={styles.noEventsContainer}
               entering={FadeInUp.delay(300).springify()}
             >
-              <View style={styles.noEventsIcon}>
+              <View style={styles.noEventsCircle}>
                 <IconSymbol
                   ios_icon_name="calendar"
                   android_material_icon_name="calendar-today"
-                  size={48}
-                  color={designColors.text.secondary}
+                  size={32}
+                  color={designColors.primary}
                 />
               </View>
-              <Text style={styles.noEventsText}>
-                {noEventsMessage}
+              <Text style={[styles.noEventsText, { fontSize: 16, fontWeight: '700', color: designColors.text.primary, marginBottom: 4 }]}>
+                {noEventsTitle}
               </Text>
+              <Text style={styles.noEventsText}>{noEventsSub}</Text>
             </Animated.View>
           )}
         </RNAnimated.View>

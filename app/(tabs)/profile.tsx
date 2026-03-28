@@ -238,7 +238,7 @@ export default function ProfileScreen() {
       <Animated.View entering={FadeIn.duration(300)} style={{ flex: 1 }}>
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 140 }}
           showsVerticalScrollIndicator={false}
         >
           {/* Hero Header */}
