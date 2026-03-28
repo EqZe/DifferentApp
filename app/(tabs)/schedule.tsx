@@ -8,13 +8,12 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
   useColorScheme,
   Dimensions,
-  PanResponder,
-  Animated as RNAnimated,
 } from 'react-native';
 import { IconSymbol } from '@/components/IconSymbol';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -857,100 +856,7 @@ export default function ScheduleScreen() {
   const toggleIndicatorPosition = useSharedValue(viewMode === 'full' ? 0 : 1);
   const languageIndicatorPosition = useSharedValue(languageFilter === 'hebrew' ? 0 : 1);
 
-  const swipeAnim = useRef(new RNAnimated.Value(0)).current;
-  // Keep a ref to the current daysWithEvents length so the panResponder
-  // (created once) always reads the up-to-date boundary value.
-  const daysWithEventsLengthRef = useRef(0);
-  const selectedDayIndexRef = useRef(0);
-
-  // Scroll-enable state + stable ref so the stale-closure panResponder can call it
-  const [isScrollEnabled, setIsScrollEnabled] = useState(true);
-  const setScrollEnabledRef = useRef<(v: boolean) => void>(() => {});
-  setScrollEnabledRef.current = setIsScrollEnabled;
-
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gestureState) =>
-        Math.abs(gestureState.dx) > 12 && Math.abs(gestureState.dy) < 30,
-      onMoveShouldSetPanResponderCapture: (_, gestureState) =>
-        Math.abs(gestureState.dx) > 12 && Math.abs(gestureState.dy) < 30,
-      onPanResponderGrant: () => {
-        setScrollEnabledRef.current(false);
-      },
-      onPanResponderMove: (_, gestureState) => {
-        swipeAnim.setValue(gestureState.dx);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const SWIPE_THRESHOLD = 50;
-        const totalDays = daysWithEventsLengthRef.current;
-        const currentIndex = selectedDayIndexRef.current;
-        if (gestureState.dx < -SWIPE_THRESHOLD) {
-          // At last day — bounce back, no navigation
-          if (currentIndex >= totalDays - 1) {
-            console.log('ScheduleScreen: Swipe left blocked — already at last day');
-            RNAnimated.spring(swipeAnim, { toValue: 0, useNativeDriver: true }).start();
-            setScrollEnabledRef.current(true);
-            return;
-          }
-          console.log('ScheduleScreen: Swipe left → next day');
-          RNAnimated.timing(swipeAnim, {
-            toValue: -400,
-            duration: 200,
-            useNativeDriver: true,
-          }).start(() => {
-            swipeAnim.setValue(400);
-            setSelectedDayIndex(prev => {
-              const next = Math.min(prev + 1, daysWithEventsLengthRef.current - 1);
-              selectedDayIndexRef.current = next;
-              return next;
-            });
-            RNAnimated.timing(swipeAnim, {
-              toValue: 0,
-              duration: 200,
-              useNativeDriver: true,
-            }).start(() => setScrollEnabledRef.current(true));
-          });
-        } else if (gestureState.dx > SWIPE_THRESHOLD) {
-          // At first day — bounce back, no navigation
-          if (currentIndex <= 0) {
-            console.log('ScheduleScreen: Swipe right blocked — already at first day');
-            RNAnimated.spring(swipeAnim, { toValue: 0, useNativeDriver: true }).start();
-            setScrollEnabledRef.current(true);
-            return;
-          }
-          console.log('ScheduleScreen: Swipe right → previous day');
-          RNAnimated.timing(swipeAnim, {
-            toValue: 400,
-            duration: 200,
-            useNativeDriver: true,
-          }).start(() => {
-            swipeAnim.setValue(-400);
-            setSelectedDayIndex(prev => {
-              const next = Math.max(prev - 1, 0);
-              selectedDayIndexRef.current = next;
-              return next;
-            });
-            RNAnimated.timing(swipeAnim, {
-              toValue: 0,
-              duration: 200,
-              useNativeDriver: true,
-            }).start(() => setScrollEnabledRef.current(true));
-          });
-        } else {
-          RNAnimated.spring(swipeAnim, {
-            toValue: 0,
-            useNativeDriver: true,
-          }).start();
-          setScrollEnabledRef.current(true);
-        }
-      },
-      onPanResponderTerminate: () => {
-        RNAnimated.spring(swipeAnim, { toValue: 0, useNativeDriver: true }).start();
-        setScrollEnabledRef.current(true);
-      },
-    })
-  ).current;
+  const dayPagerRef = useRef<FlatList>(null);
 
   const loadSchedule = useCallback(async () => {
     if (!user?.id) {
@@ -1030,15 +936,6 @@ export default function ScheduleScreen() {
       return filteredEvents.length > 0 || hasAgent;
     });
   }, [scheduleData, filterEventsByLanguage, languageFilter]);
-
-  // Keep refs in sync so the stale-closure-safe panResponder can read current values
-  useEffect(() => {
-    daysWithEventsLengthRef.current = daysWithEvents.length;
-  }, [daysWithEvents.length]);
-
-  useEffect(() => {
-    selectedDayIndexRef.current = selectedDayIndex;
-  }, [selectedDayIndex]);
 
   const allDaysWithEvents = useMemo(() => {
     const today = new Date();
@@ -1204,28 +1101,9 @@ export default function ScheduleScreen() {
       return null;
     }
 
-    const selectedDay = daysWithEvents[selectedDayIndex];
-    const filteredEvents = filterEventsByLanguage(selectedDay.events);
-    const hasEvents = filteredEvents.length > 0;
-    const rawAgentText = languageFilter === 'hebrew' ? selectedDay.agent_he : selectedDay.agent_en;
-    const agentText = rawAgentText ? rawAgentText.replace(/\s*\(female\)/i, '').trim() : rawAgentText;
-    const hasAgent = agentText && agentText.trim() !== '';
-    const agentBadgeColors = getAgentBadgeColors(agentText);
-    const fullDayName = getFullDayName(selectedDay.day_of_week, languageFilter);
-    const noEventsTitle = languageFilter === 'hebrew' ? 'אין אירועים' : 'No Events';
-    const noEventsSub = languageFilter === 'hebrew'
-      ? 'אין אירועים ביום זה.'
-      : 'Nothing scheduled for this day.';
-    const eventCountLabel = languageFilter === 'hebrew'
-      ? `${filteredEvents.length} אירועים`
-      : `${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}`;
-
     return (
-      <Animated.View
-        style={styles.dayViewContainer}
-        entering={FadeIn.duration(250)}
-      >
-        {/* Day selector is NOT part of the swipeable area */}
+      <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(250)}>
+        {/* Day selector pills */}
         <View style={styles.daySelector}>
           <ScrollView
             horizontal
@@ -1243,8 +1121,9 @@ export default function ScheduleScreen() {
                     isActive && styles.daySelectorItemActive,
                   ]}
                   onPress={() => {
-                    console.log('ScheduleScreen: Selected day', index);
+                    console.log('ScheduleScreen: Selected day pill', index);
                     setSelectedDayIndex(index);
+                    dayPagerRef.current?.scrollToIndex({ index, animated: true });
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
                 >
@@ -1260,79 +1139,117 @@ export default function ScheduleScreen() {
           </ScrollView>
         </View>
 
-        {/* Swipe gesture wraps ONLY the content below the day selector */}
-        <RNAnimated.View
-          style={{ flex: 1, transform: [{ translateX: swipeAnim }] }}
-          {...panResponder.panHandlers}
-        >
-          {/* Hero card */}
-          <Animated.View style={styles.heroCard} entering={FadeInDown.delay(50).springify()}>
-            <AnimatedLinearGradient
-              colors={agentBadgeColors}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.heroGradient}
-            >
-              {/* Top row: day name + agent pill */}
-              <View style={styles.heroTopRow}>
-                <Text style={styles.heroDayOfWeek}>{fullDayName}</Text>
-                {hasAgent && (
-                  <View style={styles.heroAgentPill}>
-                    <View style={styles.heroAgentDot} />
-                    <Text style={styles.heroAgentText}>{agentText}</Text>
-                  </View>
-                )}
-              </View>
-              {/* Bottom row: big date + event count */}
-              <View style={styles.heroBottomRow}>
-                <Text style={styles.heroDate}>{selectedDay.date}</Text>
-                {hasEvents && (
-                  <View style={styles.heroEventCountWrap}>
-                    <IconSymbol
-                      ios_icon_name="calendar"
-                      android_material_icon_name="calendar-today"
-                      size={12}
-                      color="rgba(255,255,255,0.8)"
-                    />
-                    <Text style={styles.heroEventCountText}>{eventCountLabel}</Text>
-                  </View>
-                )}
-              </View>
-            </AnimatedLinearGradient>
-          </Animated.View>
+        {/* Pager FlatList */}
+        <FlatList
+          ref={dayPagerRef}
+          data={daysWithEvents}
+          keyExtractor={(_, i) => String(i)}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          initialScrollIndex={selectedDayIndex}
+          getItemLayout={(_, index) => ({
+            length: width,
+            offset: width * index,
+            index,
+          })}
+          onMomentumScrollEnd={(e) => {
+            const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
+            console.log('ScheduleScreen: Pager swiped to day', newIndex);
+            setSelectedDayIndex(newIndex);
+          }}
+          renderItem={({ item: day }) => {
+            const dayFilteredEvents = filterEventsByLanguage(day.events);
+            const dayHasEvents = dayFilteredEvents.length > 0;
+            const rawAgent = languageFilter === 'hebrew' ? day.agent_he : day.agent_en;
+            const dayAgentText = rawAgent ? rawAgent.replace(/\s*\(female\)/i, '').trim() : rawAgent;
+            const dayHasAgent = dayAgentText && dayAgentText.trim() !== '';
+            const dayAgentColors = getAgentBadgeColors(dayAgentText);
+            const dayFullName = getFullDayName(day.day_of_week, languageFilter);
+            const noEventsTitle = languageFilter === 'hebrew' ? 'אין אירועים' : 'No Events';
+            const noEventsSub = languageFilter === 'hebrew'
+              ? 'אין אירועים ביום זה.'
+              : 'Nothing scheduled for this day.';
+            const eventCountLabel = languageFilter === 'hebrew'
+              ? `${dayFilteredEvents.length} אירועים`
+              : `${dayFilteredEvents.length} event${dayFilteredEvents.length !== 1 ? 's' : ''}`;
 
-          {hasEvents ? (
-            <View style={styles.timeline}>
-              {filteredEvents.map((event, eventIndex) => (
-                <TimelineEventCard
-                  key={eventIndex}
-                  event={event}
-                  index={eventIndex}
-                  isLast={eventIndex === filteredEvents.length - 1}
-                  languageFilter={languageFilter}
-                />
-              ))}
-            </View>
-          ) : (
-            <Animated.View
-              style={styles.noEventsContainer}
-              entering={FadeInUp.delay(300).springify()}
-            >
-              <View style={styles.noEventsCircle}>
-                <IconSymbol
-                  ios_icon_name="calendar"
-                  android_material_icon_name="calendar-today"
-                  size={32}
-                  color={designColors.primary}
-                />
-              </View>
-              <Text style={[styles.noEventsText, { fontSize: 16, fontWeight: '700', color: designColors.text.primary, marginBottom: 4 }]}>
-                {noEventsTitle}
-              </Text>
-              <Text style={styles.noEventsText}>{noEventsSub}</Text>
-            </Animated.View>
-          )}
-        </RNAnimated.View>
+            return (
+              <ScrollView
+                style={{ width }}
+                contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl * 2 }}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Hero card */}
+                <Animated.View style={styles.heroCard} entering={FadeInDown.delay(50).springify()}>
+                  <AnimatedLinearGradient
+                    colors={dayAgentColors}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.heroGradient}
+                  >
+                    <View style={styles.heroTopRow}>
+                      <Text style={styles.heroDayOfWeek}>{dayFullName}</Text>
+                      {dayHasAgent && (
+                        <View style={styles.heroAgentPill}>
+                          <View style={styles.heroAgentDot} />
+                          <Text style={styles.heroAgentText}>{dayAgentText}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.heroBottomRow}>
+                      <Text style={styles.heroDate}>{day.date}</Text>
+                      {dayHasEvents && (
+                        <View style={styles.heroEventCountWrap}>
+                          <IconSymbol
+                            ios_icon_name="calendar"
+                            android_material_icon_name="calendar-today"
+                            size={12}
+                            color="rgba(255,255,255,0.8)"
+                          />
+                          <Text style={styles.heroEventCountText}>{eventCountLabel}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </AnimatedLinearGradient>
+                </Animated.View>
+
+                {/* Timeline */}
+                {dayHasEvents ? (
+                  <View style={styles.timeline}>
+                    {dayFilteredEvents.map((event, eventIndex) => (
+                      <TimelineEventCard
+                        key={eventIndex}
+                        event={event}
+                        index={eventIndex}
+                        isLast={eventIndex === dayFilteredEvents.length - 1}
+                        languageFilter={languageFilter}
+                      />
+                    ))}
+                  </View>
+                ) : (
+                  <Animated.View
+                    style={styles.noEventsContainer}
+                    entering={FadeInUp.delay(300).springify()}
+                  >
+                    <View style={styles.noEventsCircle}>
+                      <IconSymbol
+                        ios_icon_name="calendar"
+                        android_material_icon_name="calendar-today"
+                        size={32}
+                        color={designColors.primary}
+                      />
+                    </View>
+                    <Text style={[styles.noEventsText, { fontSize: 16, fontWeight: '700', color: designColors.text.primary, marginBottom: 4 }]}>
+                      {noEventsTitle}
+                    </Text>
+                    <Text style={styles.noEventsText}>{noEventsSub}</Text>
+                  </Animated.View>
+                )}
+              </ScrollView>
+            );
+          }}
+        />
       </Animated.View>
     );
   };
@@ -1479,20 +1396,23 @@ export default function ScheduleScreen() {
             </TouchableOpacity>
           </Animated.View>
 
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            scrollEnabled={isScrollEnabled}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor={designColors.primary}
-              />
-            }
-          >
-            {viewMode === 'day' ? renderDayView() : renderFullScheduleView()}
-          </ScrollView>
+          {viewMode === 'day' ? (
+            renderDayView()
+          ) : (
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={designColors.primary}
+                />
+              }
+            >
+              {renderFullScheduleView()}
+            </ScrollView>
+          )}
         </React.Fragment>
       ) : (
         <ScrollView
