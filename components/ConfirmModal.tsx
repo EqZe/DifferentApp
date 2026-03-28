@@ -18,6 +18,8 @@ interface ConfirmModalProps {
   cancelText: string;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Called after the modal has fully disappeared from the screen (Android: after window is removed). */
+  onDismiss?: () => void;
 }
 
 export function ConfirmModal({
@@ -28,6 +30,7 @@ export function ConfirmModal({
   cancelText,
   onConfirm,
   onCancel,
+  onDismiss,
 }: ConfirmModalProps) {
   return (
     <Modal
@@ -35,6 +38,7 @@ export function ConfirmModal({
       transparent
       animationType="none"
       onRequestClose={onCancel}
+      onDismiss={onDismiss}
     >
       <View style={styles.overlay}>
         {Platform.OS === 'ios' ? (

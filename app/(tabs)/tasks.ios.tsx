@@ -428,6 +428,14 @@ export default function TasksScreen() {
     setShowConfirmModal(true);
   }, []);
 
+  // Ref flag: set to the confirmed action so onDismiss can fire confetti
+  // after the modal window is fully removed from the view hierarchy.
+  const pendingConfettiAction = useRef<{
+    taskId: string;
+    requiresPending: boolean;
+    currentStatus: string;
+  } | null>(null);
+
   const handleConfirmComplete = useCallback(() => {
     if (!pendingTaskAction) return;
     
@@ -435,17 +443,15 @@ export default function TasksScreen() {
     
     console.log('✅ User confirmed (iOS) - closing modal immediately', taskId);
 
-    // 1️⃣ Close modal IMMEDIATELY — first thing, no delays, no awaits
+    // 1️⃣ Stash the action for onDismiss to pick up (confetti fires there,
+    //    after the modal window is fully gone).
+    pendingConfettiAction.current = { taskId, requiresPending, currentStatus };
+
+    // 2️⃣ Close modal IMMEDIATELY — first thing, no delays, no awaits
     setShowConfirmModal(false);
     setPendingTaskAction(null);
 
-    // 2️⃣ Fire confetti immediately after closing
-    if (confettiRef.current) {
-      console.log('🎉 CONFETTI FIRED (iOS) synchronously');
-      confettiRef.current.start();
-    }
-
-    // 3️⃣ Optimistic UI update
+    // 3️⃣ Optimistic UI update (synchronous, no await)
     const newStatus: 'YET' | 'PENDING' | 'DONE' = 
       requiresPending 
         ? (currentStatus === 'YET' ? 'PENDING' : 'DONE')
@@ -463,10 +469,22 @@ export default function TasksScreen() {
         console.error('❌ Backend failed (iOS), reverting:', error);
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: currentStatus } : t));
       });
-  }, [pendingTaskAction, confettiRef]);
+  }, [pendingTaskAction]);
+
+  // Called by ConfirmModal after the modal window is fully dismissed.
+  // This is the earliest safe moment to fire confetti — the modal window
+  // has been removed so the confetti canvas is no longer occluded.
+  const handleModalDismiss = useCallback(() => {
+    if (pendingConfettiAction.current) {
+      console.log('🎉 CONFETTI FIRED (iOS) after modal dismissed', pendingConfettiAction.current.taskId);
+      confettiRef.current?.start();
+      pendingConfettiAction.current = null;
+    }
+  }, []);
 
   const handleCancelComplete = useCallback(() => {
     console.log('❌ User cancelled task completion (iOS)');
+    pendingConfettiAction.current = null;
     setShowConfirmModal(false);
     setPendingTaskAction(null);
   }, []);
@@ -564,6 +582,7 @@ export default function TasksScreen() {
           cancelText="ביטול"
           onConfirm={handleConfirmComplete}
           onCancel={handleCancelComplete}
+          onDismiss={handleModalDismiss}
         />
       </SafeAreaView>
     </LinearGradient>
