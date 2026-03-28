@@ -862,10 +862,22 @@ export default function ScheduleScreen() {
   // (created once) always reads the up-to-date boundary value.
   const daysWithEventsLengthRef = useRef(0);
   const selectedDayIndexRef = useRef(0);
+
+  // Scroll-enable state + stable ref so the stale-closure panResponder can call it
+  const [isScrollEnabled, setIsScrollEnabled] = useState(true);
+  const setScrollEnabledRef = useRef<(v: boolean) => void>(() => {});
+  setScrollEnabledRef.current = setIsScrollEnabled;
+
   const panResponder = useRef(
     PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) =>
-        Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dy) < 40,
+        Math.abs(gestureState.dx) > 12 && Math.abs(gestureState.dy) < 30,
+      onMoveShouldSetPanResponderCapture: (_, gestureState) =>
+        Math.abs(gestureState.dx) > 12 && Math.abs(gestureState.dy) < 30,
+      onPanResponderGrant: () => {
+        setScrollEnabledRef.current(false);
+      },
       onPanResponderMove: (_, gestureState) => {
         swipeAnim.setValue(gestureState.dx);
       },
@@ -878,6 +890,7 @@ export default function ScheduleScreen() {
           if (currentIndex >= totalDays - 1) {
             console.log('ScheduleScreen: Swipe left blocked — already at last day');
             RNAnimated.spring(swipeAnim, { toValue: 0, useNativeDriver: true }).start();
+            setScrollEnabledRef.current(true);
             return;
           }
           console.log('ScheduleScreen: Swipe left → next day');
@@ -896,13 +909,14 @@ export default function ScheduleScreen() {
               toValue: 0,
               duration: 200,
               useNativeDriver: true,
-            }).start();
+            }).start(() => setScrollEnabledRef.current(true));
           });
         } else if (gestureState.dx > SWIPE_THRESHOLD) {
           // At first day — bounce back, no navigation
           if (currentIndex <= 0) {
             console.log('ScheduleScreen: Swipe right blocked — already at first day');
             RNAnimated.spring(swipeAnim, { toValue: 0, useNativeDriver: true }).start();
+            setScrollEnabledRef.current(true);
             return;
           }
           console.log('ScheduleScreen: Swipe right → previous day');
@@ -921,14 +935,19 @@ export default function ScheduleScreen() {
               toValue: 0,
               duration: 200,
               useNativeDriver: true,
-            }).start();
+            }).start(() => setScrollEnabledRef.current(true));
           });
         } else {
           RNAnimated.spring(swipeAnim, {
             toValue: 0,
             useNativeDriver: true,
           }).start();
+          setScrollEnabledRef.current(true);
         }
+      },
+      onPanResponderTerminate: () => {
+        RNAnimated.spring(swipeAnim, { toValue: 0, useNativeDriver: true }).start();
+        setScrollEnabledRef.current(true);
       },
     })
   ).current;
@@ -1463,6 +1482,7 @@ export default function ScheduleScreen() {
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            scrollEnabled={isScrollEnabled}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
