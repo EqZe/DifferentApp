@@ -5,11 +5,11 @@
     "owner": "ilayrachkovski",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/appicon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/different logo.png",
+      "image": "./assets/images/appicon.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
@@ -31,7 +31,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/different logo.png",
+        "foregroundImage": "./assets/images/appicon.png",
         "backgroundColor": "#000000"
       },
       "package": "com.differentapp.com",
