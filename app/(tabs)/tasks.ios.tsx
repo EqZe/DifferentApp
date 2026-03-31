@@ -583,6 +583,7 @@ export default function TasksScreen() {
           onConfirm={handleConfirmComplete}
           onCancel={handleCancelComplete}
           onDismiss={handleModalDismiss}
+          onAfterClose={handleModalDismiss}
         />
       </SafeAreaView>
     </LinearGradient>

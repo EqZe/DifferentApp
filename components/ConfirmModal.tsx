@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -20,6 +20,8 @@ interface ConfirmModalProps {
   onCancel: () => void;
   /** Called after the modal has fully disappeared from the screen (Android: after window is removed). */
   onDismiss?: () => void;
+  /** Reliable cross-platform callback fired after visible transitions true→false. Use this instead of onDismiss on Android. */
+  onAfterClose?: () => void;
 }
 
 export function ConfirmModal({
@@ -31,7 +33,22 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
   onDismiss,
+  onAfterClose,
 }: ConfirmModalProps) {
+  const prevVisible = useRef(visible);
+
+  useEffect(() => {
+    const wasVisible = prevVisible.current;
+    prevVisible.current = visible;
+    if (wasVisible && !visible) {
+      // visible just went true → false
+      const timer = setTimeout(() => {
+        onAfterClose?.();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [visible, onAfterClose]);
+
   return (
     <Modal
       visible={visible}

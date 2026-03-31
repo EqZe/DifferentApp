@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { View, StyleSheet, useColorScheme } from 'react-native';
+import { View, StyleSheet, useColorScheme, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -107,27 +107,71 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
           display: block;
           margin: 16px 0;
         }
+        /* Table fallback styles */
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 16px 0;
+          font-size: 14px;
+        }
+        th, td {
+          border: 1px solid #e2e8f0;
+          padding: 10px 12px;
+          text-align: right;
+        }
+        thead {
+          background-color: #f1f5f9;
+          font-weight: 600;
+        }
+        tbody tr:nth-child(even) {
+          background-color: #f8fafc;
+        }
+        /* Button/link fallback styles */
+        a[class*="bg-"] {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 14px 24px;
+          border-radius: 16px;
+          font-weight: 700;
+          text-decoration: none;
+          color: white;
+          background-color: #4f46e5;
+          margin: 8px 0;
+          width: 100%;
+          box-sizing: border-box;
+        }
       </style>
-      <script>
-        window.onload = function() {
-          const height = document.body.scrollHeight;
-          window.ReactNativeWebView.postMessage(JSON.stringify({ height: height }));
-        };
-        
-        const observer = new MutationObserver(() => {
-          const height = document.body.scrollHeight;
-          window.ReactNativeWebView.postMessage(JSON.stringify({ height: height }));
-        });
-        
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true,
-          attributes: true
-        });
-      </script>
+      <script src="https://cdn.tailwindcss.com"></script>
     </head>
     <body>
       ${htmlContent}
+      <script>
+        function reportHeight() {
+          var height = document.body.scrollHeight;
+          window.ReactNativeWebView.postMessage(JSON.stringify({ height: height }));
+        }
+
+        // Report immediately, then again after Tailwind has had time to render
+        reportHeight();
+        setTimeout(reportHeight, 300);
+        setTimeout(reportHeight, 800);
+
+        // Re-report on any DOM mutations (e.g. Tailwind applying classes)
+        var observer = new MutationObserver(function() {
+          reportHeight();
+        });
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+
+        // Intercept link clicks and open in device browser
+        document.addEventListener('click', function(e) {
+          var target = e.target.closest('a');
+          if (target && target.href) {
+            e.preventDefault();
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'link', url: target.href }));
+          }
+        });
+      </script>
     </body>
     </html>
   `;
@@ -135,6 +179,11 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
   const handleMessage = (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'link' && data.url) {
+        console.log('HtmlBlock: Opening link in browser:', data.url);
+        Linking.openURL(data.url);
+        return;
+      }
       if (data.height) {
         const newHeight = Math.max(100, data.height + 20);
         console.log('HtmlBlock: Setting height to', newHeight);
