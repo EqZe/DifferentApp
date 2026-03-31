@@ -19,7 +19,8 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const htmlContent = data?.content ?? data?.html ?? data?.body ?? data?.text ?? '';
+  const rawContent = data?.content ?? data?.html ?? data?.body ?? data?.text ?? '';
+  const htmlContent = rawContent.replace(/`/g, '&#96;');
 
   const textColor = isDark ? '#E2E8F0' : '#1a1a1a';
   const bgColor = isDark ? '#0F172A' : '#FFFFFF';
