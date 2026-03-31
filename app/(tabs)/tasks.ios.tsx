@@ -7,7 +7,6 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  I18nManager,
   Switch,
   ActivityIndicator,
 } from 'react-native';
@@ -18,7 +17,6 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useUser } from '@/contexts/UserContext';
 import { api, type Task } from '@/utils/api';
 import ConfettiCannon from 'react-native-confetti-cannon';
-import { ConfirmModal } from '@/components/ConfirmModal';
 
 const styles = StyleSheet.create({
   container: {
@@ -204,10 +202,9 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontWeight: '500',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  inlineLoadingContainer: {
     alignItems: 'center',
+    paddingVertical: 20,
   },
   confettiContainer: {
     position: 'absolute',
@@ -217,6 +214,70 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 1000,
     pointerEvents: 'none',
+  },
+  overlayBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlayCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    width: '85%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
+  overlayTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  overlayMessage: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  overlayButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  overlayCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  overlayConfirmBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#2784F5',
+  },
+  overlayCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  overlayConfirmText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
   },
 });
 
@@ -242,10 +303,8 @@ function TaskCard({
   const isYet = task.status === 'YET';
   const dueDateText = formatDate(task.dueDate);
   
-  // Determine if button should be disabled (pending tasks cannot be completed)
   const isDisabled = isPending;
   
-  // Determine button text based on status and requirements
   let buttonText = 'התחל';
   if (task.requiresPending) {
     if (task.status === 'YET') {
@@ -257,7 +316,6 @@ function TaskCard({
     buttonText = 'סיימתי';
   }
   
-  // Icon names
   let iosIconName = 'circle';
   let androidIconName = 'radio-button-unchecked';
   let iconColor = '#9CA3AF';
@@ -358,6 +416,7 @@ function TaskCard({
             ]}
             onPress={() => {
               if (!isDisabled) {
+                console.log('🎯 Task button pressed (iOS)', task.id);
                 onComplete(task.id, task.requiresPending, task.status);
               }
             }}
@@ -374,7 +433,7 @@ function TaskCard({
 export default function TasksScreen() {
   const { user } = useUser();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showCompleted, setShowCompleted] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -391,6 +450,7 @@ export default function TasksScreen() {
 
     try {
       console.log('TasksScreen (iOS): Loading tasks for user', user.id);
+      setLoading(true);
       const fetchedTasks = await api.getTasks(user.id);
       console.log('TasksScreen (iOS): Tasks loaded', fetchedTasks.length);
       setTasks(fetchedTasks);
@@ -415,89 +475,55 @@ export default function TasksScreen() {
   };
 
   const handleCompleteTask = useCallback((taskId: string, requiresPending: boolean, currentStatus: string) => {
-    console.log('🎯 Task button pressed (iOS) - showing confirmation modal', taskId);
+    console.log('🎯 Task button pressed (iOS) - showing confirmation overlay', taskId);
     
-    // Prevent completing pending tasks
     if (currentStatus === 'PENDING') {
       console.log('⚠️ Cannot complete pending task (iOS)', taskId);
       return;
     }
     
-    // Store the pending action and show confirmation modal
     setPendingTaskAction({ taskId, requiresPending, currentStatus });
     setShowConfirmModal(true);
   }, []);
 
-  // Ref flag: set to the confirmed action so onDismiss can fire confetti
-  // after the modal window is fully removed from the view hierarchy.
-  const pendingConfettiAction = useRef<{
-    taskId: string;
-    requiresPending: boolean;
-    currentStatus: string;
-  } | null>(null);
-
   const handleConfirmComplete = useCallback(() => {
     if (!pendingTaskAction) return;
-    
     const { taskId, requiresPending, currentStatus } = pendingTaskAction;
-    
-    console.log('✅ User confirmed (iOS) - closing modal immediately', taskId);
 
-    // 1️⃣ Stash the action for onDismiss to pick up (confetti fires there,
-    //    after the modal window is fully gone).
-    pendingConfettiAction.current = { taskId, requiresPending, currentStatus };
+    console.log('✅ User confirmed task completion (iOS)', taskId);
 
-    // 2️⃣ Close modal IMMEDIATELY — first thing, no delays, no awaits
+    // Close overlay immediately
     setShowConfirmModal(false);
     setPendingTaskAction(null);
 
-    // 3️⃣ Optimistic UI update (synchronous, no await)
-    const newStatus: 'YET' | 'PENDING' | 'DONE' = 
-      requiresPending 
-        ? (currentStatus === 'YET' ? 'PENDING' : 'DONE')
-        : 'DONE';
+    // Optimistic UI update
+    const newStatus: 'YET' | 'PENDING' | 'DONE' = requiresPending
+      ? (currentStatus === 'YET' ? 'PENDING' : 'DONE')
+      : 'DONE';
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
-    console.log('🚀 UI UPDATED INSTANTLY (iOS) to status:', newStatus);
-    
-    // 4️⃣ BACKGROUND API CALL - Fire and forget (non-blocking)
+    console.log('🚀 UI updated optimistically (iOS) to status:', newStatus);
+
+    // Fire confetti immediately (same view hierarchy, no modal window blocking)
+    console.log('🎉 Firing confetti (iOS)');
+    confettiRef.current?.start();
+
+    // Background API call
     api.completeTask(taskId, requiresPending)
       .then(updatedTask => {
-        console.log('✅ Backend confirmed (iOS):', updatedTask.status);
+        console.log('✅ Backend confirmed task status (iOS):', updatedTask.status);
         setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
       })
       .catch(error => {
-        console.error('❌ Backend failed (iOS), reverting:', error);
+        console.error('❌ Backend failed (iOS), reverting task status:', error);
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: currentStatus } : t));
       });
   }, [pendingTaskAction]);
 
-  // Called by ConfirmModal after the modal window is fully dismissed.
-  // This is the earliest safe moment to fire confetti — the modal window
-  // has been removed so the confetti canvas is no longer occluded.
-  const handleModalDismiss = useCallback(() => {
-    if (pendingConfettiAction.current) {
-      console.log('🎉 CONFETTI FIRED (iOS) after modal dismissed', pendingConfettiAction.current.taskId);
-      confettiRef.current?.start();
-      pendingConfettiAction.current = null;
-    }
-  }, []);
-
   const handleCancelComplete = useCallback(() => {
     console.log('❌ User cancelled task completion (iOS)');
-    pendingConfettiAction.current = null;
     setShowConfirmModal(false);
     setPendingTaskAction(null);
   }, []);
-
-  if (loading) {
-    return (
-      <LinearGradient colors={['#2784F5', '#1a5fb8']} style={styles.container}>
-        <SafeAreaView style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
-        </SafeAreaView>
-      </LinearGradient>
-    );
-  }
 
   // Filter tasks based on showCompleted toggle
   const filteredTasks = showCompleted 
@@ -520,7 +546,10 @@ export default function TasksScreen() {
         <View style={styles.filterContainer}>
           <Switch
             value={showCompleted}
-            onValueChange={setShowCompleted}
+            onValueChange={(val) => {
+              console.log('TasksScreen (iOS): Toggle show completed', val);
+              setShowCompleted(val);
+            }}
             trackColor={{ false: '#FFFFFF40', true: '#F5AD27' }}
             thumbColor={showCompleted ? '#FFFFFF' : '#E0E0E0'}
             ios_backgroundColor="#FFFFFF40"
@@ -539,7 +568,13 @@ export default function TasksScreen() {
             />
           }
         >
-          {filteredTasks.length === 0 ? (
+          {loading && (
+            <View style={styles.inlineLoadingContainer}>
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            </View>
+          )}
+
+          {!loading && filteredTasks.length === 0 ? (
             <View style={styles.emptyState}>
               <IconSymbol
                 ios_icon_name="checkmark.circle"
@@ -560,7 +595,7 @@ export default function TasksScreen() {
           )}
         </ScrollView>
 
-        {/* Confetti animation overlay */}
+        {/* Confetti animation overlay — zIndex 1000, above the confirm overlay */}
         <View style={styles.confettiContainer}>
           <ConfettiCannon
             ref={confettiRef}
@@ -573,18 +608,23 @@ export default function TasksScreen() {
           />
         </View>
 
-        {/* Confirmation Modal */}
-        <ConfirmModal
-          visible={showConfirmModal}
-          title="אישור משימה"
-          message="האם אתה בטוח שברצונך לסמן את המשימה כהושלמה?"
-          confirmText="אישור"
-          cancelText="ביטול"
-          onConfirm={handleConfirmComplete}
-          onCancel={handleCancelComplete}
-          onDismiss={handleModalDismiss}
-          onAfterClose={handleModalDismiss}
-        />
+        {/* Confirmation overlay — plain View, zIndex 999, same hierarchy as confetti */}
+        {showConfirmModal && (
+          <View style={styles.overlayBackdrop}>
+            <View style={styles.overlayCard}>
+              <Text style={styles.overlayTitle}>אישור משימה</Text>
+              <Text style={styles.overlayMessage}>האם אתה בטוח שברצונך לסמן את המשימה כהושלמה?</Text>
+              <View style={styles.overlayButtons}>
+                <TouchableOpacity style={styles.overlayCancelBtn} onPress={handleCancelComplete}>
+                  <Text style={styles.overlayCancelText}>ביטול</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.overlayConfirmBtn} onPress={handleConfirmComplete}>
+                  <Text style={styles.overlayConfirmText}>אישור</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
       </SafeAreaView>
     </LinearGradient>
   );
