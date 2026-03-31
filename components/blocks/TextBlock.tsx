@@ -6,7 +6,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 interface TextBlockProps {
   data: {
-    html: string;
+    html?: string;
+    content?: string;
+    body?: string;
+    text?: string;
   };
   isLocked?: boolean;
   isPreview?: boolean;
@@ -39,7 +42,7 @@ export function TextBlock({ data, isLocked = false, isPreview = false }: TextBlo
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   
-  const htmlContent = data.html;
+  const htmlContent = data?.html ?? data?.content ?? data?.body ?? data?.text ?? '';
   
   console.log('TextBlock: Rendering with isLocked:', isLocked, 'isPreview:', isPreview, 'height:', webViewHeight);
   

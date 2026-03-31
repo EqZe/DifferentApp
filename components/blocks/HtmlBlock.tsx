@@ -6,7 +6,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 interface HtmlBlockProps {
   data: {
-    html: string;
+    html?: string;
+    content?: string;
+    body?: string;
+    text?: string;
   };
   isLocked?: boolean;
   isPreview?: boolean;
@@ -39,7 +42,7 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const htmlContent = data.html;
+  const htmlContent = data?.html ?? data?.content ?? data?.body ?? data?.text ?? '';
 
   const htmlTemplate = `
     <!DOCTYPE html>
