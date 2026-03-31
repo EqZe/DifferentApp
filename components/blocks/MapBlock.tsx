@@ -59,7 +59,7 @@ export function MapBlock({ data, isLocked = false }: MapBlockProps) {
         <Text style={[styles.placeholderText, { color: colors.textTertiary }]}>
           מפות אינן נתמכות ב-Natively כרגע
         </Text>
-        {data.title && (
+        {data.title && data.title !== 'undefined' && (
           <Text style={[styles.placeholderText, { color: colors.text, marginTop: spacing.xs }]}>
             {data.title}
           </Text>
