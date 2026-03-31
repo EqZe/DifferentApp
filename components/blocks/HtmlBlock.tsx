@@ -188,6 +188,36 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
         .inline-flex { display: inline-flex; }
         .relative { position: relative; }
         .group { display: flex; }
+
+        /* ── Table wrapper ── */
+        .table-wrapper { overflow-x: auto; margin: 16px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+
+        /* ── Table base (override defaults above for styled tables) ── */
+        table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+        thead { background-color: #312e81; color: #fff; }
+        th, td { padding: 12px 16px; border: 1px solid #e5e7eb; text-align: right; }
+        thead th { border-color: #3730a3; font-size: 16px; }
+        tbody tr:nth-child(even) { background-color: #f9fafb; }
+
+        /* ── Tailwind-like utility classes for table content ── */
+        .w-full { width: 100%; }
+        .text-right { text-align: right; }
+        .border-collapse { border-collapse: collapse; }
+        .bg-white { background-color: #ffffff; }
+        .text-sm { font-size: 14px; }
+        .text-lg { font-size: 18px; }
+        .bg-indigo-900 { background-color: #312e81; }
+        .p-3 { padding: 12px; }
+        .p-4 { padding: 16px; }
+        .border { border: 1px solid #e5e7eb; }
+        .border-gray-200 { border-color: #e5e7eb; }
+        .border-indigo-800 { border-color: #3730a3; }
+        .font-bold { font-weight: bold; }
+        .text-indigo-900 { color: #312e81; }
+        .shadow-lg { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+        .rounded-xl { border-radius: 12px; }
+        .overflow-hidden { overflow: hidden; }
+        .my-8 { margin-top: 32px; margin-bottom: 32px; }
       </style>
     </head>
     <body>
@@ -245,6 +275,7 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
         source={{ html: htmlTemplate }}
         style={styles.webview}
         scrollEnabled={false}
+        scalesPageToFit={false}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
         originWhitelist={['*']}

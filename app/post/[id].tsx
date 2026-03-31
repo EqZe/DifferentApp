@@ -33,7 +33,7 @@ function resolveImageSource(source: string | number | ImageSourcePropType | unde
 }
 
 export default function PostDetailScreen() {
-  const { id, fromHome } = useLocalSearchParams<{ id: string; fromHome?: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useUser();
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -79,14 +79,8 @@ export default function PostDetailScreen() {
   };
 
   const handleBackPress = () => {
-    console.log('PostDetailScreen: Back button pressed, fromHome:', fromHome);
-    if (fromHome === 'true') {
-      // Navigate directly to home screen
-      router.push('/(tabs)/(home)');
-    } else {
-      // Default back behavior
-      router.back();
-    }
+    console.log('PostDetailScreen: Back button pressed');
+    router.back();
   };
 
   if (loading) {
