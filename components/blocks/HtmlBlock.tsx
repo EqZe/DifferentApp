@@ -1,8 +1,7 @@
 
 import React, { useState } from 'react';
-import { View, StyleSheet, useColorScheme, Linking } from 'react-native';
+import { View, useColorScheme, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { LinearGradient } from 'expo-linear-gradient';
 
 interface HtmlBlockProps {
   data: {
@@ -15,265 +14,143 @@ interface HtmlBlockProps {
   isPreview?: boolean;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    position: 'relative',
-  },
-  webview: {
-    backgroundColor: 'transparent',
-  },
-  previewContainer: {
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  gradientOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-    zIndex: 10,
-  },
-});
-
 export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlockProps) {
-  const [webViewHeight, setWebViewHeight] = useState(200);
+  const [webViewHeight, setWebViewHeight] = useState(300);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const htmlContent = data?.html ?? data?.content ?? data?.body ?? data?.text ?? '';
+  const htmlContent = data?.content ?? data?.html ?? data?.body ?? data?.text ?? '';
 
-  const htmlTemplate = `
-    <!DOCTYPE html>
-    <html dir="rtl">
-    <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          font-size: 16px;
-          line-height: 1.8;
-          color: ${isDark ? '#E2E8F0' : '#333'};
-          background: transparent;
-          overflow-x: hidden;
-          padding: 0;
-        }
+  const textColor = isDark ? '#E2E8F0' : '#1a1a1a';
+  const bgColor = isDark ? '#0F172A' : '#FFFFFF';
 
-        /* ── Typography ── */
-        h1, h2, h3, h4, h5, h6 {
-          margin: 20px 0 16px 0;
-          color: #2784F5;
-          font-weight: 600;
-          line-height: 1.3;
-        }
-        h1 { font-size: 28px; margin-top: 0; }
-        h2 { font-size: 24px; }
-        h3 { font-size: 20px; }
-        p { margin: 12px 0; line-height: 1.8; }
-        strong { font-weight: 700; }
-        em { font-style: italic; }
+  const htmlTemplate = `<!DOCTYPE html>
+<html dir="rtl">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      background-color: ${bgColor};
+      color: ${textColor};
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      direction: rtl;
+      padding: 0 4px;
+    }
+    h1, h2, h3, h4, h5, h6 { color: #2784F5; margin: 12px 0 8px 0; }
+    p { margin: 8px 0; }
+    a { color: #2784F5; }
 
-        /* ── Lists ── */
-        ul, ol { margin: 16px 0; padding-right: 24px; }
-        li { margin: 8px 0; line-height: 1.6; }
+    /* Tables */
+    .table-wrapper { overflow-x: auto; margin: 16px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+    table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
+    thead { background-color: #312e81; color: #fff; }
+    th { padding: 12px 16px; border: 1px solid #3730a3; text-align: right; font-size: 16px; color: #fff; }
+    td { padding: 12px 16px; border: 1px solid #e5e7eb; text-align: right; color: #1a1a1a; }
+    tbody tr:nth-child(even) { background-color: #f9fafb; }
+    tbody tr:nth-child(odd) { background-color: #ffffff; }
 
-        /* ── Blockquote ── */
-        blockquote {
-          margin: 16px 0;
-          padding: 12px 16px;
-          border-right: 4px solid #2784F5;
-          background: ${isDark ? 'rgba(39,132,245,0.1)' : '#f5f5f5'};
-          font-style: italic;
-        }
+    /* Tailwind utility classes */
+    .w-full { width: 100%; }
+    .text-right { text-align: right; }
+    .border-collapse { border-collapse: collapse; }
+    .bg-white { background-color: #ffffff; }
+    .text-sm { font-size: 14px; }
+    .text-lg { font-size: 18px; }
+    .bg-indigo-900 { background-color: #312e81 !important; }
+    .text-white { color: #ffffff !important; }
+    .p-3 { padding: 12px; }
+    .p-4 { padding: 16px; }
+    .border { border: 1px solid #e5e7eb; }
+    .border-gray-200 { border-color: #e5e7eb; }
+    .border-indigo-800 { border-color: #3730a3; }
+    .font-bold { font-weight: bold; }
+    .text-indigo-900 { color: #312e81; }
+    .shadow-lg { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+    .rounded-xl { border-radius: 12px; }
+    .overflow-hidden { overflow: hidden; }
+    .my-8 { margin-top: 32px; margin-bottom: 32px; }
+    .my-12 { margin-top: 48px; margin-bottom: 48px; }
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .gap-3 { gap: 12px; }
+    .gap-4 { gap: 16px; }
+    .items-center { align-items: center; }
+    .justify-center { justify-content: center; }
+    .text-center { text-align: center; }
+    .font-semibold { font-weight: 600; }
+    .text-base { font-size: 16px; }
+    .px-6 { padding-left: 24px; padding-right: 24px; }
+    .py-3 { padding-top: 12px; padding-bottom: 12px; }
+    .rounded-full { border-radius: 9999px; }
+    .bg-blue-600 { background-color: #2563eb; }
+    .bg-green-600 { background-color: #16a34a; }
+    .block { display: block; }
+    .inline-block { display: inline-block; }
 
-        /* ── Images ── */
-        img { max-width: 100%; height: auto; display: block; margin: 16px 0; }
+    /* Links styled as buttons */
+    a[class*="bg-"] {
+      display: block;
+      padding: 12px 24px;
+      border-radius: 9999px;
+      text-align: center;
+      text-decoration: none;
+      font-weight: 600;
+      color: #ffffff !important;
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+${htmlContent}
+<script>
+  // Height reporting
+  function reportHeight() {
+    var h = document.documentElement.scrollHeight || document.body.scrollHeight;
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'height', height: h }));
+  }
+  reportHeight();
+  setTimeout(reportHeight, 100);
+  setTimeout(reportHeight, 500);
+  setTimeout(reportHeight, 1000);
 
-        /* ── Tables ── */
-        .table-wrapper { overflow-x: auto; margin: 16px 0; border-radius: 12px; border: 1px solid ${isDark ? '#334155' : '#e2e8f0'}; }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th {
-          background: ${isDark ? '#1e293b' : '#f1f5f9'};
-          color: ${isDark ? '#94a3b8' : '#475569'};
-          font-weight: 600;
-          font-size: 13px;
-          padding: 12px 14px;
-          text-align: right;
-          border-bottom: 2px solid ${isDark ? '#334155' : '#e2e8f0'};
-        }
-        td {
-          padding: 11px 14px;
-          text-align: right;
-          border-bottom: 1px solid ${isDark ? '#1e293b' : '#f1f5f9'};
-          color: ${isDark ? '#cbd5e1' : '#374151'};
-          font-size: 14px;
-        }
-        tr:last-child td { border-bottom: none; }
-        tbody tr:nth-child(even) { background: ${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'}; }
-
-        /* ── Buttons / CTA links ── */
-        /* Wrapper divs */
-        .my-12, .my-4 { margin-top: 16px; margin-bottom: 16px; }
-        .flex { display: flex; }
-        .flex-col { flex-direction: column; }
-        .flex-row { flex-direction: row; }
-        .items-center { align-items: center; }
-        .justify-center { justify-content: center; }
-        .w-full { width: 100%; }
-        .max-w-sm { max-width: 100%; }
-        .mx-auto { margin-left: auto; margin-right: auto; }
-        .gap-3 { gap: 12px; }
-
-        /* Base anchor/button style */
-        a {
-          color: #2784F5;
-          text-decoration: none;
-        }
-
-        /* Styled CTA buttons — any <a> with inline classes that look like buttons */
-        a.group, a[class*="bg-"], a[class*="rounded"] {
-          display: flex !important;
-          align-items: center !important;
-          justify-content: center !important;
-          gap: 8px;
-          width: 100% !important;
-          padding: 16px 24px !important;
-          border-radius: 16px !important;
-          font-weight: 700 !important;
-          font-size: 16px !important;
-          text-decoration: none !important;
-          color: #ffffff !important;
-          margin: 6px 0 !important;
-          cursor: pointer;
-          -webkit-tap-highlight-color: transparent;
-        }
-
-        /* Color variants */
-        a[class*="bg-indigo"], a[class*="bg-blue-6"], a[class*="bg-blue-7"] {
-          background: #4f46e5 !important;
-        }
-        a[class*="bg-blue-5"] {
-          background: #3b82f6 !important;
-        }
-        a[class*="bg-emerald"], a[class*="bg-green"] {
-          background: #10b981 !important;
-        }
-        a[class*="bg-red"] {
-          background: #ef4444 !important;
-        }
-        a[class*="bg-yellow"], a[class*="bg-amber"] {
-          background: #f59e0b !important;
-        }
-        a[class*="bg-purple"] {
-          background: #8b5cf6 !important;
-        }
-        a[class*="bg-pink"] {
-          background: #ec4899 !important;
-        }
-
-        /* Hide SVG decorative icons inside buttons (they break layout in WebView) */
-        a svg { display: none !important; }
-
-        /* Hover/active state */
-        a:active { opacity: 0.85; }
-
-        /* ── Utility classes used in content ── */
-        .uppercase { text-transform: uppercase; }
-        .tracking-widest { letter-spacing: 0.1em; }
-        .font-black { font-weight: 900; }
-        .text-white { color: #ffffff !important; }
-        .inline-flex { display: inline-flex; }
-        .relative { position: relative; }
-        .group { display: flex; }
-
-        /* ── Table wrapper ── */
-        .table-wrapper { overflow-x: auto; margin: 16px 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
-
-        /* ── Table base (override defaults above for styled tables) ── */
-        table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
-        thead { background-color: #312e81; color: #fff; }
-        th, td { padding: 12px 16px; border: 1px solid #e5e7eb; text-align: right; }
-        thead th { border-color: #3730a3; font-size: 16px; }
-        tbody tr:nth-child(even) { background-color: #f9fafb; }
-
-        /* ── Tailwind-like utility classes for table content ── */
-        .w-full { width: 100%; }
-        .text-right { text-align: right; }
-        .border-collapse { border-collapse: collapse; }
-        .bg-white { background-color: #ffffff; }
-        .text-sm { font-size: 14px; }
-        .text-lg { font-size: 18px; }
-        .bg-indigo-900 { background-color: #312e81; }
-        .p-3 { padding: 12px; }
-        .p-4 { padding: 16px; }
-        .border { border: 1px solid #e5e7eb; }
-        .border-gray-200 { border-color: #e5e7eb; }
-        .border-indigo-800 { border-color: #3730a3; }
-        .font-bold { font-weight: bold; }
-        .text-indigo-900 { color: #312e81; }
-        .shadow-lg { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
-        .rounded-xl { border-radius: 12px; }
-        .overflow-hidden { overflow: hidden; }
-        .my-8 { margin-top: 32px; margin-bottom: 32px; }
-      </style>
-    </head>
-    <body>
-      ${htmlContent}
-      <script>
-        // Link interception — open in device browser
-        document.addEventListener('click', function(e) {
-          var target = e.target;
-          while (target && target.tagName !== 'A') target = target.parentElement;
-          if (target && target.href && target.href !== '#' && !target.href.startsWith('javascript')) {
-            e.preventDefault();
-            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'link', url: target.href }));
-          }
-        });
-
-        // Height reporting
-        function reportHeight() {
-          var h = document.body.scrollHeight;
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'height', height: h }));
-        }
-        reportHeight();
-        setTimeout(reportHeight, 100);
-        setTimeout(reportHeight, 500);
-
-        var observer = new MutationObserver(reportHeight);
-        observer.observe(document.body, { childList: true, subtree: true, attributes: true });
-      </script>
-    </body>
-    </html>
-  `;
+  // Link interception
+  document.addEventListener('click', function(e) {
+    var el = e.target;
+    while (el && el.tagName !== 'A') { el = el.parentElement; }
+    if (el && el.href) {
+      e.preventDefault();
+      console.log('HtmlBlock: link tapped:', el.href);
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'link', url: el.href }));
+    }
+  });
+</script>
+</body>
+</html>`;
 
   const handleMessage = (event: any) => {
     try {
       const msg = JSON.parse(event.nativeEvent.data);
-      if (msg.type === 'height' && msg.height) {
-        const newHeight = Math.max(100, msg.height + 20);
+      if (msg.type === 'height' && msg.height > 0) {
+        const newHeight = Math.max(100, msg.height + 32);
         setWebViewHeight(newHeight);
       } else if (msg.type === 'link' && msg.url) {
-        console.log('HtmlBlock: Opening link in browser:', msg.url);
+        console.log('HtmlBlock: opening link in browser:', msg.url);
         Linking.openURL(msg.url).catch(() => {});
       }
-    } catch (e) {}
+    } catch {}
   };
 
   const shouldTruncate = isPreview;
   const displayHeight = shouldTruncate ? Math.min(webViewHeight, 150) : webViewHeight;
 
-  const gradientColors = isDark
-    ? ['rgba(15,23,42,0)', 'rgba(15,23,42,0.7)', 'rgba(15,23,42,0.95)', '#0F172A']
-    : ['rgba(255,255,255,0)', 'rgba(255,255,255,0.7)', 'rgba(255,255,255,0.95)', '#FFFFFF'];
-
   return (
-    <View style={[styles.container, shouldTruncate && styles.previewContainer, { height: displayHeight }]}>
+    <View style={{ width: '100%', height: displayHeight }}>
       <WebView
         source={{ html: htmlTemplate }}
-        style={styles.webview}
+        style={{ flex: 1, backgroundColor: 'transparent' }}
         scrollEnabled={false}
         scalesPageToFit={false}
         showsVerticalScrollIndicator={false}
@@ -283,19 +160,12 @@ export function HtmlBlock({ data, isLocked = false, isPreview = false }: HtmlBlo
         onMessage={handleMessage}
         injectedJavaScript={`
           setTimeout(function() {
-            var h = document.body.scrollHeight;
+            var h = document.documentElement.scrollHeight || document.body.scrollHeight;
             window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'height', height: h }));
-          }, 300);
+          }, 800);
           true;
         `}
       />
-      {shouldTruncate && (
-        <LinearGradient
-          colors={gradientColors}
-          style={styles.gradientOverlay}
-          pointerEvents="none"
-        />
-      )}
     </View>
   );
 }
