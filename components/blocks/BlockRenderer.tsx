@@ -28,6 +28,8 @@ const styles = StyleSheet.create({
 });
 
 export function BlockRenderer({ block, isLocked = false, isPreview = false }: BlockRendererProps) {
+  if (!block || !block.type) return null;
+
   console.log('BlockRenderer: Rendering block', block.type, 'order:', block.order, 'isLocked:', isLocked, 'isPreview:', isPreview);
 
   try {
@@ -54,13 +56,7 @@ export function BlockRenderer({ block, isLocked = false, isPreview = false }: Bl
       
       default:
         console.warn('BlockRenderer: Unknown block type:', block.type);
-        return (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>
-              סוג בלוק לא נתמך: {block.type}
-            </Text>
-          </View>
-        );
+        return null;
     }
   } catch (error) {
     console.error('BlockRenderer: Error rendering block:', error);
