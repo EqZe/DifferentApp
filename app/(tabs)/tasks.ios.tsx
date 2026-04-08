@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 1000,
+    zIndex: 2000,
     pointerEvents: 'none',
   },
   overlayBackdrop: {
@@ -475,13 +475,17 @@ export default function TasksScreen() {
   };
 
   const handleCompleteTask = useCallback((taskId: string, requiresPending: boolean, currentStatus: string) => {
-    console.log('🎯 Task button pressed (iOS) - showing confirmation overlay', taskId);
-    
+    console.log('🎯 Task button pressed (iOS) - firing confetti instantly', taskId);
+
     if (currentStatus === 'PENDING') {
       console.log('⚠️ Cannot complete pending task (iOS)', taskId);
       return;
     }
-    
+
+    // Fire confetti FIRST — before anything else
+    console.log('🎉 Firing confetti instantly on tap (iOS)');
+    confettiRef.current?.start();
+
     setPendingTaskAction({ taskId, requiresPending, currentStatus });
     setShowConfirmModal(true);
   }, []);
@@ -502,10 +506,6 @@ export default function TasksScreen() {
       : 'DONE';
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     console.log('🚀 UI updated optimistically (iOS) to status:', newStatus);
-
-    // Fire confetti immediately (same view hierarchy, no modal window blocking)
-    console.log('🎉 Firing confetti (iOS)');
-    confettiRef.current?.start();
 
     // Background API call
     api.completeTask(taskId, requiresPending)
