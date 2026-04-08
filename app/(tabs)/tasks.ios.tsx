@@ -414,7 +414,7 @@ function TaskCard({
               styles.actionButton,
               isDisabled && styles.actionButtonDisabled,
             ]}
-            onPress={() => {
+            onPressIn={() => {
               if (!isDisabled) {
                 console.log('🎯 Task button pressed (iOS)', task.id);
                 onComplete(task.id, task.requiresPending, task.status);
@@ -475,16 +475,12 @@ export default function TasksScreen() {
   };
 
   const handleCompleteTask = useCallback((taskId: string, requiresPending: boolean, currentStatus: string) => {
-    console.log('🎯 Task button pressed (iOS) - firing confetti instantly', taskId);
+    console.log('🎯 Task button pressed (iOS)', taskId);
 
     if (currentStatus === 'PENDING') {
       console.log('⚠️ Cannot complete pending task (iOS)', taskId);
       return;
     }
-
-    // Fire confetti FIRST — before anything else
-    console.log('🎉 Firing confetti instantly on tap (iOS)');
-    confettiRef.current?.start();
 
     setPendingTaskAction({ taskId, requiresPending, currentStatus });
     setShowConfirmModal(true);
@@ -494,29 +490,35 @@ export default function TasksScreen() {
     if (!pendingTaskAction) return;
     const { taskId, requiresPending, currentStatus } = pendingTaskAction;
 
-    console.log('✅ User confirmed task completion (iOS)', taskId);
+    // Fire confetti immediately — synchronously, before anything else
+    console.log('🎉 Firing confetti on confirm (iOS)');
+    confettiRef.current?.start();
 
-    // Close overlay immediately
-    setShowConfirmModal(false);
-    setPendingTaskAction(null);
-
-    // Optimistic UI update
+    // Optimistic UI update — synchronously before any awaits
     const newStatus: 'YET' | 'PENDING' | 'DONE' = requiresPending
       ? (currentStatus === 'YET' ? 'PENDING' : 'DONE')
       : 'DONE';
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     console.log('🚀 UI updated optimistically (iOS) to status:', newStatus);
 
-    // Background API call
-    api.completeTask(taskId, requiresPending)
-      .then(updatedTask => {
-        console.log('✅ Backend confirmed task status (iOS):', updatedTask.status);
-        setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
-      })
-      .catch(error => {
-        console.error('❌ Backend failed (iOS), reverting task status:', error);
-        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: currentStatus } : t));
-      });
+    // Close overlay immediately
+    setShowConfirmModal(false);
+    setPendingTaskAction(null);
+
+    console.log('✅ User confirmed task completion (iOS)', taskId);
+
+    // Defer API call off the critical path
+    setTimeout(() => {
+      api.completeTask(taskId, requiresPending)
+        .then(updatedTask => {
+          console.log('✅ Backend confirmed task status (iOS):', updatedTask.status);
+          setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
+        })
+        .catch(error => {
+          console.error('❌ Backend failed (iOS), reverting task status:', error);
+          setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: currentStatus } : t));
+        });
+    }, 0);
   }, [pendingTaskAction]);
 
   const handleCancelComplete = useCallback(() => {
@@ -615,10 +617,10 @@ export default function TasksScreen() {
               <Text style={styles.overlayTitle}>אישור משימה</Text>
               <Text style={styles.overlayMessage}>האם אתה בטוח שברצונך לסמן את המשימה כהושלמה?</Text>
               <View style={styles.overlayButtons}>
-                <Pressable style={styles.overlayCancelBtn} onPress={handleCancelComplete}>
+                <Pressable style={styles.overlayCancelBtn} onPressIn={handleCancelComplete}>
                   <Text style={styles.overlayCancelText}>ביטול</Text>
                 </Pressable>
-                <Pressable style={styles.overlayConfirmBtn} onPress={handleConfirmComplete}>
+                <Pressable style={styles.overlayConfirmBtn} onPressIn={handleConfirmComplete}>
                   <Text style={styles.overlayConfirmText}>אישור</Text>
                 </Pressable>
               </View>
