@@ -5,7 +5,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   RefreshControl,
   Switch,
   ActivityIndicator,
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 999,
+    zIndex: 3000,
     backgroundColor: 'rgba(0,0,0,0.55)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -409,7 +409,7 @@ function TaskCard({
             <Text style={styles.pendingBadgeText}>בתהליך</Text>
           </View>
         ) : (
-          <TouchableOpacity
+          <Pressable
             style={[
               styles.actionButton,
               isDisabled && styles.actionButtonDisabled,
@@ -423,7 +423,7 @@ function TaskCard({
             disabled={isDisabled}
           >
             <Text style={styles.actionButtonText}>{buttonText}</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
     </View>
@@ -596,7 +596,7 @@ export default function TasksScreen() {
         </ScrollView>
 
         {/* Confetti animation overlay — zIndex 1000, above the confirm overlay */}
-        <View style={styles.confettiContainer}>
+        <View style={styles.confettiContainer} pointerEvents="none">
           <ConfettiCannon
             ref={confettiRef}
             count={150}
@@ -615,12 +615,12 @@ export default function TasksScreen() {
               <Text style={styles.overlayTitle}>אישור משימה</Text>
               <Text style={styles.overlayMessage}>האם אתה בטוח שברצונך לסמן את המשימה כהושלמה?</Text>
               <View style={styles.overlayButtons}>
-                <TouchableOpacity style={styles.overlayCancelBtn} onPress={handleCancelComplete}>
+                <Pressable style={styles.overlayCancelBtn} onPress={handleCancelComplete}>
                   <Text style={styles.overlayCancelText}>ביטול</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.overlayConfirmBtn} onPress={handleConfirmComplete}>
+                </Pressable>
+                <Pressable style={styles.overlayConfirmBtn} onPress={handleConfirmComplete}>
                   <Text style={styles.overlayConfirmText}>אישור</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </View>
           </View>
