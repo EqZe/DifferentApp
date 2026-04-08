@@ -59,7 +59,7 @@ function SkeletonBox({ width: w, height: h, borderRadius = 8, style }: {
       -1,
       true
     );
-  }, []);
+  }, [opacity]);
 
   const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
@@ -160,7 +160,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     console.log('ProfileScreen: Component mounted');
     refreshUser();
-  }, []);
+  }, [refreshUser]);
 
   useEffect(() => {
     console.log('ProfileScreen: User or session changed');

@@ -662,7 +662,7 @@ const AnimatedCalendarCell = React.memo(({
         false
       );
     }
-  }, [calendarDay.isToday]);
+  }, [calendarDay.isToday, pulseAnimation]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],

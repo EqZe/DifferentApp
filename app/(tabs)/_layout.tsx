@@ -1,7 +1,7 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Slot, useRouter } from 'expo-router';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useUser } from '@/contexts/UserContext';
 import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
 import { Href } from 'expo-router';
@@ -12,33 +12,22 @@ export default function TabLayout() {
   const { user, isLoading } = useUser();
   const router = useRouter();
   const [hasContainers, setHasContainers] = useState(false);
-  const [checkingContainers, setCheckingContainers] = useState(true);
-  const rtl = isRTL();
-
-  console.log('TabLayout rendering, user:', user?.fullName, 'hasContract:', user?.hasContract);
-  console.log('TabLayout - RTL status:', rtl, 'Platform:', Platform.OS);
-  console.log('TabLayout - Writing Direction:', rtl ? 'RTL' : 'LTR');
+  const rtl = useMemo(() => isRTL(), []);
 
   // Check if user has any containers
   useEffect(() => {
     async function checkUserContainers() {
       if (!user?.id) {
         setHasContainers(false);
-        setCheckingContainers(false);
         return;
       }
 
       try {
-        console.log('TabLayout: Checking if user has containers');
         const containers = await api.getContainers(user.id);
         const hasRecords = containers.length > 0;
-        console.log('TabLayout: User has', containers.length, 'containers, showing tab:', hasRecords);
         setHasContainers(hasRecords);
       } catch (error) {
-        console.error('TabLayout: Error checking containers', error);
         setHasContainers(false);
-      } finally {
-        setCheckingContainers(false);
       }
     }
 
@@ -48,83 +37,38 @@ export default function TabLayout() {
   // Redirect to register if user is null
   useEffect(() => {
     if (!isLoading && !user) {
-      console.log('TabLayout: No user found, redirecting to register');
       router.replace('/register');
     }
   }, [user, isLoading, router]);
+
+  const tabs = useMemo<TabBarItem[]>(() => {
+    const result: TabBarItem[] = [
+      { name: '(home)', route: '/(tabs)/(home)' as Href, icon: 'home', label: 'מידע' },
+    ];
+    if (user && !user.hasContract) {
+      result.push({ name: 'calculator', route: '/(tabs)/calculator' as Href, icon: 'calculate', label: 'מחשבון חיסכון' });
+    }
+    if (user && user.hasContract) {
+      result.push({ name: 'tasks', route: '/(tabs)/tasks' as Href, icon: 'check-circle', label: 'משימות' });
+      result.push({ name: 'schedule', route: '/(tabs)/schedule' as Href, icon: 'calendar-today', label: 'לוח זמנים' });
+    }
+    if (user && hasContainers) {
+      result.push({ name: 'containers', route: '/(tabs)/containers' as Href, icon: 'inventory', label: 'מכולות' });
+    }
+    result.push({ name: 'profile', route: '/(tabs)/profile' as Href, icon: 'person', label: 'פרופיל' });
+    return result;
+  }, [user, hasContainers]);
 
   // Don't render tabs if no user
   if (!user) {
     return null;
   }
 
-  // Build tabs based on user status
-  const tabs: TabBarItem[] = [
-    {
-      name: '(home)',
-      route: '/(tabs)/(home)' as Href,
-      icon: 'home',
-      label: 'מידע',
-    },
-  ];
-
-  // Add calculator tab for first-stage users (not signed agreement)
-  if (user && !user.hasContract) {
-    console.log('Adding calculator tab for first-stage user');
-    tabs.push({
-      name: 'calculator',
-      route: '/(tabs)/calculator' as Href,
-      icon: 'calculate',
-      label: 'מחשבון חיסכון',
-    });
-  }
-
-  // Add tasks tab for second-stage users (signed agreement)
-  if (user && user.hasContract) {
-    console.log('Adding tasks tab for second-stage user');
-    tabs.push({
-      name: 'tasks',
-      route: '/(tabs)/tasks' as Href,
-      icon: 'check-circle',
-      label: 'משימות',
-    });
-  }
-
-  // Add schedule tab for second-stage users (signed agreement)
-  if (user && user.hasContract) {
-    console.log('Adding schedule tab for second-stage user');
-    tabs.push({
-      name: 'schedule',
-      route: '/(tabs)/schedule' as Href,
-      icon: 'calendar-today',
-      label: 'לוח זמנים',
-    });
-  }
-
-  // Add containers tab ONLY if user has container records
-  if (user && hasContainers) {
-    console.log('Adding containers tab - user has container records');
-    tabs.push({
-      name: 'containers',
-      route: '/(tabs)/containers' as Href,
-      icon: 'inventory',
-      label: 'מכולות',
-    });
-  }
-
-  // Profile tab is always last
-  tabs.push({
-    name: 'profile',
-    route: '/(tabs)/profile' as Href,
-    icon: 'person',
-    label: 'פרופיל',
-  });
-
   return (
     <View style={[styles.container, { direction: rtl ? 'rtl' : 'ltr' }]}>
       {/* This renders the actual screen content */}
       <Slot />
-      
+
       {/* Floating tab bar on top */}
       <FloatingTabBar tabs={tabs} />
     </View>

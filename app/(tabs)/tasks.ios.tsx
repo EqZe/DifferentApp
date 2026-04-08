@@ -1,15 +1,15 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  Pressable,
   RefreshControl,
   Switch,
   ActivityIndicator,
+  unstable_batchedUpdates,
 } from 'react-native';
+import { TouchableOpacity as GHTouchableOpacity, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '@react-navigation/native';
@@ -58,6 +58,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
+  },
+  listContent: {
     paddingBottom: 100,
   },
   taskCard: {
@@ -290,8 +292,51 @@ function formatDate(dateString: string | null) {
   return `${dayText} ${month}`;
 }
 
-// Task Card Component
-function TaskCard({ 
+const ConfettiLayer = memo(function ConfettiLayer({ confettiRef }: { confettiRef: React.RefObject<any> }) {
+  return (
+    <View style={styles.confettiContainer} pointerEvents="none">
+      <ConfettiCannon
+        ref={confettiRef}
+        count={150}
+        origin={{ x: -10, y: 0 }}
+        autoStart={false}
+        fadeOut={true}
+        fallSpeed={2500}
+        colors={['#2784F5', '#F5AD27', '#4CAF50', '#FF6B6B', '#FFD93D', '#6BCF7F']}
+      />
+    </View>
+  );
+});
+
+const ConfirmOverlay = memo(function ConfirmOverlay({
+  visible,
+  onConfirm,
+  onCancel,
+}: {
+  visible: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <View style={[styles.overlayBackdrop, !visible && { display: 'none' }]} pointerEvents={visible ? 'auto' : 'none'}>
+      <View style={styles.overlayCard}>
+        <Text style={styles.overlayTitle}>אישור משימה</Text>
+        <Text style={styles.overlayMessage}>האם אתה בטוח שברצונך לסמן את המשימה כהושלמה?</Text>
+        <View style={styles.overlayButtons}>
+          <GHTouchableOpacity style={styles.overlayCancelBtn} onPress={onCancel} activeOpacity={0.7}>
+            <Text style={styles.overlayCancelText}>ביטול</Text>
+          </GHTouchableOpacity>
+          <GHTouchableOpacity style={styles.overlayConfirmBtn} onPress={onConfirm} activeOpacity={0.7}>
+            <Text style={styles.overlayConfirmText}>אישור</Text>
+          </GHTouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+});
+
+// Task Card Component — memoized so parent state changes don't re-render every card
+const TaskCard = memo(function TaskCard({ 
   task, 
   onComplete, 
 }: { 
@@ -409,26 +454,24 @@ function TaskCard({
             <Text style={styles.pendingBadgeText}>בתהליך</Text>
           </View>
         ) : (
-          <Pressable
+          <GHTouchableOpacity
             style={[
               styles.actionButton,
               isDisabled && styles.actionButtonDisabled,
             ]}
-            onPressIn={() => {
-              if (!isDisabled) {
-                console.log('🎯 Task button pressed (iOS)', task.id);
-                onComplete(task.id, task.requiresPending, task.status);
-              }
+            onPress={() => {
+              console.log('[Tasks] task button pressed:', task.id, 'status:', task.status);
+              onComplete(task.id, task.requiresPending, task.status);
             }}
-            disabled={isDisabled}
+            activeOpacity={0.7}
           >
             <Text style={styles.actionButtonText}>{buttonText}</Text>
-          </Pressable>
+          </GHTouchableOpacity>
         )}
       </View>
     </View>
   );
-}
+});
 
 export default function TasksScreen() {
   const { user } = useUser();
@@ -437,7 +480,9 @@ export default function TasksScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showCompleted, setShowCompleted] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingTaskAction, setPendingTaskAction] = useState<{
+  // Ref stores pending action so confirm/cancel handlers never need to be
+  // recreated (avoids breaking TaskCard memo on every modal open/close)
+  const pendingTaskActionRef = useRef<{
     taskId: string;
     requiresPending: boolean;
     currentStatus: string;
@@ -449,13 +494,11 @@ export default function TasksScreen() {
     if (!user) return;
 
     try {
-      console.log('TasksScreen (iOS): Loading tasks for user', user.id);
       setLoading(true);
       const fetchedTasks = await api.getTasks(user.id);
-      console.log('TasksScreen (iOS): Tasks loaded', fetchedTasks.length);
       setTasks(fetchedTasks);
     } catch (error) {
-      console.error('TasksScreen (iOS): Failed to load tasks', error);
+      // silently handle fetch errors
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -469,68 +512,66 @@ export default function TasksScreen() {
   }, [user, loadTasks]);
 
   const onRefresh = () => {
-    console.log('TasksScreen (iOS): Refreshing tasks');
     setRefreshing(true);
     loadTasks();
   };
 
   const handleCompleteTask = useCallback((taskId: string, requiresPending: boolean, currentStatus: string) => {
-    console.log('🎯 Task button pressed (iOS)', taskId);
-
+    console.log('[Tasks] handleCompleteTask:', taskId, 'requiresPending:', requiresPending, 'currentStatus:', currentStatus);
     if (currentStatus === 'PENDING') {
-      console.log('⚠️ Cannot complete pending task (iOS)', taskId);
       return;
     }
 
-    setPendingTaskAction({ taskId, requiresPending, currentStatus });
+    pendingTaskActionRef.current = { taskId, requiresPending, currentStatus };
     setShowConfirmModal(true);
   }, []);
 
   const handleConfirmComplete = useCallback(() => {
-    if (!pendingTaskAction) return;
-    const { taskId, requiresPending, currentStatus } = pendingTaskAction;
+    // Read from ref — never stale, never causes handler recreation
+    const action = pendingTaskActionRef.current;
+    if (!action) return;
+    const { taskId, requiresPending, currentStatus } = action;
 
-    // Fire confetti immediately — synchronously, before anything else
-    console.log('🎉 Firing confetti on confirm (iOS)');
+    console.log('[Tasks] confirm complete:', taskId, 'currentStatus:', currentStatus);
+
+    // 1. All sync UI updates first — fire confetti, update task list, close overlay
     confettiRef.current?.start();
 
-    // Optimistic UI update — synchronously before any awaits
     const newStatus: 'YET' | 'PENDING' | 'DONE' = requiresPending
       ? (currentStatus === 'YET' ? 'PENDING' : 'DONE')
       : 'DONE';
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
-    console.log('🚀 UI updated optimistically (iOS) to status:', newStatus);
+    unstable_batchedUpdates(() => {
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+      setShowConfirmModal(false);
+    });
+    pendingTaskActionRef.current = null;
 
-    // Close overlay immediately
-    setShowConfirmModal(false);
-    setPendingTaskAction(null);
-
-    console.log('✅ User confirmed task completion (iOS)', taskId);
-
-    // Defer API call off the critical path
+    // 2. Defer ALL async work with setTimeout so the render frame commits first
     setTimeout(() => {
-      api.completeTask(taskId, requiresPending)
+      console.log('[Tasks] API completeTask request:', taskId, 'newStatus:', newStatus);
+      api.completeTask(taskId, requiresPending, currentStatus as 'YET' | 'PENDING' | 'DONE')
         .then(updatedTask => {
-          console.log('✅ Backend confirmed task status (iOS):', updatedTask.status);
+          console.log('[Tasks] API completeTask response:', updatedTask);
           setTasks(prev => prev.map(t => t.id === taskId ? updatedTask : t));
         })
-        .catch(error => {
-          console.error('❌ Backend failed (iOS), reverting task status:', error);
+        .catch((err) => {
+          console.log('[Tasks] API completeTask error:', err);
           setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: currentStatus } : t));
         });
     }, 0);
-  }, [pendingTaskAction]);
+  }, []); // stable — reads pendingTaskActionRef, never needs to be recreated
 
   const handleCancelComplete = useCallback(() => {
-    console.log('❌ User cancelled task completion (iOS)');
+    console.log('[Tasks] cancel complete');
     setShowConfirmModal(false);
-    setPendingTaskAction(null);
+    pendingTaskActionRef.current = null;
   }, []);
 
-  // Filter tasks based on showCompleted toggle
-  const filteredTasks = showCompleted 
-    ? tasks 
-    : tasks.filter(t => t.status !== 'DONE');
+  // Filter tasks based on showCompleted toggle — memoized to avoid recomputing on unrelated renders
+  const filteredTasks = useMemo(
+    () => showCompleted ? tasks : tasks.filter(t => t.status !== 'DONE'),
+    [tasks, showCompleted]
+  );
 
   const emptyMessage = showCompleted 
     ? 'אין משימות כרגע'
@@ -549,7 +590,7 @@ export default function TasksScreen() {
           <Switch
             value={showCompleted}
             onValueChange={(val) => {
-              console.log('TasksScreen (iOS): Toggle show completed', val);
+              console.log('[Tasks] showCompleted toggled:', val);
               setShowCompleted(val);
             }}
             trackColor={{ false: '#FFFFFF40', true: '#F5AD27' }}
@@ -559,9 +600,12 @@ export default function TasksScreen() {
           <Text style={styles.filterLabel}>הצג משימות שהושלמו</Text>
         </View>
 
-        <ScrollView
+        <GHScrollView
           style={styles.content}
+          contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -575,8 +619,7 @@ export default function TasksScreen() {
               <ActivityIndicator size="small" color="#FFFFFF" />
             </View>
           )}
-
-          {!loading && filteredTasks.length === 0 ? (
+          {!loading && filteredTasks.length === 0 && (
             <View style={styles.emptyState}>
               <IconSymbol
                 ios_icon_name="checkmark.circle"
@@ -586,47 +629,14 @@ export default function TasksScreen() {
               />
               <Text style={styles.emptyText}>{emptyMessage}</Text>
             </View>
-          ) : (
-            filteredTasks.map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onComplete={handleCompleteTask}
-              />
-            ))
           )}
-        </ScrollView>
+          {filteredTasks.map((task) => (
+            <TaskCard key={task.id} task={task} onComplete={handleCompleteTask} />
+          ))}
+        </GHScrollView>
 
-        {/* Confetti animation overlay — zIndex 1000, above the confirm overlay */}
-        <View style={styles.confettiContainer} pointerEvents="none">
-          <ConfettiCannon
-            ref={confettiRef}
-            count={150}
-            origin={{ x: -10, y: 0 }}
-            autoStart={false}
-            fadeOut={true}
-            fallSpeed={2500}
-            colors={['#2784F5', '#F5AD27', '#4CAF50', '#FF6B6B', '#FFD93D', '#6BCF7F']}
-          />
-        </View>
-
-        {/* Confirmation overlay — plain View, zIndex 999, same hierarchy as confetti */}
-        {showConfirmModal && (
-          <View style={styles.overlayBackdrop}>
-            <View style={styles.overlayCard}>
-              <Text style={styles.overlayTitle}>אישור משימה</Text>
-              <Text style={styles.overlayMessage}>האם אתה בטוח שברצונך לסמן את המשימה כהושלמה?</Text>
-              <View style={styles.overlayButtons}>
-                <Pressable style={styles.overlayCancelBtn} onPressIn={handleCancelComplete}>
-                  <Text style={styles.overlayCancelText}>ביטול</Text>
-                </Pressable>
-                <Pressable style={styles.overlayConfirmBtn} onPressIn={handleConfirmComplete}>
-                  <Text style={styles.overlayConfirmText}>אישור</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-        )}
+        <ConfettiLayer confettiRef={confettiRef} />
+        <ConfirmOverlay visible={showConfirmModal} onConfirm={handleConfirmComplete} onCancel={handleCancelComplete} />
       </SafeAreaView>
     </LinearGradient>
   );

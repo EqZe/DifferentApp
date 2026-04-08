@@ -30,7 +30,6 @@ if (Platform.OS !== 'web') {
     
     // On Android, changing RTL requires an app restart
     if (Platform.OS === 'android') {
-      console.log('🔄 RTL was not enabled. Forcing RTL and reloading app...');
       // The app will restart automatically on Android when RTL changes
     }
   }
@@ -73,13 +72,7 @@ export default function RootLayout() {
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
 
-  useEffect(() => {
-    // Log backend URL and RTL status at app startup for debugging
-    console.log('🚀 App starting with OneSignal push notifications');
-    console.log('🔄 RTL enabled:', rtl);
-    console.log('📱 Platform:', Platform.OS);
-    console.log('🌍 Writing Direction:', rtl ? 'RTL' : 'LTR');
-  }, [rtl]);
+
 
   useEffect(() => {
     if (loaded) {

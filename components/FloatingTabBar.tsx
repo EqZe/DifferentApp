@@ -39,7 +39,7 @@ interface FloatingTabBarProps {
   bottomMargin?: number;
 }
 
-export default function FloatingTabBar({
+function FloatingTabBar({
   tabs,
   containerWidth = screenWidth * 0.9,
   borderRadius = 28,
@@ -51,13 +51,9 @@ export default function FloatingTabBar({
   const isDark = colorScheme === 'dark';
   const colors = isDark ? designColors.dark : designColors.light;
   const animatedValue = useSharedValue(0);
-  const rtl = isRTL();
+  const rtl = React.useMemo(() => isRTL(), []);
 
   const activeTabIndex = React.useMemo(() => {
-    console.log('FloatingTabBar: Current pathname:', pathname);
-    console.log('FloatingTabBar: RTL status:', rtl, 'Platform:', Platform.OS);
-    console.log('FloatingTabBar: Writing Direction:', rtl ? 'RTL' : 'LTR');
-    
     let bestMatch = -1;
     let bestMatchScore = 0;
 
@@ -79,9 +75,8 @@ export default function FloatingTabBar({
     });
 
     const finalIndex = bestMatch >= 0 ? bestMatch : 0;
-    console.log('FloatingTabBar: Active tab index:', finalIndex, 'for tab:', tabs[finalIndex]?.name);
     return finalIndex;
-  }, [pathname, tabs, rtl]);
+  }, [pathname, tabs]);
 
   React.useEffect(() => {
     if (activeTabIndex >= 0) {
@@ -93,10 +88,9 @@ export default function FloatingTabBar({
     }
   }, [activeTabIndex, animatedValue]);
 
-  const handleTabPress = (route: Href) => {
-    console.log('FloatingTabBar: Tab pressed:', route);
+  const handleTabPress = React.useCallback((route: Href) => {
     router.push(route);
-  };
+  }, [router]);
 
   const tabWidthPercent = ((100 / tabs.length) - 1).toFixed(2);
 
@@ -116,8 +110,6 @@ export default function FloatingTabBar({
           [0, tabs.length - 1],
           [0, tabWidth * (tabs.length - 1)]
         );
-    
-    console.log('FloatingTabBar: Indicator translateX:', translateX, 'for index:', animatedValue.value, 'RTL:', rtl);
     
     return {
       transform: [{ translateX }],
@@ -193,6 +185,8 @@ export default function FloatingTabBar({
     </SafeAreaView>
   );
 }
+
+export default React.memo(FloatingTabBar);
 
 const styles = StyleSheet.create({
   safeArea: {

@@ -27,6 +27,7 @@ import React, {
   createContext,
   useContext,
   useCallback,
+  useMemo,
   ReactNode,
 } from "react";
 import { Platform } from "react-native";
@@ -72,24 +73,21 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
   const requestPermission = useCallback(async (): Promise<boolean> => {
     if (isWeb) return false;
-    console.log('[NotificationContext] requestPermission() — delegating to OneSignalContext');
-    const granted = await oneSignal.requestPermission();
-    console.log('[NotificationContext] requestPermission() result:', granted);
-    return granted;
-  }, [oneSignal]);
+    console.log('[NotificationContext] requestPermission() called');
+    return oneSignal.requestPermission();
+  }, [oneSignal.requestPermission]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tags are managed centrally by OneSignalContext.applyUserTagsForUser().
   // Exposing sendTag/deleteTag as no-ops prevents double-tagging.
-  const sendTag = useCallback((key: string, value: string) => {
-    if (isWeb) return;
-    console.log('[NotificationContext] sendTag (no-op — managed by OneSignalContext):', key, '=', value);
+  const sendTag = useCallback((_key: string, _value: string) => {
+    // no-op — managed by OneSignalContext
   }, []);
 
   const deleteTag = useCallback((_key: string) => {
     // no-op — tag removal handled by OneSignalContext on logout
   }, []);
 
-  const value: NotificationContextType = {
+  const value = useMemo<NotificationContextType>(() => ({
     hasPermission: oneSignal.hasPermission,
     permissionDenied: oneSignal.isInitialized && !oneSignal.hasPermission,
     loading: !oneSignal.isInitialized,
@@ -98,7 +96,13 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     sendTag,
     deleteTag,
     lastNotification: null,
-  };
+  }), [
+    oneSignal.hasPermission,
+    oneSignal.isInitialized,
+    requestPermission,
+    sendTag,
+    deleteTag,
+  ]);
 
   return (
     <NotificationContext.Provider value={value}>

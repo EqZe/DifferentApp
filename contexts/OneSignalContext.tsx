@@ -23,8 +23,10 @@
 
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -52,10 +54,6 @@ function loadOneSignal(): void {
     !!NativeModules.OneSignal || !!NativeModules.RNOneSignal;
 
   if (!hasNativeModule) {
-    console.warn(
-      '[OneSignal] Native module not found in NativeModules — skipping require().' +
-        ' This is expected in Expo Go and web builds.'
-    );
     OS = undefined; // mark as attempted so we never retry
     return;
   }
@@ -65,9 +63,7 @@ function loadOneSignal(): void {
     const mod = require('react-native-onesignal');
     OS = mod.OneSignal ?? mod.default ?? mod;
     LogLevel = mod.LogLevel;
-    console.log('[OneSignal] Native module loaded successfully');
   } catch (e) {
-    console.warn('[OneSignal] require() failed (Expo Go / web):', e);
     OS = undefined;
   }
 }
@@ -123,15 +119,8 @@ function readSubscriptionState(): {
     const onesignalId = OS?.User?.onesignalId ?? null;
     const optedIn = OS?.User?.pushSubscription?.optedIn ?? false;
     const token = OS?.User?.pushSubscription?.token ?? null;
-    console.log(
-      '[OneSignal] readSubscriptionState — subscriptionId:', id,
-      '| onesignalId:', onesignalId,
-      '| optedIn:', optedIn,
-      '| token:', token ? token.substring(0, 20) + '...' : null
-    );
     return { id, onesignalId, optedIn, token };
   } catch (e) {
-    console.warn('[OneSignal] readSubscriptionState error:', e);
     return { id: null, onesignalId: null, optedIn: false, token: null };
   }
 }
@@ -152,34 +141,16 @@ function attemptRegistration(
   label: string,
   onResult: (result: RegisterOneSignalPlayerResult) => void
 ): void {
-  const onesignalId = OS?.User?.onesignalId ?? null;
-  console.log(`[PushToken] attemptRegistration (${label})`);
-  console.log('[PushToken] authUserId:', authUserId);
-  console.log('[PushToken] subscriptionId (playerId):', subscriptionId);
-  console.log('[PushToken] onesignalId:', onesignalId);
-  console.log('[PushToken] pushToken:', pushToken ? pushToken.substring(0, 20) + '...' : 'null');
-
   if (!pushToken || pushToken.trim() === '') {
-    console.warn(
-      `[PushToken] attemptRegistration (${label}) — skipped: push token is null/empty. ` +
-        'Will retry when token arrives via subscription change event.'
-    );
     return;
   }
 
   registerOneSignalPlayer(subscriptionId, authUserId, pushToken)
     .then((result) => {
-      console.log(
-        `[PushToken] registration complete (${label}) — success:`,
-        result.success
-      );
       onResult(result);
     })
-    .catch((err: any) => {
-      console.error(
-        `[PushToken] registerOneSignalPlayer threw (${label}):`,
-        err?.message || err
-      );
+    .catch((_err: any) => {
+      // registration failure is non-fatal
     });
 }
 
@@ -202,33 +173,20 @@ function pollAndSavePlayerIdAfterLogin(
   const timer = setInterval(() => {
     elapsed += intervalMs;
     try {
-      const { id, onesignalId, token } = readSubscriptionState();
-      console.log(
-        `[OneSignal] post-login poll (${elapsed}ms) — subscriptionId: ${id},` +
-          ` onesignalId: ${onesignalId}, token: ${token ? 'present' : 'null'}`
-      );
+      const { id, token } = readSubscriptionState();
 
       // Only register when BOTH subscription ID and push token are available
       if (id && token && id !== lastSavedId) {
         lastSavedId = id;
-        console.log(
-          '[OneSignal] ✅ Post-login poll found new/updated subscription ID + token:',
-          id
-        );
         onIdFound(id);
         attemptRegistration(id, token, authUserId, 'post-login-poll', () => {});
-      } else if (id && !token) {
-        console.log(
-          `[OneSignal] post-login poll — subscriptionId present but token not yet available, waiting...`
-        );
       }
     } catch (e) {
-      console.warn('[OneSignal] post-login poll error:', e);
+      // non-fatal
     }
 
     if (elapsed >= maxMs) {
       clearInterval(timer);
-      console.log('[OneSignal] post-login poll finished after', elapsed, 'ms');
     }
   }, intervalMs);
 
@@ -250,38 +208,19 @@ function waitForSubscriptionId(
   const timer = setInterval(() => {
     elapsed += intervalMs;
     try {
-      const { id, onesignalId, token } = readSubscriptionState();
-      console.log(
-        `[OneSignal] waitForSubscriptionId poll (${elapsed}ms) — id: ${id},` +
-          ` onesignalId: ${onesignalId}, token: ${token ? 'present' : 'null'}`
-      );
+      const { id, token } = readSubscriptionState();
 
       if (id && token) {
         clearInterval(timer);
-        console.log(
-          '[OneSignal] ✅ Subscription ID + token both available after',
-          elapsed,
-          'ms:',
-          id
-        );
         onReady(id, token);
         return;
-      } else if (id && !token) {
-        console.log(
-          '[OneSignal] waitForSubscriptionId — subscriptionId present but token not yet available, waiting...'
-        );
       }
     } catch (e) {
-      console.warn('[OneSignal] waitForSubscriptionId poll error:', e);
+      // non-fatal
     }
 
     if (elapsed >= maxMs) {
       clearInterval(timer);
-      console.warn(
-        '[OneSignal] ⚠️ waitForSubscriptionId timed out after',
-        maxMs,
-        'ms — subscription ID and/or push token never arrived'
-      );
     }
   }, intervalMs);
 
@@ -336,17 +275,14 @@ export function OneSignalProvider({
   // without capturing stale state.
   const performLogin = (userId: string, subscriptionId: string): void => {
     try {
-      console.log('[OneSignal] Calling OS.login() for user:', userId);
       OS.login(userId);
       loggedInUserRef.current = userId;
       setExternalUserId(userId);
-      console.log('[OneSignal] ✅ OS.login() called successfully for:', userId);
 
       // Flush any buffered token that arrived before login
       if (pendingTokenRef.current) {
         const { id: bufferedId, token: bufferedToken } = pendingTokenRef.current;
         pendingTokenRef.current = null;
-        console.log('[OneSignal] performLogin — flushing buffered token:', bufferedId);
         attemptRegistration(bufferedId, bufferedToken, userId, 'perform-login-buffered', (result) => {
           setPushTokenDebugInfo(result);
         });
@@ -365,19 +301,10 @@ export function OneSignalProvider({
       if (onesignalId) setOnesignalUserId(onesignalId);
 
       const { token: loginToken } = readSubscriptionState();
-      console.log(
-        '[PushToken] performLogin — subscriptionId:',
-        subscriptionId,
-        '| onesignalId:',
-        onesignalId,
-        '| token:', loginToken ? loginToken.substring(0, 20) + '...' : 'null'
-      );
       if (loginToken) {
         attemptRegistration(subscriptionId, loginToken, userId, 'perform-login', (result) => {
           setPushTokenDebugInfo(result);
         });
-      } else {
-        console.log('[OneSignal] performLogin — token not yet available at login time, poll/change event will handle it');
       }
 
       // Start post-login poll to catch any subscription ID reassignment
@@ -391,7 +318,7 @@ export function OneSignalProvider({
         }
       );
     } catch (e) {
-      console.warn('[OneSignal] performLogin error:', e);
+      // non-fatal
     }
   };
 
@@ -405,17 +332,15 @@ export function OneSignalProvider({
         email: currentUser?.email ?? '',
         platform: Platform.OS,
       });
-      console.log('[OneSignal] addTags() called for user:', userId);
     } catch (e) {
-      console.warn('[OneSignal] addTags() error:', e);
+      // non-fatal
     }
 
     if (currentUser?.email) {
       try {
         OS.User.addEmail(currentUser.email);
-        console.log('[OneSignal] addEmail() called:', currentUser.email);
       } catch (e) {
-        console.warn('[OneSignal] addEmail() error:', e);
+        // non-fatal
       }
     }
   };
@@ -427,19 +352,12 @@ export function OneSignalProvider({
     if (initialized.current) return;
     initialized.current = true;
 
-    console.log('[OneSignal] ========== INITIALIZING ==========');
-    console.log('[OneSignal] App ID:', APP_ID);
-    console.log('[OneSignal] Platform:', Platform.OS);
-
     try {
       if (LogLevel) {
         OS.Debug.setLogLevel(LogLevel.Verbose);
-        console.log('[OneSignal] Verbose logging enabled');
       }
       OS.initialize(APP_ID);
-      console.log('[OneSignal] ✅ initialize() called with App ID:', APP_ID);
     } catch (e) {
-      console.error('[OneSignal] ❌ initialize() threw an error:', e);
       initialized.current = false;
       return;
     }
@@ -447,108 +365,50 @@ export function OneSignalProvider({
     setIsInitialized(true);
 
     // ── Foreground notification display handler ───────────────────────────
-    // Fires when a push notification arrives while the app is in the foreground.
-    // Call event.preventDefault() to suppress the default banner, or let it
-    // through by calling event.notification.display().
     try {
       OS.Notifications.addEventListener(
         'foregroundWillDisplay',
         (event: any) => {
-          console.log(
-            '[OneSignal] 🔔 foregroundWillDisplay — notification received in foreground'
-          );
-          const notification = event?.notification;
-          console.log(
-            '[OneSignal] foreground notification title:',
-            notification?.title
-          );
-          console.log(
-            '[OneSignal] foreground notification body:',
-            notification?.body
-          );
-          console.log(
-            '[OneSignal] foreground notification data:',
-            JSON.stringify(notification?.additionalData)
-          );
           // Display the notification banner even while the app is open
           event?.preventDefault();
-          notification?.display();
+          event?.notification?.display();
         }
       );
-      console.log('[OneSignal] foregroundWillDisplay listener registered');
     } catch (e) {
-      console.warn(
-        '[OneSignal] Failed to register foregroundWillDisplay listener:',
-        e
-      );
+      // non-fatal
     }
 
     // ── Notification click / tap handler ─────────────────────────────────
-    // Fires when the user taps a notification (from background or killed state).
     try {
       OS.Notifications.addEventListener('click', (event: any) => {
-        console.log('[OneSignal] 🔔 Notification tapped (click event)');
         const notification = event?.notification;
         const data = notification?.additionalData ?? {};
-        console.log('[OneSignal] Tapped notification title:', notification?.title);
-        console.log('[OneSignal] Tapped notification data:', JSON.stringify(data));
 
         // Navigate based on the notification payload.
-        // Supported data fields:
-        //   data.screen  — route to navigate to (e.g. "/(tabs)/tasks")
-        //   data.postId  — navigate to a specific post
-        //   data.taskId  — navigate to tasks tab
         try {
           if (data.screen) {
-            console.log('[OneSignal] Navigating to screen:', data.screen);
             router.push(data.screen as any);
           } else if (data.postId) {
-            console.log('[OneSignal] Navigating to post:', data.postId);
             router.push(`/post/${data.postId}` as any);
           } else if (data.taskId) {
-            console.log('[OneSignal] Navigating to tasks tab for task:', data.taskId);
             router.push('/(tabs)/tasks' as any);
           } else {
-            // Default: navigate to the home tab
-            console.log('[OneSignal] No specific screen in payload — navigating to home');
             router.push('/(tabs)' as any);
           }
-        } catch (navErr) {
-          console.warn('[OneSignal] Navigation after notification tap failed:', navErr);
+        } catch (_navErr) {
+          // non-fatal
         }
       });
-      console.log('[OneSignal] click (notification tap) listener registered');
     } catch (e) {
-      console.warn('[OneSignal] Failed to register click listener:', e);
+      // non-fatal
     }
 
     // ── Subscription change listener ──────────────────────────────────────
-    // Primary reliable path for capturing the subscription ID. Fires whenever
-    // the subscription state changes (permission granted, optIn, post-login
-    // ID reassignment). We attempt registration for ALL cases.
     try {
       OS.User.pushSubscription.addEventListener('change', (state: any) => {
-        console.log('[OneSignal] 🔔 pushSubscription change event fired');
-        console.log(
-          '[OneSignal] state.current:',
-          JSON.stringify(state?.current)
-        );
-        console.log(
-          '[OneSignal] state.previous:',
-          JSON.stringify(state?.previous)
-        );
-
         const id = state?.current?.id ?? null;
         const token = state?.current?.token ?? null;
-        const optedIn = state?.current?.optedIn ?? false;
         const onesignalId = OS?.User?.onesignalId ?? null;
-
-        console.log(
-          '[OneSignal] subscription change — subscriptionId:', id,
-          '| onesignalId:', onesignalId,
-          '| token:', token ? token.substring(0, 20) + '...' : null,
-          '| optedIn:', optedIn
-        );
 
         if (id) setPlayerId(id);
         if (onesignalId) setOnesignalUserId(onesignalId);
@@ -560,10 +420,6 @@ export function OneSignalProvider({
         if (loginPendingRef.current) {
           const pendingUserId = loginPendingRef.current;
           loginPendingRef.current = null;
-          console.log(
-            '[OneSignal] 🔄 Subscription arrived via change event — completing deferred login for user:',
-            pendingUserId
-          );
           cancelWaitForSubRef.current?.();
           cancelWaitForSubRef.current = null;
           performLogin(pendingUserId, id);
@@ -573,15 +429,7 @@ export function OneSignalProvider({
         // Case 2: User is already logged in — register the new/updated token.
         const currentUserId = loggedInUserRef.current;
         if (currentUserId) {
-          if (!token) {
-            console.log(
-              '[OneSignal] 🔄 Subscription change — subscriptionId present but token null, skipping registration'
-            );
-          } else {
-            console.log(
-              '[OneSignal] 🔄 Subscription change with logged-in user — registering token for:',
-              currentUserId
-            );
+          if (token) {
             attemptRegistration(
               id,
               token,
@@ -594,16 +442,11 @@ export function OneSignalProvider({
           }
         } else if (id && token) {
           // No user logged in yet — buffer the token so performLogin can flush it
-          console.log('[OneSignal] subscription change — buffering token, no user yet');
           pendingTokenRef.current = { id, token };
         }
       });
-      console.log('[OneSignal] pushSubscription change listener registered');
     } catch (e) {
-      console.warn(
-        '[OneSignal] Failed to register pushSubscription change listener:',
-        e
-      );
+      // non-fatal
     }
 
     // ── Permission change listener ────────────────────────────────────────
@@ -611,19 +454,12 @@ export function OneSignalProvider({
       OS.Notifications.addEventListener(
         'permissionChange',
         (granted: boolean) => {
-          console.log(
-            '[OneSignal] 🔔 permissionChange event — granted:',
-            granted
-          );
           setHasPermission(granted);
           if (granted) {
             try {
               OS.User.pushSubscription.optIn();
-              console.log(
-                '[OneSignal] optIn() called after permissionChange event'
-              );
             } catch (e) {
-              console.warn('[OneSignal] optIn() error:', e);
+              // non-fatal
             }
 
             const {
@@ -632,9 +468,6 @@ export function OneSignalProvider({
               token: immediateToken,
             } = readSubscriptionState();
             if (immediateId && loggedInUserRef.current) {
-              console.log(
-                '[OneSignal] permissionChange — subscription ID already available, registering immediately'
-              );
               if (immediateOid) setOnesignalUserId(immediateOid);
               setPlayerId(immediateId);
               if (isTrulySubscribed(immediateId, immediateToken))
@@ -648,65 +481,40 @@ export function OneSignalProvider({
                   setPushTokenDebugInfo(result);
                 }
               );
-            } else if (!immediateId) {
-              console.log(
-                '[OneSignal] permissionChange — subscription ID not yet available, change event will handle it'
-              );
             }
           }
         }
       );
-      console.log('[OneSignal] permissionChange listener registered');
     } catch (e) {
-      console.warn(
-        '[OneSignal] Failed to register permissionChange listener:',
-        e
-      );
+      // non-fatal
     }
 
     // ── Startup: sync current permission state (no prompt) ───────────────
     try {
       const alreadyGranted: boolean =
         OS.Notifications.hasPermission ?? false;
-      console.log(
-        '[OneSignal] startup permission check — already granted:',
-        alreadyGranted
-      );
       setHasPermission(alreadyGranted);
     } catch (e) {
-      console.warn('[OneSignal] startup hasPermission check error:', e);
+      // non-fatal
     }
 
     // ── Startup poll: read subscription state once it stabilises ─────────
-    // Handles the case where the subscription is already active from a
-    // previous session but the change event won't fire (no state transition).
     let pollCount = 0;
     const MAX_POLLS = 12; // 12 × 5s = 60s
     const pollInterval = setInterval(() => {
       pollCount += 1;
       const { id, onesignalId, optedIn, token } = readSubscriptionState();
-      console.log(
-        `[OneSignal] startup poll #${pollCount}/${MAX_POLLS} — subscriptionId: ${id},` +
-          ` onesignalId: ${onesignalId}, token: ${token ? 'present' : 'null'}, optedIn: ${optedIn}`
-      );
 
       if (id) setPlayerId(id);
       if (onesignalId) setOnesignalUserId(onesignalId);
       if (isTrulySubscribed(id, token)) {
         setIsSubscribed(true);
-        console.log(
-          '[OneSignal] ✅ Device is truly subscribed (has subscriptionId + token)'
-        );
       }
 
       // If a login was pending and we now have BOTH subscription ID and token, complete it
       if (id && token && loginPendingRef.current) {
         const pendingUserId = loginPendingRef.current;
         loginPendingRef.current = null;
-        console.log(
-          '[OneSignal] 🔄 Startup poll found subscription + token — completing deferred login for:',
-          pendingUserId
-        );
         cancelWaitForSubRef.current?.();
         cancelWaitForSubRef.current = null;
         clearInterval(pollInterval);
@@ -716,23 +524,14 @@ export function OneSignalProvider({
 
       if ((id && token) || pollCount >= MAX_POLLS) {
         clearInterval(pollInterval);
-        if (!id && pollCount >= MAX_POLLS) {
-          console.warn(
-            '[OneSignal] ⚠️ Startup polling timed out — device never received a subscription ID.'
-          );
-          console.warn(
-            '[OneSignal] Check: 1) google-services.json is correct,' +
-              ' 2) App ID matches dashboard, 3) FCM is configured in OneSignal dashboard'
-          );
-        }
       }
+
+      // suppress unused variable warning
+      void optedIn;
     }, 5000);
 
     return () => {
       clearInterval(pollInterval);
-      // Note: OneSignal v5 does not expose a removeEventListener API for all
-      // event types. Listeners are cleaned up when the app process ends.
-      // The provider is mounted for the lifetime of the app so this is fine.
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -757,9 +556,8 @@ export function OneSignalProvider({
           OS.logout();
           loggedInUserRef.current = null;
           setExternalUserId(null);
-          console.log('[OneSignal] logout() called — user signed out');
         } catch (e) {
-          console.warn('[OneSignal] logout() error:', e);
+          // non-fatal
         }
       }
       return;
@@ -767,23 +565,10 @@ export function OneSignalProvider({
 
     // Skip if we already called login() for this user in this session
     if (userId === loggedInUserRef.current) {
-      console.log(
-        '[OneSignal] OS.login() already called for user:',
-        userId,
-        '— checking startup re-registration'
-      );
-
       // Startup re-registration: ensure the player ID is saved to user_push_tokens
-      // even if login() was already called (handles reinstalls / missed registrations).
       const { id: existingId, onesignalId, token: existingToken } = readSubscriptionState();
 
       if (existingId && existingToken) {
-        console.log(
-          '[OneSignal] Startup re-registration — subscriptionId + token available:',
-          existingId,
-          '| onesignalId:',
-          onesignalId
-        );
         attemptRegistration(
           existingId,
           existingToken,
@@ -794,17 +579,9 @@ export function OneSignalProvider({
           }
         );
       } else {
-        console.log(
-          '[OneSignal] Startup re-registration — subscriptionId or token not yet available, waiting...',
-          '| id:', existingId, '| token:', existingToken ? 'present' : 'null'
-        );
         cancelWaitForSubRef.current?.();
         cancelWaitForSubRef.current = waitForSubscriptionId((id, token) => {
           cancelWaitForSubRef.current = null;
-          console.log(
-            '[OneSignal] Startup re-registration — subscriptionId + token arrived:',
-            id
-          );
           attemptRegistration(
             id,
             token,
@@ -820,16 +597,13 @@ export function OneSignalProvider({
         });
       }
 
+      // suppress unused variable warning
+      void onesignalId;
+
       // Also ensure permission is requested if not yet granted
       requestPermissionIfNeeded();
       return;
     }
-
-    console.log(
-      '[OneSignal] User changed to:',
-      userId,
-      '— checking subscription readiness'
-    );
 
     const {
       id: currentId,
@@ -839,26 +613,15 @@ export function OneSignalProvider({
 
     if (!currentId) {
       // Subscription not ready yet — defer login until subscription ID arrives
-      console.log(
-        '[OneSignal] Subscription ID not yet available — deferring OS.login() for user:',
-        userId
-      );
       loginPendingRef.current = userId;
 
       cancelWaitForSubRef.current?.();
       cancelWaitForSubRef.current = waitForSubscriptionId((id, _token) => {
         cancelWaitForSubRef.current = null;
         if (loginPendingRef.current !== userId) {
-          console.log(
-            '[OneSignal] waitForSubscriptionId resolved but pending user changed — skipping'
-          );
           return;
         }
         loginPendingRef.current = null;
-        console.log(
-          '[OneSignal] waitForSubscriptionId resolved — performing login for:',
-          userId
-        );
         performLogin(userId, id);
         // Request permission after login
         requestPermissionIfNeeded();
@@ -873,45 +636,19 @@ export function OneSignalProvider({
         cancelWaitForSubRef.current?.();
         cancelWaitForSubRef.current = null;
 
-        const { id: retryId, onesignalId: retryOnesignalId } =
-          readSubscriptionState();
-        const logLabel = retryId
-          ? '(subscription now ready)'
-          : '(optimistic — no subscription yet)';
-        console.log(
-          `[OneSignal] 10s safety-net firing for user: ${userId} ${logLabel}`
-        );
+        const { id: retryId } = readSubscriptionState();
 
         try {
-          console.log(
-            '[OneSignal] Calling OS.login() via 10s safety-net for user:',
-            userId
-          );
           OS.login(userId);
           loggedInUserRef.current = userId;
           setExternalUserId(userId);
-          console.log(
-            '[OneSignal] ✅ Safety-net OS.login() called for:',
-            userId
-          );
           applyUserTagsForUser(userId);
 
           const { token: retryToken } = readSubscriptionState();
           if (retryId && retryToken) {
-            console.log(
-              '[PushToken] safety-net — subscriptionId:',
-              retryId,
-              '| onesignalId:',
-              retryOnesignalId,
-              '| token: present'
-            );
             attemptRegistration(retryId, retryToken, userId, 'safety-net', (result) => {
               setPushTokenDebugInfo(result);
             });
-          } else if (retryId && !retryToken) {
-            console.log(
-              '[PushToken] safety-net — subscriptionId present but token null, post-login poll will handle registration'
-            );
           }
 
           cancelPostLoginPollRef.current?.();
@@ -927,19 +664,16 @@ export function OneSignalProvider({
           // Request permission after safety-net login
           requestPermissionIfNeeded();
         } catch (e) {
-          console.warn('[OneSignal] Safety-net OS.login() error:', e);
+          // non-fatal
         }
       }, 10000);
       return;
     }
 
     // Subscription is ready — call login() immediately
-    console.log(
-      '[OneSignal] Subscription ready — subscriptionId:', currentId,
-      '| onesignalId:', currentOnesignalId,
-      '| token:', currentToken ? 'present' : 'null',
-      '— calling OS.login() for:', userId
-    );
+    // suppress unused variable warning
+    void currentOnesignalId;
+    void currentToken;
     loginPendingRef.current = null;
     performLogin(userId, currentId);
 
@@ -948,25 +682,18 @@ export function OneSignalProvider({
   }, [isInitialized, isUserLoading, user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── requestPermission ───────────────────────────────────────────────────
-  // Shows the OS permission prompt. Uses `true` to force the prompt even if
-  // the user previously dismissed it (iOS only — Android ignores this flag).
-  const requestPermission = async (): Promise<boolean> => {
+  const requestPermission = useCallback(async (): Promise<boolean> => {
     if (!OS || Platform.OS === 'web') return false;
     console.log('[OneSignal] requestPermission() called by user action');
     try {
-      // Pass `true` to force the permission prompt (required by audit spec)
       const granted = await OS.Notifications.requestPermission(true);
-      console.log('[OneSignal] requestPermission result:', granted);
       setHasPermission(granted);
 
       if (granted) {
         try {
           OS.User.pushSubscription.optIn();
-          console.log(
-            '[OneSignal] optIn() called after user-triggered permission grant'
-          );
         } catch (e) {
-          console.warn('[OneSignal] optIn() error:', e);
+          // non-fatal
         }
 
         const {
@@ -981,10 +708,6 @@ export function OneSignalProvider({
           setIsSubscribed(true);
           const userId = loggedInUserRef.current;
           if (userId) {
-            console.log(
-              '[PushToken] requestPermission — subscriptionId + token already available:',
-              immediateId
-            );
             attemptRegistration(
               immediateId,
               immediateToken,
@@ -994,18 +717,8 @@ export function OneSignalProvider({
                 setPushTokenDebugInfo(result);
               }
             );
-          } else {
-            console.log(
-              '[OneSignal] requestPermission — subscription ready but no user yet, deferring registration'
-            );
           }
         } else {
-          // Subscription ID or token not yet available — the pushSubscription change event
-          // listener is the primary path. Start a safety-net poll as backup.
-          console.log(
-            '[OneSignal] requestPermission — subscription ID/token not yet available, change event will handle it',
-            '| id:', immediateId, '| token:', immediateToken ? 'present' : 'null'
-          );
           cancelWaitForSubRef.current?.();
           cancelWaitForSubRef.current = waitForSubscriptionId((newId, newToken) => {
             cancelWaitForSubRef.current = null;
@@ -1015,12 +728,6 @@ export function OneSignalProvider({
             setIsSubscribed(true);
             const userId = loggedInUserRef.current;
             if (userId) {
-              console.log(
-                '[PushToken] requestPermission safety-net poll — subscriptionId:',
-                newId,
-                '| onesignalId:',
-                oid
-              );
               attemptRegistration(
                 newId,
                 newToken,
@@ -1030,59 +737,32 @@ export function OneSignalProvider({
                   setPushTokenDebugInfo(result);
                 }
               );
-            } else {
-              console.log(
-                '[OneSignal] requestPermission safety-net — subscription ready but no user, deferring'
-              );
             }
           });
         }
-      } else {
-        console.log(
-          '[OneSignal] requestPermission — user denied permission. Degrading gracefully.'
-        );
       }
       return granted;
     } catch (e) {
-      console.warn('[OneSignal] requestPermission() error:', e);
       return false;
     }
-  };
+  }, []); // reads only refs and module-level vars — stable
 
   // ─── requestPermissionIfNeeded ───────────────────────────────────────────
-  // Call this after a successful login or registration. Skips the OS prompt if
-  // the user already granted permission; still ensures optIn() is called so the
-  // subscription ID is saved to the backend.
-  const requestPermissionIfNeeded = async (): Promise<boolean> => {
+  const requestPermissionIfNeeded = useCallback(async (): Promise<boolean> => {
     if (!OS || Platform.OS === 'web') return false;
-    console.log('[OneSignal] requestPermissionIfNeeded() called');
     try {
       const alreadyGranted: boolean =
         OS.Notifications.hasPermission ?? false;
-      console.log(
-        '[OneSignal] requestPermissionIfNeeded — hasPermission:',
-        alreadyGranted
-      );
 
       if (alreadyGranted) {
-        console.log(
-          '[OneSignal] permission already granted — skipping prompt, ensuring optIn()'
-        );
         setHasPermission(true);
         try {
           OS.User.pushSubscription.optIn();
         } catch (e) {
-          console.warn(
-            '[OneSignal] optIn() error in requestPermissionIfNeeded:',
-            e
-          );
+          // non-fatal
         }
-        // Ensure token is registered if subscription ID + token are already available
         const { id, onesignalId, token } = readSubscriptionState();
         if (id && token && loggedInUserRef.current) {
-          console.log(
-            '[OneSignal] requestPermissionIfNeeded — subscription + token already ready, re-registering'
-          );
           if (onesignalId) setOnesignalUserId(onesignalId);
           setPlayerId(id);
           setIsSubscribed(true);
@@ -1095,39 +775,41 @@ export function OneSignalProvider({
               setPushTokenDebugInfo(result);
             }
           );
-        } else if (id && !token) {
-          console.log(
-            '[OneSignal] requestPermissionIfNeeded — subscriptionId present but token null, change event will handle registration'
-          );
         }
         return true;
       }
 
       // Permission not yet granted — show the OS prompt
-      console.log(
-        '[OneSignal] requestPermissionIfNeeded — permission not granted, showing OS prompt'
-      );
       return requestPermission();
     } catch (e) {
-      console.warn('[OneSignal] requestPermissionIfNeeded() error:', e);
       return false;
     }
-  };
+  }, [requestPermission]);
+
+  const contextValue = useMemo<OneSignalContextType>(() => ({
+    isInitialized,
+    hasPermission,
+    isSubscribed,
+    playerId,
+    onesignalUserId,
+    externalUserId,
+    pushTokenDebugInfo,
+    requestPermission,
+    requestPermissionIfNeeded,
+  }), [
+    isInitialized,
+    hasPermission,
+    isSubscribed,
+    playerId,
+    onesignalUserId,
+    externalUserId,
+    pushTokenDebugInfo,
+    requestPermission,
+    requestPermissionIfNeeded,
+  ]);
 
   return (
-    <OneSignalContext.Provider
-      value={{
-        isInitialized,
-        hasPermission,
-        isSubscribed,
-        playerId,
-        onesignalUserId,
-        externalUserId,
-        pushTokenDebugInfo,
-        requestPermission,
-        requestPermissionIfNeeded,
-      }}
-    >
+    <OneSignalContext.Provider value={contextValue}>
       {children}
     </OneSignalContext.Provider>
   );
