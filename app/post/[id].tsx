@@ -148,30 +148,43 @@ export default function PostDetailScreen() {
   // Determine which blocks to show
   const blocksToShow = shouldRestrictContent && blocks.length > 0 ? [blocks[0]] : blocks;
 
+  const hasCoverImage = !!post.coverImage;
+  const headerOptions = hasCoverImage
+    ? {
+        title: '',
+        headerShown: true,
+        headerTransparent: true,
+        headerStyle: { backgroundColor: 'transparent' },
+        headerTintColor: '#FFFFFF',
+        headerShadowVisible: false,
+        headerBackVisible: true,
+        headerBackTitle: 'חזור',
+        headerLeft: () => (
+          <TouchableOpacity onPress={handleBackPress} style={{ paddingHorizontal: 8 }}>
+            <IconSymbol
+              ios_icon_name="chevron.left"
+              android_material_icon_name="arrow-back"
+              size={24}
+              color="#FFFFFF"
+            />
+          </TouchableOpacity>
+        ),
+      }
+    : {
+        title: '',
+        headerShown: true,
+        headerTransparent: false,
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.text,
+        headerShadowVisible: true,
+        headerBackVisible: true,
+        headerBackTitle: 'חזור',
+        headerLeft: undefined,
+      };
+
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: '',
-          headerShown: true,
-          headerTransparent: true,
-          headerStyle: {
-            backgroundColor: 'transparent',
-          },
-          headerTintColor: '#FFFFFF',
-          headerShadowVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity onPress={handleBackPress} style={{ paddingHorizontal: 8 }}>
-              <IconSymbol
-                ios_icon_name="chevron.left"
-                android_material_icon_name="arrow-back"
-                size={24}
-                color="#FFFFFF"
-              />
-            </TouchableOpacity>
-          ),
-        }}
-      />
+      <Stack.Screen options={headerOptions} />
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ScrollView
           style={styles.scrollView}
